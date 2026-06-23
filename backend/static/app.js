@@ -87,25 +87,26 @@ async function load(reset = false) {
     limit: state.limit, offset: state.offset, include_retweets: (!state.hideRT).toString(),
   });
   if (state.group !== "ALL") params.set("group", state.group);
+  if (state.search.trim()) params.set("q", state.search.trim());
 
   try {
     const res = await fetch(`${API}/feed?${params}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     state.total = data.total;
-    let items = data.items;
-    if (state.search.trim()) {
-      const q = state.search.toLowerCase();
-      items = items.filter((i) =>
-        i.personality.full_name.toLowerCase().includes(q) ||
-        (i.personality.handle || "").toLowerCase().includes(q));
-    }
-    feedEl.insertAdjacentHTML("beforeend", items.map(card).join(""));
+    feedEl.insertAdjacentHTML("beforeend", data.items.map(card).join(""));
     state.offset += data.items.length;
     state.done = state.offset >= data.total || data.items.length === 0;
-    sentinel.textContent = state.done ? `— fin · ${state.total} posts —` : "";
+    if (state.done) {
+      sentinel.textContent = state.total
+        ? `— fin · ${state.total.toLocaleString("fr-FR")} posts —`
+        : "Aucun post pour ce filtre.";
+    } else {
+      sentinel.textContent = "";
+    }
     renderStats();
   } catch (e) {
-    sentinel.innerHTML = `<span class="text-red-400">Erreur API. Le backend tourne-t-il sur :8000 ?</span>`;
+    sentinel.innerHTML = `<span class="text-red-400">Erreur de chargement du flux (${e.message}).</span>`;
   } finally {
     state.loading = false;
   }
