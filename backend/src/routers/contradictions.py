@@ -8,6 +8,7 @@ from src.database import get_db
 from src.models.contradiction import TYPE_LABELS, Contradiction
 from src.schemas import ContradictionPage
 from src.security import require_token
+from src.services.analysis.claim_sources import resolve_claim_urls
 from src.services.analysis.contradiction_detector import run_contradiction_detection
 
 router = APIRouter(tags=["contradictions"])
@@ -40,6 +41,14 @@ async def list_contradictions(
 
     total = await db.scalar(count_stmt) or 0
     items = list((await db.execute(stmt.limit(limit).offset(offset))).scalars().all())
+
+    # Provenance : URL source de chaque claim (pour vérifier le verbatim en contexte).
+    all_claims = [c.claim_a for c in items] + [c.claim_b for c in items]
+    urls = await resolve_claim_urls(db, all_claims)
+    for c in items:
+        c.claim_a.source_url = urls.get(c.claim_a.id)
+        c.claim_b.source_url = urls.get(c.claim_b.id)
+
     return ContradictionPage(total=total, limit=limit, offset=offset, items=items)
 
 

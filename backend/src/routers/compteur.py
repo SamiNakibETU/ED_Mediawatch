@@ -10,8 +10,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database import get_db
 from src.models.claim import Claim
-from src.security import require_token
 from src.models.referentiel import Referent
+from src.security import require_token
+from src.services.analysis.claim_sources import resolve_claim_urls
 
 router = APIRouter(tags=["compteur"])
 
@@ -67,6 +68,7 @@ async def compteur(
         )
     ).scalars().all()
 
+    urls = await resolve_claim_urls(db, claims)
     points = [
         {
             "claim_id": c.id,
@@ -79,6 +81,7 @@ async def compteur(
             "verbatim": c.verbatim,
             "confidence": c.confidence,
             "human_validated": c.human_validated,
+            "source_url": urls.get(c.id),
         }
         for c in claims
     ]

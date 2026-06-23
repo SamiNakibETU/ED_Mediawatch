@@ -83,6 +83,8 @@ async function loadCompteur(key) {
         <span class="text-[10px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400">${p.party || p.platform}</span>
         <span class="text-zinc-600 text-xs">${p.published_at ? new Date(p.published_at).toLocaleDateString("fr-FR") : ""}</span>
         ${p.human_validated ? '<span class="text-emerald-400 text-xs">✓ validé</span>' : ''}
+        <div class="flex-1"></div>
+        ${p.source_url ? `<a href="${p.source_url}" target="_blank" rel="noopener" class="text-[11px] text-zinc-600 hover:text-violet-300">source ↗</a>` : ""}
       </div>
       <p class="mt-1 text-[13px] text-zinc-400 italic">« ${(p.verbatim || "").slice(0, 240)} »</p>
     </div>`).join("");

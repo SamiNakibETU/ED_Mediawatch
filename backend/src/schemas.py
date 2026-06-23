@@ -115,6 +115,7 @@ class ClaimMini(BaseModel):
     verbatim: str
     canonical: str | None
     confidence: float
+    source_url: str | None = None
 
 
 class ContradictionOut(BaseModel):

@@ -18,6 +18,7 @@ function claimCard(c, side) {
   const who = c.speaker_name || c.party || "source presse";
   const date = c.published_at ? new Date(c.published_at).toLocaleDateString("fr-FR") : "—";
   const txt = c.canonical || c.verbatim;
+  const platform = c.platform === "x" ? "X" : (c.platform === "press" ? "presse" : c.platform);
   return `<div class="flex-1 rounded-lg border border-[#26262b] bg-[#141417] p-3">
     <div class="flex items-baseline gap-2">
       <span class="text-lg font-semibold" style="color:${PARTY_COLOR[c.party] || '#e4e4e7'}">${c.qty_value}${c.qty_unit ? " " + c.qty_unit : ""}</span>
@@ -25,6 +26,11 @@ function claimCard(c, side) {
       <span class="text-xs text-zinc-600">· ${date}</span>
     </div>
     <p class="mt-1.5 text-[13px] text-zinc-400 italic leading-snug">« ${(txt || "").slice(0, 220)} »</p>
+    <div class="mt-1.5 flex items-center gap-2 text-[10px] text-zinc-600">
+      <span class="px-1.5 py-0.5 rounded bg-zinc-800/70">${platform}</span>
+      <div class="flex-1"></div>
+      ${c.source_url ? `<a href="${c.source_url}" target="_blank" rel="noopener" class="hover:text-amber-300">vérifier la source ↗</a>` : ""}
+    </div>
   </div>`;
 }
 
