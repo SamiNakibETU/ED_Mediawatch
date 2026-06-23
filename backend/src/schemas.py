@@ -23,12 +23,20 @@ class PersonalityOut(BaseModel):
 
 
 class PersonalityMini(BaseModel):
+    """Auteur enrichi pour le flux de veille (métadonnées soignées)."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: int
     full_name: str
     handle: str | None
     group_code: str
+    group_long: str | None = None
+    famille: str | None = None
+    role: str | None = None
+    verif: str | None = None
+    circo: str | None = None
+    departement: str | None = None
     photo_url: str | None
 
 
@@ -72,6 +80,8 @@ class ArticleOut(BaseModel):
 
     id: int
     media_source_id: str
+    source_name: str | None = None
+    leaning: str | None = None
     url: str
     title: str
     author: str | None

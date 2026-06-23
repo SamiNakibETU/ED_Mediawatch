@@ -47,32 +47,79 @@ function linkify(s) {
     .replace(/(^|\s)#(\w+)/g, '$1<span class="text-zinc-400">#$2</span>');
 }
 
-function badge(p) {
+function affiliation(p) {
   const g = GROUPS[p.group_code] || GROUPS.ALL;
-  return `<span class="text-[10px] font-medium px-1.5 py-0.5 rounded" style="color:${g.color};background:${g.color}1a">${g.label}</span>`;
+  let html = `<span class="text-[10px] font-medium px-1.5 py-0.5 rounded" style="color:${g.color};background:${g.color}1a">${g.label}</span>`;
+  const fam = (p.famille || "").trim();
+  const skip = new Set(["", g.label.toLowerCase(), "officiel", "groupe"]);
+  if (fam && !skip.has(fam.toLowerCase())) {
+    html += `<span class="text-[10px] px-1.5 py-0.5 rounded border border-line text-muted">${escapeHtml(fam)}</span>`;
+  }
+  return html;
+}
+
+function verifMark(p) {
+  if (p.verif === "verifie") return `<span title="Identité vérifiée" class="text-emerald-400">✓</span>`;
+  if (p.verif === "a_confirmer") return `<span title="À confirmer" class="text-amber-500/60">•</span>`;
+  return "";
+}
+
+function metaLine(p) {
+  const bits = [];
+  if (p.role) bits.push(escapeHtml(p.role));
+  const loc = [p.departement, p.circo].filter(Boolean).join(" ");
+  if (loc) bits.push(escapeHtml(loc));
+  return bits.length ? `<div class="text-[11px] text-muted mt-0.5 truncate">${bits.join(" · ")}</div>` : "";
+}
+
+function exactDate(iso) {
+  if (!iso) return "";
+  return new Date(iso).toLocaleString("fr-FR", {
+    day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
+  });
+}
+
+function engagement(it) {
+  const fmt = (n) => n.toLocaleString("fr-FR");
+  const parts = [];
+  if (it.likes != null) parts.push(`♥ ${fmt(it.likes)}`);
+  if (it.retweets != null) parts.push(`🔁 ${fmt(it.retweets)}`);
+  if (it.replies != null) parts.push(`💬 ${fmt(it.replies)}`);
+  return parts.length ? `<span class="text-[11px] text-muted tabular-nums">${parts.join("  ")}</span>` : "";
 }
 
 function card(it) {
   const p = it.personality;
-  const tags = [];
-  if (it.is_retweet) tags.push(`<span class="text-[11px] text-muted">🔁 RT</span>`);
-  if (it.is_reply) tags.push(`<span class="text-[11px] text-muted">↩︎ réponse</span>`);
+  const chips = [];
+  if (it.is_retweet) chips.push(`<span class="text-[11px] text-muted">🔁 RT</span>`);
+  if (it.is_reply) chips.push(`<span class="text-[11px] text-muted">↩︎ réponse</span>`);
+  if (it.theme) chips.push(`<span class="text-[10px] px-1.5 py-0.5 rounded bg-figure/15 text-figure">${escapeHtml(it.theme)}</span>`);
+  const eng = engagement(it);
+  if (eng) chips.push(eng);
+
   const media = it.media_url
     ? `<a href="${it.url}" target="_blank" rel="noopener"><img src="${it.media_url}" loading="lazy"
          class="mt-3 rounded-xl border border-line max-h-96 w-full object-cover" onerror="this.remove()" /></a>` : "";
+
   return `<article class="card-enter py-4 flex gap-3">
     <div class="shrink-0">${avatar(p)}</div>
     <div class="min-w-0 flex-1">
       <div class="flex items-center gap-1.5 flex-wrap text-sm">
         <span class="font-semibold text-zinc-100 truncate">${escapeHtml(p.full_name)}</span>
-        ${badge(p)}
+        ${verifMark(p)}
+        ${affiliation(p)}
         ${p.handle ? `<a href="https://x.com/${p.handle}" target="_blank" rel="noopener" class="text-muted hover:underline">@${p.handle}</a>` : ""}
         <span class="text-muted">·</span>
-        <a href="${it.url}" target="_blank" rel="noopener" class="text-muted hover:underline" title="${it.published_at || ""}">${relTime(it.published_at)}</a>
+        <a href="${it.url}" target="_blank" rel="noopener" class="text-muted hover:underline" title="${exactDate(it.published_at)}">${relTime(it.published_at)}</a>
       </div>
-      <p class="mt-1 text-[15px] leading-relaxed text-zinc-200 whitespace-pre-wrap break-words">${linkify(it.content)}</p>
+      ${metaLine(p)}
+      <p class="mt-1.5 text-[15px] leading-relaxed text-zinc-200 whitespace-pre-wrap break-words">${linkify(it.content)}</p>
       ${media}
-      ${tags.length ? `<div class="mt-2 flex gap-3">${tags.join("")}</div>` : ""}
+      <div class="mt-2 flex items-center gap-3 flex-wrap">
+        ${chips.join("")}
+        <div class="flex-1"></div>
+        <a href="${it.url}" target="_blank" rel="noopener" class="text-[11px] text-zinc-600 hover:text-figure" title="${exactDate(it.published_at)}">source ↗</a>
+      </div>
     </div>
   </article>`;
 }

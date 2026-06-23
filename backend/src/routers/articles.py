@@ -44,7 +44,20 @@ async def articles(
 
     total = await db.scalar(count_stmt) or 0
     res = await db.execute(stmt.limit(limit).offset(offset))
-    return ArticlePage(total=total, limit=limit, offset=offset, items=list(res.scalars().all()))
+    items = list(res.scalars().all())
+
+    # Enrichir avec le nom + l'orientation de la source (métadonnées de veille).
+    srcs = {
+        s.id: s
+        for s in (await db.execute(select(MediaSource))).scalars().all()
+    }
+    for art in items:
+        src = srcs.get(art.media_source_id)
+        if src:
+            art.source_name = src.name
+            art.leaning = src.leaning
+
+    return ArticlePage(total=total, limit=limit, offset=offset, items=items)
 
 
 @router.post("/collect-press", response_model=dict, dependencies=[Depends(require_token)])
