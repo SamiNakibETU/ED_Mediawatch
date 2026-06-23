@@ -5,11 +5,10 @@ uvicorn[standard]==0.34.0
 pydantic==2.10.4
 pydantic-settings==2.7.1
 
-# Database — SQLite (local-first) now, Postgres/pgvector later (same models)
+# Database — SQLite en local, PostgreSQL en prod (mêmes modèles)
 SQLAlchemy[asyncio]==2.0.36
 aiosqlite==0.20.0
-# asyncpg==0.30.0          # uncomment to switch to PostgreSQL
-# pgvector==0.3.6          # uncomment for embeddings/clustering phase
+asyncpg==0.30.0            # driver async PostgreSQL (prod)
 
 # Collection (Nitter RSS + French press)
 feedparser==6.0.11

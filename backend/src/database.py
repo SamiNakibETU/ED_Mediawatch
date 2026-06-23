@@ -20,13 +20,18 @@ from src.models.base import Base
 
 @lru_cache
 def get_engine() -> AsyncEngine:
-    settings = get_settings()
-    is_sqlite = settings.database_url.startswith("sqlite")
+    url = get_settings().database_url
+    # Railway/Heroku exposent l'URL en `postgresql://` ; le moteur async exige
+    # le driver `asyncpg`. On normalise pour accepter les deux formes.
+    if url.startswith("postgresql://"):
+        url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+
+    is_sqlite = url.startswith("sqlite")
     # SQLite has weak concurrency; WAL + a busy timeout let concurrent async
     # collectors write without "database is locked". No-op on PostgreSQL.
     connect_args = {"timeout": 30} if is_sqlite else {}
     engine = create_async_engine(
-        settings.database_url,
+        url,
         echo=False,
         pool_pre_ping=True,
         connect_args=connect_args,
