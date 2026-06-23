@@ -1,0 +1,34 @@
+# Nitter auto-hébergé — débloque l'ENGAGEMENT (likes/RT/réponses/citations) et le
+# BACKFILL (pagination HTML). Les instances publiques challengent le HTML des
+# profils ; la page de statut recommande explicitement de self-host pour scraper.
+#
+# Prérequis : un fichier sessions Nitter (comptes X jetables). Nitter 2026 exige
+# de vrais comptes (les guest tokens ont été supprimés). Générer guest_accounts /
+# sessions.jsonl selon la doc zedeus/nitter, puis :
+#   docker compose -f infra/docker-compose.nitter.yml up -d
+#
+# Côté backend (.env) :
+#   NITTER_SELF_HOSTED=http://localhost:8082
+# → la collecte live passe alors en HTML (avec engagement) et
+#   `python -m src.scripts.backfill_x` devient opérationnel.
+
+services:
+  nitter-redis:
+    image: redis:7-alpine
+    container_name: edmw-nitter-redis
+    command: redis-server --save 60 1 --loglevel warning
+    volumes:
+      - ./nitter_redis:/data
+    restart: unless-stopped
+
+  nitter:
+    image: zedeus/nitter:latest
+    container_name: edmw-nitter
+    ports:
+      - "8082:8080"
+    volumes:
+      - ./nitter.conf:/src/nitter.conf:ro
+      - ./sessions.jsonl:/src/sessions.jsonl:ro
+    depends_on:
+      - nitter-redis
+    restart: unless-stopped

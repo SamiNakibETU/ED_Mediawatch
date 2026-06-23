@@ -1,0 +1,78 @@
+{
+  "version": "2026.06.1",
+  "description": "Lexique de détection (tier déterministe) : référent numérique -> unités acceptées + termes déclencheurs. Accents ignorés au matching.",
+  "referents": {
+    "immigration::cout::france::montant_annuel_eur": {
+      "unit_kinds": ["milliards_eur", "millions_eur"], "unit": "milliards_eur",
+      "triggers": ["cout de l'immigration", "immigration coute", "immigration nous coute", "cout migratoire", "cout de l immigration"]
+    },
+    "immigration::ame::cout_annuel_eur": {
+      "unit_kinds": ["millions_eur", "milliards_eur"], "unit": "millions_eur",
+      "triggers": ["ame", "aide medicale d'etat", "aide medicale d etat"]
+    },
+    "immigration::expulsions::nb_promis_annuel": {
+      "unit_kinds": ["nb"], "unit": "nb_par_an",
+      "triggers": ["expuls", "oqtf", "reconduite", "eloignement", "clandestins"]
+    },
+    "immigration::titres_sejour::nb_annuel": {
+      "unit_kinds": ["nb"], "unit": "nb_par_an",
+      "triggers": ["titres de sejour", "cartes de sejour"]
+    },
+    "immigration::regroupement_familial::nb_annuel": {
+      "unit_kinds": ["nb"], "unit": "nb_par_an",
+      "triggers": ["regroupement familial"]
+    },
+    "economie::deficit_public::pct_pib": {
+      "unit_kinds": ["pct"], "unit": "pct_pib",
+      "triggers": ["deficit"]
+    },
+    "economie::dette_publique::pct_pib": {
+      "unit_kinds": ["pct"], "unit": "pct_pib",
+      "triggers": ["dette publique", "la dette"]
+    },
+    "economie::fonctionnaires::nb_supprimes": {
+      "unit_kinds": ["nb"], "unit": "nb",
+      "triggers": ["fonctionnaires", "postes de fonctionnaires", "agents publics"]
+    },
+    "economie::economies::montant_promis_eur": {
+      "unit_kinds": ["milliards_eur"], "unit": "milliards_eur",
+      "triggers": ["economies", "economiser", "milliards d'economies"]
+    },
+    "pouvoir_achat::smic::cible_eur": {
+      "unit_kinds": ["eur"], "unit": "eur_net_mensuel",
+      "triggers": ["smic", "salaire minimum"]
+    },
+    "pouvoir_achat::tva_energie::taux_cible_pct": {
+      "unit_kinds": ["pct"], "unit": "pct",
+      "triggers": ["tva sur les carburants", "tva energie", "tva a", "baisse de la tva"]
+    },
+    "pouvoir_achat::retraite::age_legal_cible": {
+      "unit_kinds": ["ans"], "unit": "ans",
+      "triggers": ["retraite a", "age de depart", "age legal", "depart a la retraite"]
+    },
+    "energie::electricite::baisse_promise_pct": {
+      "unit_kinds": ["pct"], "unit": "pct",
+      "triggers": ["prix de l'electricite", "facture d'electricite", "baisse de l'electricite", "electricite"]
+    },
+    "energie::nucleaire::nb_reacteurs_cible": {
+      "unit_kinds": ["nb"], "unit": "nb",
+      "triggers": ["reacteurs", "epr", "centrales nucleaires"]
+    },
+    "securite::prison::nb_places_promis": {
+      "unit_kinds": ["nb"], "unit": "nb",
+      "triggers": ["places de prison", "places de prisons", "cellules de prison"]
+    },
+    "securite::forces_ordre::nb_recrutements": {
+      "unit_kinds": ["nb"], "unit": "nb",
+      "triggers": ["policiers", "gendarmes", "forces de l'ordre", "recrutements de policiers"]
+    },
+    "defense::budget::pct_pib_cible": {
+      "unit_kinds": ["pct"], "unit": "pct_pib",
+      "triggers": ["budget de la defense", "depenses militaires", "budget militaire", "effort de defense"]
+    },
+    "logement::construction::nb_annuel_cible": {
+      "unit_kinds": ["nb"], "unit": "nb_par_an",
+      "triggers": ["logements sociaux", "construire des logements", "logements par an"]
+    }
+  }
+}

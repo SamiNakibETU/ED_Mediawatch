@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ED · MediaWatch — Veille extrême droite</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            ink: "#0a0a0b", panel: "#141417", line: "#26262b",
+            muted: "#8a8a93", rn: "#2563eb", udr: "#b45309", figure: "#7c3aed",
+          },
+          fontFamily: { sans: ["Inter", "system-ui", "-apple-system", "Segoe UI", "sans-serif"] },
+        },
+      },
+    };
+  </script>
+  <link rel="preconnect" href="https://rsms.me/" />
+  <link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
+  <style>
+    html { scroll-behavior: smooth; }
+    body { background: radial-gradient(1200px 600px at 50% -10%, #1a1a20 0%, #0a0a0b 55%); }
+    .card-enter { animation: fade .35s ease both; }
+    @keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+    ::-webkit-scrollbar { width: 10px; } ::-webkit-scrollbar-thumb { background: #26262b; border-radius: 8px; }
+    .pill { transition: all .15s ease; }
+  </style>
+</head>
+<body class="text-zinc-200 font-sans min-h-screen">
+  <!-- Header -->
+  <header class="sticky top-0 z-20 backdrop-blur-xl bg-ink/70 border-b border-line">
+    <div class="max-w-2xl mx-auto px-4 py-3">
+      <div class="flex items-center justify-between gap-3">
+        <div class="flex items-center gap-2.5">
+          <div class="h-9 w-9 rounded-xl bg-gradient-to-br from-rn to-figure grid place-items-center font-bold text-white text-sm">ED</div>
+          <div>
+            <h1 class="font-semibold leading-tight">MediaWatch</h1>
+            <p class="text-[11px] text-muted leading-tight">Veille des prises de parole · extrême droite</p>
+          </div>
+          <nav class="ml-3 hidden sm:flex items-center gap-1 text-sm">
+            <a href="index.html" class="px-3 py-1.5 rounded-lg bg-figure/20 text-figure">Flux</a>
+            <a href="compteur.html" class="px-3 py-1.5 rounded-lg text-muted hover:text-zinc-100">Le Compteur</a>
+            <a href="contradictions.html" class="px-3 py-1.5 rounded-lg text-muted hover:text-zinc-100">Validation</a>
+          </nav>
+        </div>
+        <div id="stats" class="text-right text-[11px] text-muted tabular-nums"></div>
+      </div>
+
+      <!-- Filters -->
+      <div class="mt-3 flex items-center gap-2 flex-wrap">
+        <div id="groupPills" class="flex items-center gap-1.5"></div>
+        <div class="flex-1"></div>
+        <label class="flex items-center gap-1.5 text-xs text-muted cursor-pointer select-none">
+          <input id="hideRT" type="checkbox" class="accent-figure" />
+          Masquer les RT
+        </label>
+      </div>
+      <input id="search" type="search" placeholder="Filtrer une personnalité (nom ou @handle)…"
+        class="mt-2 w-full bg-panel border border-line rounded-lg px-3 py-1.5 text-sm placeholder:text-zinc-600 focus:outline-none focus:border-figure/60" />
+    </div>
+  </header>
+
+  <!-- Feed -->
+  <main class="max-w-2xl mx-auto px-4 pb-24">
+    <div id="feed" class="divide-y divide-line"></div>
+    <div id="sentinel" class="py-8 text-center text-sm text-muted"></div>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

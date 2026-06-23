@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ED · MediaWatch — Validation des incohérences</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://rsms.me/" />
+  <link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
+  <style>
+    body { background: radial-gradient(1200px 600px at 50% -10%, #1a1a20 0%, #0a0a0b 55%); font-family: Inter, system-ui, sans-serif; }
+    ::-webkit-scrollbar { width: 10px; } ::-webkit-scrollbar-thumb { background: #26262b; border-radius: 8px; }
+    .card-enter { animation: fade .3s ease both; } @keyframes fade { from {opacity:0;transform:translateY(6px)} to {opacity:1;transform:none} }
+  </style>
+</head>
+<body class="text-zinc-200 min-h-screen">
+  <header class="sticky top-0 z-20 backdrop-blur-xl bg-black/70 border-b border-[#26262b]">
+    <div class="max-w-4xl mx-auto px-4 py-3 flex items-center gap-4">
+      <div class="h-9 w-9 rounded-xl bg-gradient-to-br from-blue-600 to-violet-600 grid place-items-center font-bold text-white text-sm">ED</div>
+      <nav class="flex items-center gap-1 text-sm">
+        <a href="index.html" class="px-3 py-1.5 rounded-lg text-zinc-400 hover:text-zinc-100">Flux</a>
+        <a href="compteur.html" class="px-3 py-1.5 rounded-lg text-zinc-400 hover:text-zinc-100">Le Compteur</a>
+        <a href="contradictions.html" class="px-3 py-1.5 rounded-lg bg-amber-500/20 text-amber-300">Validation</a>
+      </nav>
+      <div class="flex-1"></div>
+      <div id="stats" class="text-[11px] text-zinc-500"></div>
+    </div>
+    <div class="max-w-4xl mx-auto px-4 pb-3 flex items-center gap-2">
+      <div id="typePills" class="flex flex-wrap gap-1.5"></div>
+    </div>
+  </header>
+
+  <main class="max-w-4xl mx-auto px-4 py-5">
+    <p class="text-sm text-zinc-500 mb-4">Chaque incohérence détectée est <b class="text-zinc-300">en attente</b> : confirme-la (publiable) ou écarte-la. Rien n'est publié sans ta validation.</p>
+    <div id="list" class="space-y-3"></div>
+    <div id="empty" class="hidden text-center text-zinc-500 py-10"></div>
+  </main>
+
+  <script src="contradictions.js"></script>
+</body>
+</html>

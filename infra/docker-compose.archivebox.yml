@@ -1,0 +1,45 @@
+# ArchiveBox — archivage possédé multi-format (HTML/PDF/screenshot/WARC) pour la presse.
+# Repris de breve_de_presse_PMO (branche v2/media-watch), adapté ED_Mediawatch.
+#
+# Démarrer le serveur (UI/API sur http://localhost:8001) :
+#   docker compose -f infra/docker-compose.archivebox.yml up -d
+#
+# Archiver une URL en one-shot (utilisé par le backend, ARCHIVE_BACKEND=archivebox) :
+#   docker compose -f infra/docker-compose.archivebox.yml run --rm archivebox add <url>
+#
+# Côté backend (.env) :
+#   ARCHIVE_BACKEND=archivebox
+#   ARCHIVEBOX_DATA_DIR=./infra/archivebox_data
+#   ARCHIVEBOX_BINARY=docker compose -f infra/docker-compose.archivebox.yml run --rm archivebox
+
+services:
+  archivebox:
+    image: archivebox/archivebox:latest
+    container_name: edmw-archivebox
+    ports:
+      - "8001:8000"
+    volumes:
+      - ./archivebox_data:/data
+    environment:
+      - ADMIN_USERNAME=${ARCHIVEBOX_ADMIN_USERNAME:-admin}
+      - ADMIN_PASSWORD=${ARCHIVEBOX_ADMIN_PASSWORD:-changeme}
+      - PUBLIC_INDEX=False
+      - PUBLIC_SNAPSHOTS=False
+      - PUBLIC_ADD_VIEW=False
+      # Extraction multi-format = les « reçus »
+      - SAVE_TITLE=True
+      - SAVE_WARC=True
+      - SAVE_PDF=True
+      - SAVE_SCREENSHOT=True
+      - SAVE_DOM=True
+      - SAVE_SINGLEFILE=True
+      - SAVE_READABILITY=True
+      # Soumet aussi à archive.org (capture Wayback publique en bonus)
+      - SAVE_ARCHIVE_DOT_ORG=True
+      - CHROME_BINARY=chromium
+      - CHROME_HEADLESS=True
+      - CHROME_TIMEOUT=120
+      - TIMEOUT=120
+      - CHECK_SSL_VALIDITY=True
+    command: server --quick-init 0.0.0.0:8000
+    restart: unless-stopped

@@ -1,0 +1,54 @@
+nom,famille,fonction,compte_X,statut_verif,note
+Rassemblement National,Officiel,Parti,@RNational_off,verifie,Compte officiel du parti
+Groupe RN a l'Assemblee,Officiel,Groupe parlementaire,@groupeRN_off,a_confirmer,Groupe AN
+Reconquete,Officiel,Parti,@Reconquete_off,verifie,Parti d'E. Zemmour
+UDR (Union des droites pour la Republique),Officiel,Parti,@partiudr,verifie,Parti d'E. Ciotti
+Jeunes UDR,Officiel,Mouvement jeunesse,@jeunesudr,a_confirmer,Jeunesse UDR
+Marine Le Pen,RN,"Deputee Pas-de-Calais, cheffe de file",@MLP_officiel,verifie,Figure centrale du RN
+Jordan Bardella,RN,"President du RN, depute europeen",@J_Bardella,verifie,
+Eric Zemmour,Reconquete,President de Reconquete,@ZemmourEric,verifie,Fondateur du parti
+Marion Marechal,Droite radicale,"Deputee europeenne, ID Libertes",@MarionMarechal,verifie,A quitte Reconquete en 2024
+Sarah Knafo,Reconquete,Deputee europeenne (ESN),@knafo_sarah,verifie,Candidate Paris 2026
+Eric Ciotti,UDR,"President de l'UDR, maire de Nice",@eciotti,verifie,Allie au RN depuis 2024
+Sebastien Chenu,RN,"Depute Nord, porte-parole",@sebchenu,verifie,
+Louis Aliot,RN,"Maire de Perpignan, VP du RN",@louis_aliot,verifie,
+Jean-Philippe Tanguy,RN,Depute Somme,@JphTanguy,verifie,Voix economique du RN
+Laurent Jacobelli,RN,"Depute Moselle, porte-parole",@ljacobelli,verifie,
+Julien Odoul,RN,"Depute Yonne, porte-parole",@JulienOdoul,verifie,
+Helene Laporte,RN,Deputee Lot-et-Garonne,@HeleneLaporteRN,verifie,
+Laure Lavalette,RN,Deputee Var,@LaureLavalette,verifie,
+Edwige Diaz,RN,"Deputee Gironde, VP du RN",@diaz_edwige,verifie,
+Julie Lechanteux,RN,Deputee europeenne,@JLechanteux,verifie,
+Philippe Ballard,RN,Depute Oise (ex-journaliste),@BallardPhilippe,verifie,
+Alexandre Loubet,RN,Depute Moselle,@alexandreloubet,verifie,
+Nicolas Meizonnet,RN,Depute Gard,@NMeizonnet,verifie,
+Yoann Gillet,RN,Depute Gard,@YoannGillet30,verifie,
+Frederic Boccaletti,RN,Depute Var,@Boccaletti83,verifie,
+Victor Catteau,RN,Depute Nord,@victorcatteau,verifie,
+Thomas Menage,RN,Depute Loiret,@Thomas_Mng,verifie,
+Kevin Pfeffer,RN,Depute Moselle,@k_pfeffer,verifie,
+Emeric Salmon,RN,Depute Haute-Saone,@EmericSalmon,verifie,
+Timothee Houssin,RN,Depute Eure,@T_Houssin,verifie,
+Julien Rancoule,RN,Depute Aude,@J_Rancoule,verifie,
+Caroline Colombier,RN,Deputee Charente,@CColombier_RN,verifie,
+Roger Chudeau,RN,Depute Loir-et-Cher (education),@ChudeauR,verifie,
+Bruno Bilde,RN,Depute Pas-de-Calais,@BrunoBilde,a_confirmer,
+Wallerand de Saint-Just,RN,"Cadre, ex-tresorier",(a confirmer),a_confirmer,
+Gilles Pennelle,RN,Directeur general du RN,@GillesPennelle,a_confirmer,
+Renaud Labaye,RN,Secretaire general du groupe AN,(a confirmer),a_confirmer,
+Jean-Paul Garraud,RN,Depute europeen,@JPGarraud,a_confirmer,
+Thierry Mariani,RN,Depute europeen,@ThierryMARIANI,a_confirmer,
+Mathilde Paris,RN,Deputee Loiret,(a confirmer),a_confirmer,
+Kevin Mauvieux,RN,Depute Eure,(a confirmer),a_confirmer,
+Nicolas Bay,Reconquete,Depute europeen (CRE),@nicolasbay_,a_confirmer,Ex-RN rallie en 2022
+Guillaume Peltier,Reconquete,VP executif (ex-LR),@g_peltier,a_confirmer,
+Laurence Trochu,Reconquete,Mouvement conservateur,(a confirmer),a_confirmer,
+Stanislas Rigault,Droite radicale,Ex-Generation Z,@stanislasrig,verifie,A quitte Reconquete en 2025
+Damien Rieu,Identitaire,Militant (ex-Generation identitaire),@DamienRieu,verifie,Proche Fdesouche
+Philippe Vardon,Identitaire,"Cadre, ex-Reconquete/RN",@philippevardon,a_confirmer,Mouvance identitaire
+Jean Messiha,Polemiste,"Essayiste (ex-RN, ex-Reconquete)",@MessihaOfficiel,a_confirmer,Habitue des plateaux
+Papacito (Ugo Gil Jimenez),Influenceur,Youtubeur droite radicale,@lepapacito,a_confirmer,Compte souvent suspendu/recree
+Julien Rochedy,Polemiste,Essayiste (ex-RN),@JulienRochedy,a_confirmer,
+Henry de Lesquen,Polemiste,Extreme droite,@HdeLesquen,a_confirmer,Compte deja suspendu par le passe
+Pierre-Marie Sosson,Influenceur,Droite radicale (X/streaming),(a confirmer),a_confirmer,
+Academie de la Realpolitik,Groupe,Mouvance souverainiste/radicale,(a confirmer),a_confirmer,

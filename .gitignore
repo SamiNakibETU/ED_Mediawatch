@@ -1,0 +1,47 @@
+# --- Secrets (NE JAMAIS COMMIT) ---
+.env
+**/.env
+backend/.env
+
+# --- Python ---
+**/__pycache__/
+*.pyc
+**/.venv/
+.venv/
+
+# --- Base de données + données locales générées ---
+backend/*.db
+backend/*.db-wal
+backend/*.db-shm
+backend/data/snapshots/
+backend/archivebox_data/
+infra/archivebox_data/
+infra/nitter_redis/
+
+# --- Frontend ---
+**/node_modules/
+**/.next/
+
+# --- Éditeur / OS ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# --- Dépôts sources clonés (analyse uniquement, non versionnés) ---
+_reference/
+
+# --- Docs de travail / planification (non versionnés) ---
+ROADMAP.md
+specs.md
+idée_produit.md
+idee_produit.md
+Note.md
+aide/README_veille.md
+DEPLOY_RAILWAY.md
+DEPLOY*.md
+
+# Clones de dépôts sources à la racine (redondants, non versionnés)
+/Analyse-discursive-sur-le-conflit-Israelo-Palestinien/
+/Analyse_discursive_depute_fr_sur_conflit_Israelo_Palestinien/
+/Trend_Analysis_candidates_Paris/

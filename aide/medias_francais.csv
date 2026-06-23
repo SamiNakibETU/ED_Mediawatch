@@ -1,0 +1,86 @@
+nom,type,perimetre,url,compte_X,orientation_indicative,verif
+Le Monde,Quotidien,National,https://www.lemonde.fr,@lemondefr,Centre-gauche / journal de reference,fiable
+Le Figaro,Quotidien,National,https://www.lefigaro.fr,@Le_Figaro,Droite,fiable
+Liberation,Quotidien,National,https://www.liberation.fr,@libe,Gauche,fiable
+L'Humanite,Quotidien,National,https://www.humanite.fr,@humanite_fr,Gauche communiste,fiable
+La Croix,Quotidien,National,https://www.la-croix.com,@LaCroix,Catholique / centre,fiable
+Les Echos,Quotidien eco,National,https://www.lesechos.fr,@LesEchos,Economie / liberal,fiable
+Le Parisien / Aujourd'hui en France,Quotidien,National,https://www.leparisien.fr,@le_Parisien,Generaliste populaire,fiable
+La Tribune,Quotidien eco,National,https://www.latribune.fr,@LaTribune,Economie,fiable
+L'Opinion,Quotidien,National,https://www.lopinion.fr,@lopinion_fr,Liberal / centre-droit,a_confirmer
+Le Point,Hebdo,National,https://www.lepoint.fr,@LePoint,Droite liberale,fiable
+L'Express,Hebdo,National,https://www.lexpress.fr,@LEXPRESS,Centre-droit,fiable
+L'Obs,Hebdo,National,https://www.nouvelobs.com,@lobs,Gauche,fiable
+Marianne,Hebdo,National,https://www.marianne.net,@MarianneleMag,Souverainiste / republicain,fiable
+Courrier international,Hebdo,National,https://www.courrierinternational.com,@Courrierinter,Generaliste (revue de presse),a_confirmer
+Challenges,Hebdo eco,National,https://www.challenges.fr,@Challenges,Economie,a_confirmer
+Le Canard enchaine,Hebdo satirique,National,(pas de site),(pas de compte officiel),Satirique / investigation,fiable
+Charlie Hebdo,Hebdo satirique,National,https://charliehebdo.fr,@Charlie_Hebdo_,Satirique / laic,a_confirmer
+Le Journal du Dimanche (JDD),Hebdo,National,https://www.lejdd.fr,@leJDD,Droite (depuis reprise Bollore 2023),fiable
+franceinfo,TV/radio/web,National,https://www.francetvinfo.fr,@franceinfo,Service public,fiable
+France Inter,Radio,National,https://www.radiofrance.fr/franceinter,@franceinter,Service public,fiable
+France Culture,Radio,National,https://www.radiofrance.fr/franceculture,@franceculture,Service public,fiable
+RTL,Radio,National,https://www.rtl.fr,@RTLFrance,Generaliste,a_confirmer
+Europe 1,Radio,National,https://www.europe1.fr,@Europe1,Generaliste (groupe Lagardere/Bollore),fiable
+RMC,Radio,National,https://rmc.bfmtv.com,@RMCInfo,Generaliste,a_confirmer
+BFM TV,TV info,National,https://www.bfmtv.com,@BFMTV,Info continue,fiable
+CNews,TV info,National,https://www.cnews.fr,@CNEWS,Droite / droite radicale (groupe Bollore),fiable
+LCI,TV info,National,https://www.tf1info.fr,@LCI,Info continue (groupe TF1),fiable
+France 24,TV info,National/Inter,https://www.france24.com,@France24,Service public international,fiable
+TF1 Info,TV,National,https://www.tf1info.fr,@TF1Info,Generaliste prive,a_confirmer
+France Televisions (France 2/3),TV,National,https://www.francetvinfo.fr,@France2tv,Service public,a_confirmer
+Arte,TV,National/Inter,https://www.arte.tv/fr,@ARTEfr,Service public franco-allemand,a_confirmer
+M6 Info,TV,National,https://www.6play.fr/m6info,@m6info,Generaliste prive,a_confirmer
+AFP,Agence,National/Inter,https://www.afp.com/fr,@afpfr,Agence de presse,fiable
+Mediapart,Pure player,National,https://www.mediapart.fr,@Mediapart,Investigation / gauche,fiable
+Brut,Pure player video,National,https://www.brut.media,@brutofficiel,Generaliste jeune,a_confirmer
+Konbini,Pure player,National,https://www.konbini.com/fr,@konbini,Culture / societe,a_confirmer
+Slate,Pure player,National,https://www.slate.fr,@Slatefr,Generaliste,a_confirmer
+Atlantico,Pure player,National,https://atlantico.fr,@Atlantico_fr,Droite liberale,a_confirmer
+Le HuffPost,Pure player,National,https://www.huffingtonpost.fr,@LeHuffPost,Generaliste,a_confirmer
+Le Media,Pure player video,National,https://www.lemediatv.fr,@LeMediaTV,Gauche radicale,a_confirmer
+Blast,Pure player video,National,https://www.blast-info.fr,@blast_france,Gauche / investigation,a_confirmer
+Reporterre,Pure player,National,https://reporterre.net,@Reporterre,Ecologie,a_confirmer
+Frustration,Pure player,National,https://www.frustrationmagazine.fr,@Frustration_web,Gauche radicale,a_confirmer
+Mediavenir,Pure player (X),National,https://x.com/Mediavenir,@Mediavenir,Fil d'actualite generaliste,a_confirmer
+Valeurs actuelles,Hebdo,National,https://www.valeursactuelles.com,@Valeurs,Droite / droite radicale,fiable
+Causeur,Mensuel/web,National,https://www.causeur.fr,@Causeur,Droite conservatrice,a_confirmer
+Front Populaire,Revue/web,National,https://frontpopulaire.fr,@F_Populaire_,Souverainiste (Onfray),a_confirmer
+L'Incorrect,Mensuel/web,National,https://lincorrect.org,@Lincorrectmag,Droite conservatrice/radicale,a_confirmer
+Elements,Revue,National,https://www.revue-elements.com,@Revue_Elements,Nouvelle Droite (GRECE),a_confirmer
+Boulevard Voltaire,Pure player,National,https://www.bvoltaire.fr,@BVoltaire,Droite radicale,a_confirmer
+Livre Noir,Media video,National,https://livre-noir.fr,@Livre_Noir,Proche extreme droite,a_confirmer
+Frontieres,Media video,National,https://www.frontieres.media,@Frontieresmedia,Extreme droite (E. Tegner),a_confirmer
+TV Libertes,Web TV,National,https://www.tvlibertes.com,@tvlofficiel,Extreme droite,a_confirmer
+Fdesouche,Agregateur,National,https://www.fdesouche.com,@F_Desouche,Agregateur extreme droite,fiable
+Riposte Laique,Pure player,National,https://ripostelaique.com,(a confirmer),Extreme droite,a_confirmer
+Omerta,Media video,National,https://omerta.media,@OmertaMedia,Proche extreme droite,a_confirmer
+Ouest-France,Quotidien,Regional (Grand Ouest),https://www.ouest-france.fr,@OuestFrance,1er tirage de France,fiable
+Sud Ouest,Quotidien,Regional (Aquitaine),https://www.sudouest.fr,@sudouest,PQR,a_confirmer
+La Voix du Nord,Quotidien,Regional (Hauts-de-France),https://www.lavoixdunord.fr,@lavoixdunord,PQR,fiable
+Le Telegramme,Quotidien,Regional (Bretagne),https://www.letelegramme.fr,@LeTelegramme,PQR,a_confirmer
+La Depeche du Midi,Quotidien,Regional (Occitanie),https://www.ladepeche.fr,@ladepechedumidi,PQR,a_confirmer
+Le Progres,Quotidien,Regional (Lyon/Rhone),https://www.leprogres.fr,@Le_Progres,PQR (groupe EBRA),a_confirmer
+Le Dauphine Libere,Quotidien,Regional (Alpes),https://www.ledauphine.com,@ledauphine,PQR (groupe EBRA),a_confirmer
+L'Est Republicain,Quotidien,Regional (Lorraine),https://www.estrepublicain.fr,@lestrepublicain,PQR (groupe EBRA),a_confirmer
+Le Republicain Lorrain,Quotidien,Regional (Moselle),https://www.republicain-lorrain.fr,@lerepu,PQR (groupe EBRA),a_confirmer
+Dernieres Nouvelles d'Alsace (DNA),Quotidien,Regional (Alsace),https://www.dna.fr,@dna_fr,PQR (groupe EBRA),a_confirmer
+L'Alsace,Quotidien,Regional (Haut-Rhin),https://www.lalsace.fr,@lalsace,PQR (groupe EBRA),a_confirmer
+Le Bien Public,Quotidien,Regional (Dijon),https://www.bienpublic.com,@lebienpublic,PQR (groupe EBRA),a_confirmer
+La Montagne,Quotidien,Regional (Auvergne),https://www.lamontagne.fr,@lamontagne_,PQR (groupe Centre France),a_confirmer
+La Nouvelle Republique,Quotidien,Regional (Centre-Val de Loire),https://www.lanouvellerepublique.fr,@lanouvellerep,PQR,a_confirmer
+Le Berry Republicain,Quotidien,Regional (Cher),https://www.leberry.fr,@leberry_fr,PQR (Centre France),a_confirmer
+Midi Libre,Quotidien,Regional (Languedoc),https://www.midilibre.fr,@Midilibre,PQR,a_confirmer
+L'Independant,Quotidien,Regional (Perpignan),https://www.lindependant.fr,@lindependant,PQR,a_confirmer
+Nice-Matin,Quotidien,Regional (Alpes-Maritimes),https://www.nicematin.com,@Nice_Matin,PQR,a_confirmer
+Var-Matin,Quotidien,Regional (Var),https://www.varmatin.com,@var_matin,PQR,a_confirmer
+La Provence,Quotidien,Regional (Marseille),https://www.laprovence.com,@laprovence,PQR,a_confirmer
+La Marseillaise,Quotidien,Regional (Marseille),https://www.lamarseillaise.fr,@La_Marseillaise,PQR / gauche,a_confirmer
+Corse-Matin,Quotidien,Regional (Corse),https://www.corsematin.com,@Corse_Matin,PQR,a_confirmer
+Paris-Normandie,Quotidien,Regional (Rouen),https://www.paris-normandie.fr,@paris_normandie,PQR,a_confirmer
+Le Courrier picard,Quotidien,Regional (Picardie),https://www.courrier-picard.fr,@CourrierPicard,PQR,a_confirmer
+L'Union,Quotidien,Regional (Reims/Champagne),https://www.lunion.fr,@lunion,PQR,a_confirmer
+Charente Libre,Quotidien,Regional (Charente),https://www.charentelibre.fr,@CharenteLibre,PQR,a_confirmer
+L'Yonne Republicaine,Quotidien,Regional (Yonne),https://www.lyonne.fr,@lyonne_repu,PQR,a_confirmer
+France 3 Regions,TV,Regional (national),https://france3-regions.francetvinfo.fr,@France3tv,Service public regional,a_confirmer
+ici (ex-France Bleu),Radio,Regional (national),https://www.francebleu.fr,@iciparici,Service public local,a_confirmer

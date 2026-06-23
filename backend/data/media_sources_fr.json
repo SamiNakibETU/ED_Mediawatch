@@ -1,0 +1,39 @@
+{
+  "version": "1.0",
+  "description": "Pool de médias français — spectre extrême droite -> extrême gauche + national/régional. Utilisé pour capter les mentions et prises de parole du RN & affiliés.",
+  "sources": [
+    { "id": "frontieres", "name": "Frontières", "homepage": "https://frontieres.media", "rss_url": "https://frontieres.media/feed/", "category": "pure_player", "leaning": "far_right" },
+    { "id": "valeurs_actuelles", "name": "Valeurs actuelles", "homepage": "https://www.valeursactuelles.com", "rss_url": "https://www.valeursactuelles.com/feed", "category": "magazine", "leaning": "far_right" },
+    { "id": "bvoltaire", "name": "Boulevard Voltaire", "homepage": "https://www.bvoltaire.fr", "rss_url": "https://www.bvoltaire.fr/feed/", "category": "pure_player", "leaning": "far_right" },
+    { "id": "causeur", "name": "Causeur", "homepage": "https://www.causeur.fr", "rss_url": "https://www.causeur.fr/feed", "category": "magazine", "leaning": "far_right" },
+    { "id": "breizh_info", "name": "Breizh-Info", "homepage": "https://www.breizh-info.com", "rss_url": "https://www.breizh-info.com/feed/", "category": "pure_player", "leaning": "far_right" },
+    { "id": "lincorrect", "name": "L'Incorrect", "homepage": "https://lincorrect.org", "rss_url": "https://lincorrect.org/feed/", "category": "magazine", "leaning": "far_right" },
+
+    { "id": "lefigaro", "name": "Le Figaro", "homepage": "https://www.lefigaro.fr", "rss_url": "https://www.lefigaro.fr/rss/figaro_actualites.xml", "category": "national", "leaning": "right" },
+    { "id": "lepoint", "name": "Le Point", "homepage": "https://www.lepoint.fr", "rss_url": "https://www.lepoint.fr/24h.xml", "category": "national", "leaning": "right" },
+    { "id": "marianne", "name": "Marianne", "homepage": "https://www.marianne.net", "rss_url": "https://www.marianne.net/rss.xml", "category": "magazine", "leaning": "center" },
+
+    { "id": "lemonde", "name": "Le Monde", "homepage": "https://www.lemonde.fr", "rss_url": "https://www.lemonde.fr/rss/une.xml", "category": "national", "leaning": "center" },
+    { "id": "franceinfo", "name": "France Info", "homepage": "https://www.francetvinfo.fr", "rss_url": "https://www.francetvinfo.fr/titres.rss", "category": "national", "leaning": "center" },
+    { "id": "liberation", "name": "Libération", "homepage": "https://www.liberation.fr", "rss_url": "https://www.liberation.fr/arc/outboundfeeds/rss/?outputType=xml", "category": "national", "leaning": "left" },
+    { "id": "20minutes", "name": "20 Minutes", "homepage": "https://www.20minutes.fr", "rss_url": "https://www.20minutes.fr/feeds/rss-une.xml", "category": "national", "leaning": "center" },
+
+    { "id": "mediapart", "name": "Mediapart", "homepage": "https://www.mediapart.fr", "rss_url": "https://www.mediapart.fr/articles/feed", "category": "pure_player", "leaning": "left" },
+    { "id": "politis", "name": "Politis", "homepage": "https://www.politis.fr", "rss_url": "https://www.politis.fr/flux-rss-apps/", "category": "magazine", "leaning": "left" },
+    { "id": "humanite", "name": "L'Humanité", "homepage": "https://www.humanite.fr", "rss_url": "https://www.humanite.fr/rss", "category": "national", "leaning": "left" },
+    { "id": "regards", "name": "Regards", "homepage": "https://regards.fr", "rss_url": "https://regards.fr/feed/", "category": "pure_player", "leaning": "left" },
+
+    { "id": "basta", "name": "Basta!", "homepage": "https://basta.media", "rss_url": "https://basta.media/spip.php?page=backend", "category": "pure_player", "leaning": "far_left" },
+    { "id": "revolution_permanente", "name": "Révolution Permanente", "homepage": "https://www.revolutionpermanente.fr", "rss_url": "https://www.revolutionpermanente.fr/spip.php?page=backend_portada", "category": "pure_player", "leaning": "far_left" },
+    { "id": "frustration", "name": "Frustration Magazine", "homepage": "https://www.frustrationmagazine.fr", "rss_url": "https://www.frustrationmagazine.fr/feed/", "category": "pure_player", "leaning": "far_left" },
+    { "id": "rapportsdeforce", "name": "Rapports de force", "homepage": "https://rapportsdeforce.fr", "rss_url": "https://rapportsdeforce.fr/feed", "category": "pure_player", "leaning": "far_left" },
+
+    { "id": "ouestfrance", "name": "Ouest-France", "homepage": "https://www.ouest-france.fr", "rss_url": "https://www.ouest-france.fr/rss/une", "category": "regional", "leaning": "center" },
+    { "id": "ladepeche", "name": "La Dépêche du Midi", "homepage": "https://www.ladepeche.fr", "rss_url": "https://www.ladepeche.fr/rss.xml", "category": "regional", "leaning": "center" },
+    { "id": "sudouest", "name": "Sud Ouest", "homepage": "https://www.sudouest.fr", "rss_url": "https://www.sudouest.fr/rss.xml", "category": "regional", "leaning": "center" },
+    { "id": "lavoixdunord", "name": "La Voix du Nord", "homepage": "https://www.lavoixdunord.fr", "rss_url": "https://www.lavoixdunord.fr/rss/une.xml", "category": "regional", "leaning": "center" },
+    { "id": "letelegramme", "name": "Le Télégramme", "homepage": "https://www.letelegramme.fr", "rss_url": "https://www.letelegramme.fr/rss.xml", "category": "regional", "leaning": "center" },
+    { "id": "nicematin", "name": "Nice-Matin", "homepage": "https://www.nicematin.com", "rss_url": "https://www.nicematin.com/rss", "category": "regional", "leaning": "center" },
+    { "id": "dna", "name": "Dernières Nouvelles d'Alsace", "homepage": "https://www.dna.fr", "rss_url": "https://www.dna.fr/rss", "category": "regional", "leaning": "center" }
+  ]
+}
