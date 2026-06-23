@@ -7,6 +7,7 @@ validation humaine : aucune contradiction n'est « publiée » sans confirmation
 from datetime import datetime
 
 from sqlalchemy import (
+    DateTime,
     Float,
     ForeignKey,
     SmallInteger,
@@ -49,8 +50,12 @@ class Contradiction(Base):
     # Validation humaine
     status: Mapped[str] = mapped_column(String(12), default="pending", index=True)
     validator: Mapped[str | None] = mapped_column(String(120))
-    detected_at: Mapped[datetime] = mapped_column(default=utcnow)
-    validated_at: Mapped[datetime | None] = mapped_column(default=None)
+    detected_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow
+    )
+    validated_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), default=None
+    )
 
     claim_a = relationship("Claim", foreign_keys=[claim_a_id], lazy="selectin")
     claim_b = relationship("Claim", foreign_keys=[claim_b_id], lazy="selectin")
