@@ -92,11 +92,16 @@ async def compteur(
 
 
 @router.post("/extract-claims", dependencies=[Depends(require_token)])
-async def trigger_extract(use_llm: bool | None = Query(None)) -> dict:
+async def trigger_extract(
+    use_llm: bool | None = Query(None),
+    reset: bool = Query(False, description="purge les claims existants avant de rejouer"),
+) -> dict:
     """Extraction des claims quantitatifs (posts + presse).
 
     use_llm: None = suit LLM_REFINE_ENABLED ; true/false = force le raffinage LLM.
+    reset: vide la table claims d'abord (les contradictions liées sont
+    supprimées en cascade) — utile pour rejouer après un changement de logique LLM.
     """
     from src.services.analysis.claim_extractor import run_claim_extraction
 
-    return await run_claim_extraction(use_llm=use_llm)
+    return await run_claim_extraction(use_llm=use_llm, reset=reset)

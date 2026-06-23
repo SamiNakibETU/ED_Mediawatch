@@ -130,7 +130,10 @@ async def _maybe_refine(llm, use_llm, c, speaker, ref_idx, allowed):
 
 
 async def run_claim_extraction(
-    limit_posts: int = 5000, limit_articles: int = 5000, use_llm: bool | None = None
+    limit_posts: int = 5000,
+    limit_articles: int = 5000,
+    use_llm: bool | None = None,
+    reset: bool = False,
 ) -> dict:
     triggers = _load_triggers()
     factory = get_session_factory()
@@ -140,6 +143,19 @@ async def run_claim_extraction(
     if use_llm is None:
         use_llm = get_settings().llm_refine_enabled
     use_llm = bool(use_llm) and llm.available()
+
+    if reset:
+        from sqlalchemy import delete
+
+        from src.models.claim import Claim as _Claim
+        from src.models.contradiction import Contradiction as _Contradiction
+
+        async with factory() as db:
+            # Contradictions d'abord (arêtes), puis claims (nœuds).
+            await db.execute(delete(_Contradiction))
+            await db.execute(delete(_Claim))
+            await db.commit()
+        logger.info("claims.reset")
 
     async with factory() as db:
         ref_idx = await _referent_index(db)

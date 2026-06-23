@@ -84,12 +84,13 @@ class Settings(BaseSettings):
 
     # Activer le raffinage LLM des claims (sinon : déterministe seul).
     llm_refine_enabled: bool = False
-    # Tier-1 (filtre de masse, open) : groq | cerebras | mistral | anthropic
-    claim_tier1_provider: str = "groq"
-    claim_tier1_model: str = "llama-3.3-70b-versatile"
-    # Tier-2 (canonicalisation / fidélité) : anthropic | mistral | groq | cerebras
-    claim_tier2_provider: str = "anthropic"
-    claim_tier2_model: str = "claude-haiku-4-5"
+    # Tier-1 (filtre de masse, open) : cerebras | groq | mistral | anthropic
+    claim_tier1_provider: str = "cerebras"
+    claim_tier1_model: str = "gpt-oss-120b"
+    # Tier-2 (canonicalisation / fidélité) : cerebras | anthropic | mistral | groq
+    # Cerebras gpt-oss-120b : open, rapide, filtre bien (Anthropic réservé/économisé).
+    claim_tier2_provider: str = "cerebras"
+    claim_tier2_model: str = "gpt-oss-120b"
 
     @property
     def snapshot_path_dir(self) -> Path:
