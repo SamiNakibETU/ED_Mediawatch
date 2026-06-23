@@ -6,10 +6,12 @@ la presse + classification thématique + détection d'incohérences.
 """
 
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 import structlog
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from src.config import get_settings
 from src.database import init_db
@@ -69,7 +71,9 @@ app.include_router(referentiel.router)
 app.include_router(compteur.router)
 app.include_router(contradictions.router)
 
-
-@app.get("/")
-async def root() -> dict:
-    return {"service": "ED_Mediawatch", "docs": "/docs", "feed": "/feed"}
+# Front statique servi par le backend (même origine → pas de CORS, une seule URL).
+# Monté en dernier : les routes API ci-dessus ont la priorité ; tout le reste
+# (`/`, `/compteur.html`, `/app.js`…) est servi depuis backend/static.
+_static_dir = Path(__file__).resolve().parent.parent / "static"
+if _static_dir.is_dir():
+    app.mount("/", StaticFiles(directory=str(_static_dir), html=True), name="static")

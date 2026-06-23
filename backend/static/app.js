@@ -1,7 +1,5 @@
 // ED · MediaWatch — feed client (vanilla JS, talks to the FastAPI backend).
-const API = (location.hostname === "localhost" || location.hostname === "127.0.0.1")
-  ? "http://127.0.0.1:8000"
-  : `${location.protocol}//${location.hostname}:8000`;
+const API = "";  // même origine : le backend FastAPI sert ce front
 
 const GROUPS = {
   ALL: { label: "Tous", color: "#a1a1aa" },

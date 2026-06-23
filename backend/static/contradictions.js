@@ -1,7 +1,5 @@
 // Validation des incohérences — file human-in-the-loop.
-const API = (location.hostname === "localhost" || location.hostname === "127.0.0.1")
-  ? "http://127.0.0.1:8000"
-  : `${location.protocol}//${location.hostname}:8000`;
+const API = "";  // même origine : le backend FastAPI sert ce front
 
 const TYPE = {
   1: { label: "Revirement", color: "#ef4444" },

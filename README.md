@@ -12,7 +12,7 @@ d'incohérences (variance, revirements) et file de validation humaine.
 - **Collecte presse** : RSS + extraction (trafilatura)
 - **LLM** : tier-1 open (Groq), tier-2 fidélité (Anthropic) — routage par tier
 - **Embeddings** : Cohere (blocking sémantique des référents)
-- **Frontend** : HTML + Tailwind + Chart.js (statique)
+- **Frontend** : HTML + Tailwind + Chart.js (statique, servi par le backend — même origine)
 
 ## Démarrage (local)
 
@@ -31,19 +31,15 @@ cp .env.example .env                                       # renseigner les clé
 .venv/Scripts/python -m src.scripts.seed_referentiel
 .venv/Scripts/python -m src.scripts.seed_affiliations
 
-# API (collecte continue via scheduler intégré)
+# API + interface (collecte continue via scheduler intégré)
 .venv/Scripts/python -m uvicorn src.app:app --port 8000
 ```
 
-Documentation interactive : http://localhost:8000/docs
+- Interface : http://localhost:8000/ (flux, Le Compteur, validation)
+- Documentation API interactive : http://localhost:8000/docs
 
-### Frontend
-
-```bash
-cd frontend
-python -m http.server 5500
-# http://localhost:5500
-```
+Le front est servi directement par le backend (`backend/static/`, même origine) :
+pas de serveur séparé ni de CORS à configurer.
 
 ## Structure
 
@@ -61,7 +57,7 @@ backend/src/
   routers/       health, personalities, posts, articles, referentiel, compteur, contradictions
   scripts/       build_pool, seed_*, backfill_x
   data/          pools + référentiel + lexiques (JSON)
-frontend/        flux, Le Compteur, validation
+  static/        front statique (flux, Le Compteur, validation) servi par FastAPI
 infra/           docker-compose : Nitter self-host, ArchiveBox
 ```
 

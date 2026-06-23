@@ -1,7 +1,5 @@
 // Le Compteur — scatter temporel des valeurs annoncées par référent.
-const API = (location.hostname === "localhost" || location.hostname === "127.0.0.1")
-  ? "http://127.0.0.1:8000"
-  : `${location.protocol}//${location.hostname}:8000`;
+const API = "";  // même origine : le backend FastAPI sert ce front
 
 const PARTY_COLOR = {
   RN: "#2563eb", UDR: "#b45309", FIGURE: "#7c3aed",
