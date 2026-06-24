@@ -57,6 +57,12 @@ class FeedItem(BaseModel):
     replies: int | None
     quotes: int | None
     theme: str | None
+    # Parti du locuteur À LA DATE du post (≠ parti actuel), cf. §5. Attribut
+    # calculé et posé sur l'objet Post par le routeur /feed.
+    party_at_date: str | None = None
+    # Reçu : preuve archivée (snapshot local + lien Wayback/ArchiveBox).
+    snapshot_url: str | None = None
+    archived_at: datetime | None = None
     personality: PersonalityMini
 
 

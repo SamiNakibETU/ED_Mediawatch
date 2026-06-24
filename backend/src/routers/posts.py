@@ -8,6 +8,7 @@ from src.models.personality import Personality
 from src.models.post import Post
 from src.schemas import CollectionStats, FeedPage
 from src.security import require_token
+from src.services.affiliation import affiliations_for, party_at
 from src.services.collection.x_collector import run_collection
 
 router = APIRouter(tags=["feed"])
@@ -56,6 +57,12 @@ async def feed(
     total = await db.scalar(count_stmt) or 0
     res = await db.execute(stmt.limit(limit).offset(offset))
     items = list(res.scalars().all())
+
+    # Parti à la date de chaque post (§5) : un seul chargement groupé.
+    affils = await affiliations_for(db, [p.personality_id for p in items])
+    for post in items:
+        post.party_at_date = party_at(affils.get(post.personality_id), post.published_at)
+
     return FeedPage(total=total, limit=limit, offset=offset, items=items)
 
 

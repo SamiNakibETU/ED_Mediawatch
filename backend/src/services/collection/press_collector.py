@@ -46,11 +46,38 @@ def _rss_full_html(entry) -> str:
     return ""
 
 
+# content:encoded n'est traité comme texte INTÉGRAL que s'il est clairement un
+# article complet (et pas juste un chapô). Seuil volontairement plus haut que
+# extractor._MIN_LEN (350) : un texte RSS court est souvent un résumé, alors
+# qu'un scrape ≥350 vise déjà le nœud <article>. En-deçà, on scrape pour comparer.
+_RSS_FULLTEXT_MIN = 1200
+
+
 class PressCollector:
     def __init__(self) -> None:
         self._factory = get_session_factory()
         self._sem = asyncio.Semaphore(settings.max_concurrent_requests)
         self._index: RelevanceIndex | None = None
+
+    async def _resolve_body(self, entry, url: str, title: str, summary: str) -> str:
+        """Meilleur texte d'article disponible.
+
+        1) `content:encoded` du flux s'il constitue déjà l'article complet
+           (≥ `_RSS_FULLTEXT_MIN`) → pas de scraping ;
+        2) sinon on scrape et on garde le candidat le plus long parmi
+           scrape / texte RSS propre / HTML RSS brut nettoyé / résumé / titre.
+        """
+        rss_html = _rss_full_html(entry)
+        rss_text = await extract_html(rss_html)
+        if rss_text and len(rss_text) >= _RSS_FULLTEXT_MIN:
+            return rss_text
+        scraped = await extract_fulltext(url)
+        rss_raw = clean_html(rss_html) if rss_html else ""
+        return max(
+            (c for c in (scraped, rss_text, rss_raw, summary, title) if c),
+            key=len,
+            default=summary or title or "",
+        )
 
     async def collect_all(self) -> dict:
         async with self._factory() as db:
@@ -136,20 +163,7 @@ class PressCollector:
                     if exists:
                         continue
 
-                    # 1) L'article complet est-il déjà dans le flux (content:encoded) ?
-                    rss_html = _rss_full_html(entry)
-                    rss_text = await extract_html(rss_html)
-                    if rss_text and len(rss_text) >= 1200:
-                        body = rss_text  # texte intégral, pas besoin de scraper
-                    else:
-                        # 2) Sinon on scrape, et on garde le candidat le plus complet
-                        #    (scraping / texte RSS propre / HTML RSS brut nettoyé / résumé).
-                        scraped = await extract_fulltext(url)
-                        rss_raw = clean_html(rss_html) if rss_html else ""
-                        body = max(
-                            (c for c in (scraped, rss_text, rss_raw, summary, title) if c),
-                            key=len, default=summary or title or "",
-                        )
+                    body = await self._resolve_body(entry, url, title, summary)
                     # Décision de NATURE sur le texte complet.
                     verdict = self._index.assess(f"{title}. {body}")
                     # Phase 1 : on ne garde QUE les prises de parole ED.

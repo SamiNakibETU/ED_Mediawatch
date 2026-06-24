@@ -64,6 +64,18 @@ function verifMark(p) {
   return "";
 }
 
+// Parti du locuteur À LA DATE du post (§5). Affiché seulement s'il diffère de
+// l'étiquette de groupe / famille déjà montrée (ex. Ciotti « UDR » sur un post
+// de 2025 alors que son groupe historique était LR).
+function partyAtDate(it, p) {
+  const v = (it.party_at_date || "").trim();
+  if (!v) return "";
+  const g = GROUPS[p.group_code] || GROUPS.ALL;
+  const known = new Set([g.label, p.famille || "", p.group_code].map((s) => s.toLowerCase()));
+  if (known.has(v.toLowerCase())) return "";
+  return `<span class="text-[10px] px-1.5 py-0.5 rounded border border-line text-muted" title="Parti à la date du post">${escapeHtml(v)}</span>`;
+}
+
 function metaLine(p) {
   const bits = [];
   if (p.role) bits.push(escapeHtml(p.role));
@@ -94,6 +106,7 @@ function card(it) {
   if (it.is_retweet) chips.push(`<span class="text-[11px] text-muted">🔁 RT</span>`);
   if (it.is_reply) chips.push(`<span class="text-[11px] text-muted">↩︎ réponse</span>`);
   if (it.theme) chips.push(`<span class="text-[10px] px-1.5 py-0.5 rounded bg-figure/15 text-figure">${escapeHtml(it.theme)}</span>`);
+  if (it.archived_at || it.snapshot_url) chips.push(`<span class="text-[11px] text-emerald-400/80" title="Copie archivée (reçu)">🗎 reçu</span>`);
   const eng = engagement(it);
   if (eng) chips.push(eng);
 
@@ -108,6 +121,7 @@ function card(it) {
         <span class="font-semibold text-zinc-100 truncate">${escapeHtml(p.full_name)}</span>
         ${verifMark(p)}
         ${affiliation(p)}
+        ${partyAtDate(it, p)}
         ${p.handle ? `<a href="https://x.com/${p.handle}" target="_blank" rel="noopener" class="text-muted hover:underline">@${p.handle}</a>` : ""}
         <span class="text-muted">·</span>
         <a href="${it.url}" target="_blank" rel="noopener" class="text-muted hover:underline" title="${exactDate(it.published_at)}">${relTime(it.published_at)}</a>
