@@ -22,12 +22,30 @@ from src.models.article import Article
 from src.models.collection_run import CollectionRun
 from src.models.media_source import MediaSource
 from src.models.personality import Personality
-from src.services.collection.extractor_client import extract_fulltext
+from src.services.collection.extractor_client import extract_fulltext, extract_html
 from src.services.collection.relevance import RelevanceIndex, build_index
 from src.utils import clean_html, feed_datetime, sha256
 
 logger = structlog.get_logger(__name__)
 settings = get_settings()
+
+# UA navigateur : plusieurs flux RSS (Le Figaro, Le Télégramme…) renvoient 403
+# au UA par défaut mais 200 à un vrai navigateur.
+_BROWSER_UA = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+)
+
+
+def _rss_full_html(entry) -> str:
+    """HTML de l'article complet quand le flux le fournit (content:encoded)."""
+    content = getattr(entry, "content", None)
+    if content:
+        try:
+            return content[0].get("value", "") or ""
+        except Exception:  # noqa: BLE001
+            return ""
+    return ""
 
 
 class PressCollector:
@@ -78,7 +96,7 @@ class PressCollector:
 
     async def _collect_source(self, source: MediaSource) -> dict:
         async with self._sem:
-            headers = {"User-Agent": settings.user_agent,
+            headers = {"User-Agent": _BROWSER_UA,
                        "Accept": "application/rss+xml, application/xml, text/xml, */*"}
             try:
                 async with aiohttp.ClientSession(headers=headers) as http:
@@ -120,7 +138,20 @@ class PressCollector:
                     if exists:
                         continue
 
-                    body = await extract_fulltext(url) or summary or title
+                    # 1) L'article complet est-il déjà dans le flux (content:encoded) ?
+                    rss_html = _rss_full_html(entry)
+                    rss_text = await extract_html(rss_html)
+                    if rss_text and len(rss_text) >= 1200:
+                        body = rss_text  # texte intégral, pas besoin de scraper
+                    else:
+                        # 2) Sinon on scrape, et on garde le candidat le plus complet
+                        #    (scraping / texte RSS propre / HTML RSS brut nettoyé / résumé).
+                        scraped = await extract_fulltext(url)
+                        rss_raw = clean_html(rss_html) if rss_html else ""
+                        body = max(
+                            (c for c in (scraped, rss_text, rss_raw, summary, title) if c),
+                            key=len, default=summary or title or "",
+                        )
                     # Décision de NATURE sur le texte complet.
                     verdict = self._index.assess(f"{title}. {body}")
                     # Phase 1 : on ne garde QUE les prises de parole ED.

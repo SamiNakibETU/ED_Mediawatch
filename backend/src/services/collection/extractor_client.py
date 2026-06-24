@@ -66,6 +66,24 @@ def _extract(html: str, *, recall: bool) -> str | None:
     )
 
 
+async def extract_html(html: str | None) -> str | None:
+    """Texte d'article propre depuis un HTML déjà en main (ex. `content:encoded`
+    du flux RSS, qui contient souvent l'article complet → pas de scraping)."""
+    if trafilatura is None or not html:
+        return None
+    best: str | None = None
+    for recall in (True, False):
+        try:
+            txt = await asyncio.to_thread(_extract, html, recall=recall)
+        except Exception:  # noqa: BLE001
+            txt = None
+        if txt and len(txt) > len(best or ""):
+            best = txt
+        if best and len(best) >= _MIN_LEN:
+            break
+    return best
+
+
 async def _via_trafilatura(url: str) -> str | None:
     """Cascade façon PMO : recall → precision → fetch direct (UA navigateur)."""
     if trafilatura is None:
