@@ -20,6 +20,7 @@ from src.routers import (
     compteur,
     contradictions,
     health,
+    meta,
     personalities,
     posts,
     referentiel,
@@ -64,6 +65,7 @@ else:
 app.add_middleware(CORSMiddleware, **_cors)
 
 app.include_router(health.router)
+app.include_router(meta.router)
 app.include_router(personalities.router)
 app.include_router(posts.router)
 app.include_router(articles.router)

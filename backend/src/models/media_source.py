@@ -11,6 +11,7 @@ from sqlalchemy import Boolean, DateTime, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.models.base import Base, TimestampMixin
+from src.vocabulary import Leaning
 
 
 class MediaSource(Base, TimestampMixin):
@@ -24,7 +25,7 @@ class MediaSource(Base, TimestampMixin):
     # national | regional | pure_player | magazine
     category: Mapped[str] = mapped_column(String(40), default="national")
     # far_right | right | center | left | far_left
-    leaning: Mapped[str] = mapped_column(String(20), default="center")
+    leaning: Mapped[str] = mapped_column(String(20), default=Leaning.CENTER)
 
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     last_collected_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

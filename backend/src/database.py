@@ -6,6 +6,7 @@ Works with SQLite (local-first) and PostgreSQL (production) unchanged.
 from collections.abc import AsyncIterator
 from functools import lru_cache
 
+import structlog
 from sqlalchemy import event
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -16,6 +17,8 @@ from sqlalchemy.ext.asyncio import (
 
 from src.config import get_settings
 from src.models.base import Base
+
+logger = structlog.get_logger(__name__)
 
 
 @lru_cache
@@ -60,11 +63,23 @@ def get_session_factory() -> async_sessionmaker[AsyncSession]:
 
 
 def _autoadd_missing_columns(sync_conn) -> None:  # noqa: ANN001
-    """Add columns that exist on the models but not yet in the SQLite tables.
+    """Add columns present on the models but missing from existing tables.
 
-    Lets us evolve models iteratively (engagement, archive fields…) without
-    losing collected data or hand-writing migrations during the local phase.
-    Only handles additive, nullable columns (the only kind we add).
+    Runs on **SQLite AND PostgreSQL** so the schema can evolve (engagement,
+    archive fields, MVP curation/taxonomy tables…) without Alembic and — above
+    all — without the local/prod divergence that bit us before: a new column
+    worked in SQLite but silently never reached Postgres.
+
+    Discipline:
+      * additive only — `ALTER TABLE ADD COLUMN`, never DROP / retype;
+      * new columns are added NULLable (the model `default=` applies to new rows
+        via the ORM; pre-existing rows get NULL). We never emit NOT NULL, so
+        ADD COLUMN is safe on a populated Postgres table;
+      * each ALTER runs in its own SAVEPOINT so one failure can't poison the
+        boot transaction (on Postgres a failed statement aborts the whole tx).
+
+    `create_all` (called first) already creates brand-new *tables*; this only
+    backfills missing *columns* on tables that already exist.
     """
     from sqlalchemy import inspect
 
@@ -78,18 +93,28 @@ def _autoadd_missing_columns(sync_conn) -> None:  # noqa: ANN001
             if col.name in have:
                 continue
             type_sql = col.type.compile(sync_conn.dialect)
-            sync_conn.exec_driver_sql(
-                f'ALTER TABLE "{table.name}" ADD COLUMN "{col.name}" {type_sql}'
-            )
+            stmt = f'ALTER TABLE "{table.name}" ADD COLUMN "{col.name}" {type_sql}'
+            try:
+                with sync_conn.begin_nested():  # savepoint: isolate this ALTER
+                    sync_conn.exec_driver_sql(stmt)
+                logger.info("schema.column_added", table=table.name, column=col.name)
+            except Exception as exc:  # noqa: BLE001
+                logger.warning(
+                    "schema.column_add_failed",
+                    table=table.name, column=col.name, error=str(exc)[:160],
+                )
 
 
 async def init_db() -> None:
-    """Create tables if they don't exist (no Alembic for the local slice)."""
+    """Create missing tables, then additively add missing columns.
+
+    No Alembic: additive, idempotent migrations applied at boot on both SQLite
+    (local) and PostgreSQL (prod). See `_autoadd_missing_columns`.
+    """
     engine = get_engine()
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-        if get_settings().database_url.startswith("sqlite"):
-            await conn.run_sync(_autoadd_missing_columns)
+        await conn.run_sync(_autoadd_missing_columns)
 
 
 async def get_db() -> AsyncIterator[AsyncSession]:

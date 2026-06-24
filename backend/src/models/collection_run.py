@@ -6,6 +6,7 @@ from sqlalchemy import DateTime, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from src.models.base import Base, utcnow
+from src.vocabulary import RunStatus
 
 
 class CollectionRun(Base):
@@ -17,7 +18,9 @@ class CollectionRun(Base):
     )
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
-    status: Mapped[str] = mapped_column(String(20), default="running")  # running/completed/error
+    status: Mapped[str] = mapped_column(
+        String(20), default=RunStatus.RUNNING
+    )  # running/completed/error
     instance_used: Mapped[str | None] = mapped_column(String(200))
 
     personalities_polled: Mapped[int] = mapped_column(Integer, default=0)

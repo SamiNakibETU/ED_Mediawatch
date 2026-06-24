@@ -17,6 +17,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.models.base import Base, TimestampMixin
+from src.vocabulary import Source
 
 
 class Post(Base, TimestampMixin):
@@ -31,7 +32,7 @@ class Post(Base, TimestampMixin):
         back_populates="posts"
     )
 
-    source: Mapped[str] = mapped_column(String(20), default="x", nullable=False)
+    source: Mapped[str] = mapped_column(String(20), default=Source.X, nullable=False)
 
     # Stable dedupe key: hash of the canonical post URL.
     guid: Mapped[str] = mapped_column(String(64), unique=True, index=True)

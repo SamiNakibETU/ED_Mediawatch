@@ -44,14 +44,14 @@ async def _via_service(url: str, base: str, timeout: int) -> str | None:
 
 _MIN_LEN = 350  # en-deçà : on considère le texte tronqué et on tente la suite
 
-_BROWSER_HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-        "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-    ),
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-    "Accept-Language": "fr-FR,fr;q=0.9,en;q=0.8",
-}
+
+def _browser_headers() -> dict:
+    """En-têtes « vrai navigateur » (UA = source unique settings.user_agent)."""
+    return {
+        "User-Agent": get_settings().user_agent,
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "fr-FR,fr;q=0.9,en;q=0.8",
+    }
 
 
 def _extract(html: str, *, recall: bool) -> str | None:
@@ -104,7 +104,7 @@ async def _via_trafilatura(url: str) -> str | None:
     # Repli : certains sites refusent le fetch trafilatura (UA), pas un vrai navigateur.
     if best is None or len(best) < _MIN_LEN:
         try:
-            async with aiohttp.ClientSession(headers=_BROWSER_HEADERS) as http:
+            async with aiohttp.ClientSession(headers=_browser_headers()) as http:
                 async with http.get(
                     url, timeout=aiohttp.ClientTimeout(total=30), allow_redirects=True
                 ) as resp:

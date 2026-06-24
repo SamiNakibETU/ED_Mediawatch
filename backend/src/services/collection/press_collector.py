@@ -25,16 +25,14 @@ from src.models.personality import Personality
 from src.services.collection.extractor_client import extract_fulltext, extract_html
 from src.services.collection.relevance import RelevanceIndex, build_index
 from src.utils import clean_html, feed_datetime, sha256
+from src.vocabulary import Nature, RunStatus
 
 logger = structlog.get_logger(__name__)
 settings = get_settings()
 
-# UA navigateur : plusieurs flux RSS (Le Figaro, Le Télégramme…) renvoient 403
-# au UA par défaut mais 200 à un vrai navigateur.
-_BROWSER_UA = (
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-    "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-)
+# UA navigateur (source unique : settings.user_agent) — plusieurs flux RSS
+# (Le Figaro, Le Télégramme…) renvoient 403 au UA par défaut mais 200 à un
+# vrai navigateur.
 
 
 def _rss_full_html(entry) -> str:
@@ -96,7 +94,7 @@ class PressCollector:
 
     async def _collect_source(self, source: MediaSource) -> dict:
         async with self._sem:
-            headers = {"User-Agent": _BROWSER_UA,
+            headers = {"User-Agent": settings.user_agent,
                        "Accept": "application/rss+xml, application/xml, text/xml, */*"}
             try:
                 async with aiohttp.ClientSession(headers=headers) as http:
@@ -155,7 +153,7 @@ class PressCollector:
                     # Décision de NATURE sur le texte complet.
                     verdict = self._index.assess(f"{title}. {body}")
                     # Phase 1 : on ne garde QUE les prises de parole ED.
-                    if verdict["nature"] != "prise_de_parole":
+                    if verdict["nature"] != Nature.PRISE_DE_PAROLE:
                         mentions += 1
                         continue
 
@@ -170,7 +168,7 @@ class PressCollector:
                         matched_keywords=verdict["keywords"],
                         matched_personalities=verdict["personalities"],
                         is_statement=True,
-                        nature="prise_de_parole",
+                        nature=Nature.PRISE_DE_PAROLE,
                         word_count=len(body.split()),
                     ))
                     new += 1
@@ -199,7 +197,7 @@ async def run_press_collection(reset: bool = False) -> dict:
         logger.info("press.reset")
 
     async with factory() as db:
-        run = CollectionRun(status="running", notes="press")
+        run = CollectionRun(status=RunStatus.RUNNING, notes="press")
         db.add(run)
         await db.commit()
         await db.refresh(run)
@@ -210,7 +208,7 @@ async def run_press_collection(reset: bool = False) -> dict:
     async with factory() as db:
         run = await db.get(CollectionRun, run_id)
         if run:
-            run.status = "completed"
+            run.status = RunStatus.COMPLETED
             run.completed_at = datetime.now(timezone.utc)
             run.posts_new = stats["articles_new"]
             run.personalities_polled = stats["sources"]

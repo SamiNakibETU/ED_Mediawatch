@@ -1,5 +1,9 @@
 """Le Compteur — « à combien le chiffrez-vous ? »
 
+[EN PAUSE — analyse] Sous-système d'ANALYSE gelé pour le MVP « Revue de veille »
+(cf. docs/MVP_SPEC.md §0 et §12 « Différé »). LLM coupé. Ne pas étendre tant que
+le socle de veille n'est pas atteint ; masqué de la nav principale (spec §8).
+
 Pour chaque référent suivi, toutes les valeurs annoncées dans le temps, par qui.
 Matérialise « les chiffres ne collent pas » : dispersion d'un coup d'œil.
 """

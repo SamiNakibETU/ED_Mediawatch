@@ -22,9 +22,10 @@ infra/nitter_redis/
 **/node_modules/
 **/.next/
 
-# --- Éditeur / OS ---
+# --- Éditeur / OS / outils ---
 .vscode/
 .idea/
+.claude/
 .DS_Store
 Thumbs.db
 

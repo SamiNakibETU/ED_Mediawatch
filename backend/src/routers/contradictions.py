@@ -1,3 +1,11 @@
+"""[EN PAUSE — analyse] Détection/validation de contradictions.
+
+Sous-système d'ANALYSE, gelé pour le MVP « Revue de veille » (cf. docs/MVP_SPEC.md
+§0 et §12 « Différé »). LLM coupé. Ne pas étendre tant que le socle de veille
+(collecte, métadonnées, classification, deux surfaces, curation) n'est pas atteint.
+Conservé en l'état ; masqué de la nav principale (spec §8).
+"""
+
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query

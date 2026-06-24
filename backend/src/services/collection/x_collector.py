@@ -25,6 +25,7 @@ from src.models.post import Post
 from src.services.collection.nitter_client import NitterClient
 from src.services.collection.x_html_parser import parse_profile_html
 from src.utils import clean_html, feed_datetime, tweet_guid
+from src.vocabulary import RunStatus, Source
 
 logger = structlog.get_logger(__name__)
 
@@ -85,7 +86,7 @@ async def _insert_new(db: AsyncSession, personality_id: int, posts: list[dict]) 
         # engagement present (HTML path) → timestamp it
         if data.get("likes") is not None or data.get("retweets") is not None:
             data["engagement_captured_at"] = datetime.now(timezone.utc)
-        db.add(Post(personality_id=personality_id, source="x", **data))
+        db.add(Post(personality_id=personality_id, source=Source.X, **data))
         known.add(pd["guid"])
         new_count += 1
     await db.commit()
@@ -212,7 +213,9 @@ async def run_collection(use_html: bool | None = None) -> dict:
         )
         personalities = list(result.scalars().all())
 
-        run = CollectionRun(status="running", personalities_polled=len(personalities))
+        run = CollectionRun(
+            status=RunStatus.RUNNING, personalities_polled=len(personalities)
+        )
         db.add(run)
         await db.commit()
         await db.refresh(run)
@@ -245,7 +248,7 @@ async def run_collection(use_html: bool | None = None) -> dict:
     async with factory() as db:
         run = await db.get(CollectionRun, run_id)
         if run:
-            run.status = "completed"
+            run.status = RunStatus.COMPLETED
             run.completed_at = datetime.now(timezone.utc)
             run.posts_new = total_new
             run.errors = errors

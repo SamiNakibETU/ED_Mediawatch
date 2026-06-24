@@ -25,6 +25,7 @@ from functools import lru_cache
 
 from src.config import BACKEND_DIR
 from src.utils import strip_accents
+from src.vocabulary import Nature
 
 # Noms de famille à NE jamais matcher seuls (collisions : mots/villes/prénoms).
 _AMBIGUOUS_SURNAMES = {
@@ -132,7 +133,11 @@ class RelevanceIndex:
 
         nature = None
         if relevant:
-            nature = "prise_de_parole" if self._is_prise_de_parole(norm) else "mention"
+            nature = (
+                Nature.PRISE_DE_PAROLE
+                if self._is_prise_de_parole(norm)
+                else Nature.MENTION
+            )
 
         keywords = sorted({
             (m.group(0).upper() if len(m.group(0)) <= 3 else m.group(0))
@@ -141,7 +146,7 @@ class RelevanceIndex:
         return {
             "relevant": relevant,
             "nature": nature,
-            "is_statement": nature == "prise_de_parole",
+            "is_statement": nature == Nature.PRISE_DE_PAROLE,
             "personalities": [self._display.get(f, f.title()) for f in figures],
             "keywords": keywords,
         }
@@ -160,3 +165,9 @@ class RelevanceIndex:
 
 def build_index(full_names: list[str]) -> RelevanceIndex:
     return RelevanceIndex(full_names)
+
+
+def reset_caches() -> None:
+    """Vide les caches de lexique (tests : rejouer avec un fichier modifié)."""
+    _keywords.cache_clear()
+    _static.cache_clear()
