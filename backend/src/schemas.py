@@ -1,6 +1,6 @@
 """Pydantic response models."""
 
-from datetime import datetime
+from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict
 
@@ -151,3 +151,46 @@ class ContradictionPage(BaseModel):
     limit: int
     offset: int
     items: list[ContradictionOut]
+
+
+# --- Taxonomie de veille : Sujet (persistant) / Actualité (datée) -----------
+
+
+class SujetIn(BaseModel):
+    label: str
+    slug: str | None = None
+    description: str | None = None
+    theme_id: str | None = None
+    subtheme_id: str | None = None
+
+
+class SujetOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    slug: str
+    label: str
+    description: str | None
+    theme_id: str | None
+    subtheme_id: str | None
+    is_active: bool
+
+
+class ActualiteIn(BaseModel):
+    label: str
+    slug: str | None = None
+    description: str | None = None
+    theme_id: str | None = None
+    event_date: date | None = None
+
+
+class ActualiteOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    slug: str
+    label: str
+    description: str | None
+    theme_id: str | None
+    event_date: date | None
+    is_active: bool

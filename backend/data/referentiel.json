@@ -1,9 +1,83 @@
 {
-  "version": "2026.06.1",
-  "description": "Référentiel thématique versionné. Thèmes → sous-thèmes → référents chiffrés suivis (les « compteurs »). referent_key = clé canonique de comparaison des claims.",
+  "version": "2026.06.2-cap",
+  "description": "Référentiel thématique aligné sur le Comparative Agendas Project (CAP, cadre §2) : 21 grands thèmes (codes d'origine non consécutifs 1-10, 12-21, 23) → sous-thèmes → référents chiffrés (les « compteurs », analyse en pause). `code` = code CAP, `salience` = saillance ED. Les clés de référent restent inchangées (clés de comparaison opaques).",
   "themes": [
     {
-      "id": "immigration", "label": "Immigration", "order": 1,
+      "id": "macroeconomie", "code": 1, "label": "Macroéconomie & pouvoir d'achat", "salience": "haute", "order": 1,
+      "subthemes": [
+        {"id": "deficit_dette", "label": "Déficit & dette", "referents": [
+          {"key": "economie::deficit_public::pct_pib", "label": "Déficit public", "unit": "pct_pib"},
+          {"key": "economie::dette_publique::pct_pib", "label": "Dette publique", "unit": "pct_pib"}
+        ]},
+        {"id": "depense_etat", "label": "Dépense & emploi public", "referents": [
+          {"key": "economie::fonctionnaires::nb_supprimes", "label": "Fonctionnaires supprimés (cible)", "unit": "nb"},
+          {"key": "economie::economies::montant_promis_eur", "label": "Économies budgétaires promises", "unit": "milliards_eur"}
+        ]},
+        {"id": "salaires", "label": "Salaires", "referents": [
+          {"key": "pouvoir_achat::smic::cible_eur", "label": "SMIC cible", "unit": "eur_net_mensuel"}
+        ]},
+        {"id": "fiscalite_carburant", "label": "TVA / carburants", "referents": [
+          {"key": "pouvoir_achat::tva_energie::taux_cible_pct", "label": "TVA énergie/carburants cible", "unit": "pct"}
+        ]},
+        {"id": "retraites", "label": "Retraites", "referents": [
+          {"key": "pouvoir_achat::retraite::age_legal_cible", "label": "Âge légal de départ (cible)", "unit": "ans"}
+        ]}
+      ]
+    },
+    {
+      "id": "droits_civiques", "code": 2, "label": "Droits civiques, minorités & libertés", "salience": "haute", "order": 2,
+      "subthemes": []
+    },
+    {
+      "id": "sante", "code": 3, "label": "Santé", "salience": "moyenne", "order": 3,
+      "subthemes": [
+        {"id": "acces_soins", "label": "Accès aux soins", "referents": [
+          {"key": "sante::deserts_medicaux::mesure_position", "label": "Déserts médicaux", "unit": "position"}
+        ]}
+      ]
+    },
+    {
+      "id": "agriculture", "code": 4, "label": "Agriculture", "salience": "moyenne", "order": 4,
+      "subthemes": [
+        {"id": "revenu_agricole", "label": "Revenu & normes", "referents": [
+          {"key": "agriculture::mercosur::position", "label": "Position Mercosur", "unit": "position"}
+        ]}
+      ]
+    },
+    {
+      "id": "travail_emploi", "code": 5, "label": "Travail & emploi", "salience": "moyenne", "order": 5,
+      "subthemes": []
+    },
+    {
+      "id": "education", "code": 6, "label": "Éducation", "salience": "moyenne", "order": 6,
+      "subthemes": [
+        {"id": "moyens", "label": "Moyens", "referents": [
+          {"key": "education::uniforme::position", "label": "Uniforme à l'école", "unit": "position"}
+        ]}
+      ]
+    },
+    {
+      "id": "environnement", "code": 7, "label": "Environnement", "salience": "moyenne", "order": 7,
+      "subthemes": [
+        {"id": "climat", "label": "Climat", "referents": [
+          {"key": "ecologie::accords_climat::position", "label": "Accords climatiques", "unit": "position"}
+        ]}
+      ]
+    },
+    {
+      "id": "energie", "code": 8, "label": "Énergie", "salience": "haute", "order": 8,
+      "subthemes": [
+        {"id": "prix_energie", "label": "Prix de l'énergie", "referents": [
+          {"key": "energie::electricite::baisse_promise_pct", "label": "Baisse promise du prix de l'électricité", "unit": "pct"}
+        ]},
+        {"id": "mix_energetique", "label": "Mix énergétique", "referents": [
+          {"key": "energie::nucleaire::nb_reacteurs_cible", "label": "Nouveaux réacteurs (cible)", "unit": "nb"},
+          {"key": "energie::eolien::position_demantelement", "label": "Éolien : démantèlement", "unit": "position"}
+        ]}
+      ]
+    },
+    {
+      "id": "immigration", "code": 9, "label": "Immigration", "salience": "tres_haute", "order": 9,
       "subthemes": [
         {"id": "cout_immigration", "label": "Coût budgétaire", "referents": [
           {"key": "immigration::cout::france::montant_annuel_eur", "label": "Coût annuel de l'immigration", "unit": "milliards_eur_par_an"},
@@ -19,46 +93,11 @@
       ]
     },
     {
-      "id": "economie", "label": "Économie & finances", "order": 2,
-      "subthemes": [
-        {"id": "deficit_dette", "label": "Déficit & dette", "referents": [
-          {"key": "economie::deficit_public::pct_pib", "label": "Déficit public", "unit": "pct_pib"},
-          {"key": "economie::dette_publique::pct_pib", "label": "Dette publique", "unit": "pct_pib"}
-        ]},
-        {"id": "depense_etat", "label": "Dépense & emploi public", "referents": [
-          {"key": "economie::fonctionnaires::nb_supprimes", "label": "Fonctionnaires supprimés (cible)", "unit": "nb"},
-          {"key": "economie::economies::montant_promis_eur", "label": "Économies budgétaires promises", "unit": "milliards_eur"}
-        ]}
-      ]
+      "id": "transports", "code": 10, "label": "Transports", "salience": "basse", "order": 10,
+      "subthemes": []
     },
     {
-      "id": "pouvoir_achat", "label": "Pouvoir d'achat", "order": 3,
-      "subthemes": [
-        {"id": "salaires", "label": "Salaires", "referents": [
-          {"key": "pouvoir_achat::smic::cible_eur", "label": "SMIC cible", "unit": "eur_net_mensuel"}
-        ]},
-        {"id": "fiscalite_carburant", "label": "TVA / carburants", "referents": [
-          {"key": "pouvoir_achat::tva_energie::taux_cible_pct", "label": "TVA énergie/carburants cible", "unit": "pct"}
-        ]},
-        {"id": "retraites", "label": "Retraites", "referents": [
-          {"key": "pouvoir_achat::retraite::age_legal_cible", "label": "Âge légal de départ (cible)", "unit": "ans"}
-        ]}
-      ]
-    },
-    {
-      "id": "energie", "label": "Énergie", "order": 4,
-      "subthemes": [
-        {"id": "prix_energie", "label": "Prix de l'énergie", "referents": [
-          {"key": "energie::electricite::baisse_promise_pct", "label": "Baisse promise du prix de l'électricité", "unit": "pct"}
-        ]},
-        {"id": "mix_energetique", "label": "Mix énergétique", "referents": [
-          {"key": "energie::nucleaire::nb_reacteurs_cible", "label": "Nouveaux réacteurs (cible)", "unit": "nb"},
-          {"key": "energie::eolien::position_demantelement", "label": "Éolien : démantèlement", "unit": "position"}
-        ]}
-      ]
-    },
-    {
-      "id": "securite", "label": "Sécurité & justice", "order": 5,
+      "id": "justice_securite", "code": 12, "label": "Justice, criminalité & sécurité", "salience": "tres_haute", "order": 12,
       "subthemes": [
         {"id": "prison", "label": "Places de prison", "referents": [
           {"key": "securite::prison::nb_places_promis", "label": "Places de prison promises", "unit": "nb"}
@@ -69,11 +108,44 @@
       ]
     },
     {
-      "id": "international_defense", "label": "International & défense", "order": 6,
+      "id": "protection_sociale", "code": 13, "label": "Protection sociale & aides", "salience": "haute", "order": 13,
+      "subthemes": [
+        {"id": "prestations", "label": "Prestations & préférence nationale", "referents": [
+          {"key": "social::prestations::conditionnalite_nationalite", "label": "Préférence nationale (aides)", "unit": "position"}
+        ]}
+      ]
+    },
+    {
+      "id": "logement", "code": 14, "label": "Logement", "salience": "moyenne", "order": 14,
+      "subthemes": [
+        {"id": "construction", "label": "Construction", "referents": [
+          {"key": "logement::construction::nb_annuel_cible", "label": "Logements à construire / an", "unit": "nb_par_an"}
+        ]}
+      ]
+    },
+    {
+      "id": "banque_finance", "code": 15, "label": "Banque, finance & commerce intérieur", "salience": "moyenne", "order": 15,
+      "subthemes": []
+    },
+    {
+      "id": "defense", "code": 16, "label": "Défense", "salience": "moyenne", "order": 16,
       "subthemes": [
         {"id": "defense", "label": "Budget défense", "referents": [
           {"key": "defense::budget::pct_pib_cible", "label": "Budget défense (cible)", "unit": "pct_pib"}
-        ]},
+        ]}
+      ]
+    },
+    {
+      "id": "science_techno", "code": 17, "label": "Science, technologie & communications", "salience": "basse", "order": 17,
+      "subthemes": []
+    },
+    {
+      "id": "commerce_exterieur", "code": 18, "label": "Commerce extérieur", "salience": "moyenne", "order": 18,
+      "subthemes": []
+    },
+    {
+      "id": "international_ue", "code": 19, "label": "Affaires internationales & UE", "salience": "haute", "order": 19,
+      "subthemes": [
         {"id": "ukraine", "label": "Ukraine", "referents": [
           {"key": "international::aide_ukraine::position", "label": "Position aide à l'Ukraine", "unit": "position"}
         ]},
@@ -83,31 +155,7 @@
       ]
     },
     {
-      "id": "logement", "label": "Logement", "order": 7,
-      "subthemes": [
-        {"id": "construction", "label": "Construction", "referents": [
-          {"key": "logement::construction::nb_annuel_cible", "label": "Logements à construire / an", "unit": "nb_par_an"}
-        ]}
-      ]
-    },
-    {
-      "id": "social_aides", "label": "Social & aides", "order": 8,
-      "subthemes": [
-        {"id": "prestations", "label": "Prestations & préférence nationale", "referents": [
-          {"key": "social::prestations::conditionnalite_nationalite", "label": "Préférence nationale (aides)", "unit": "position"}
-        ]}
-      ]
-    },
-    {
-      "id": "sante", "label": "Santé", "order": 9,
-      "subthemes": [
-        {"id": "acces_soins", "label": "Accès aux soins", "referents": [
-          {"key": "sante::deserts_medicaux::mesure_position", "label": "Déserts médicaux", "unit": "position"}
-        ]}
-      ]
-    },
-    {
-      "id": "institutions", "label": "Institutions & régalien", "order": 10,
+      "id": "institutions", "code": 20, "label": "Fonctionnement de l'État (institutions, régalien)", "salience": "haute", "order": 20,
       "subthemes": [
         {"id": "referendum", "label": "Référendum / RIC", "referents": [
           {"key": "institutions::referendum::position", "label": "Référendum (RIC / immigration)", "unit": "position"}
@@ -118,28 +166,12 @@
       ]
     },
     {
-      "id": "ecologie", "label": "Écologie", "order": 11,
-      "subthemes": [
-        {"id": "climat", "label": "Climat", "referents": [
-          {"key": "ecologie::accords_climat::position", "label": "Accords climatiques", "unit": "position"}
-        ]}
-      ]
+      "id": "domaine_public", "code": 21, "label": "Domaine public & gestion de l'eau", "salience": "basse", "order": 21,
+      "subthemes": []
     },
     {
-      "id": "agriculture", "label": "Agriculture", "order": 12,
-      "subthemes": [
-        {"id": "revenu_agricole", "label": "Revenu & normes", "referents": [
-          {"key": "agriculture::mercosur::position", "label": "Position Mercosur", "unit": "position"}
-        ]}
-      ]
-    },
-    {
-      "id": "education", "label": "Éducation", "order": 13,
-      "subthemes": [
-        {"id": "moyens", "label": "Moyens", "referents": [
-          {"key": "education::uniforme::position", "label": "Uniforme à l'école", "unit": "position"}
-        ]}
-      ]
+      "id": "culture", "code": 23, "label": "Politique culturelle (identité, langue)", "salience": "moyenne", "order": 23,
+      "subthemes": []
     }
   ]
 }

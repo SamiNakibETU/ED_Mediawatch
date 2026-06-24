@@ -19,6 +19,10 @@ class Theme(Base, TimestampMixin):
     label: Mapped[str] = mapped_column(String(120), nullable=False)
     order: Mapped[int] = mapped_column(Integer, default=0)
     version: Mapped[str] = mapped_column(String(20), default="")
+    # Alignement Comparative Agendas Project (cadre §2) : code du grand thème CAP
+    # (1-10, 12-21, 23 — numérotation d'origine non consécutive) + saillance ED.
+    code: Mapped[int | None] = mapped_column(Integer, index=True)
+    salience: Mapped[str | None] = mapped_column(String(20))  # basse|moyenne|haute|tres_haute
 
     subthemes: Mapped[list["Subtheme"]] = relationship(
         back_populates="theme", cascade="all, delete-orphan"

@@ -51,6 +51,12 @@ def strip_accents(text: str) -> str:
     ).lower()
 
 
+def slugify(text: str, max_len: int = 80) -> str:
+    """Slug stable : minuscule sans accents, séparateurs → '-'."""
+    s = re.sub(r"[^a-z0-9]+", "-", strip_accents(text or "")).strip("-")
+    return s[:max_len].strip("-") or "x"
+
+
 def status_id(url: str) -> str | None:
     m = _STATUS_RE.search(url or "")
     return m.group(1) if m else None
