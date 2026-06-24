@@ -11,6 +11,8 @@ Idempotente / rejouable : ne (re)classe que les items sans thème, sauf `reset`.
 
 from __future__ import annotations
 
+import re
+
 import structlog
 from sqlalchemy import select
 
@@ -29,6 +31,22 @@ logger = structlog.get_logger(__name__)
 _COHERE_MIN = 0.42
 _EMBED_BATCH = 96  # limite raisonnable par appel Cohere
 _EMBED_MAXLEN = 1500  # tronque le texte embeddé (borne le coût)
+
+
+_NOISE_RE = re.compile(r"https?://\S+|@\w+|#\w+|\bRT by\b|\bRT\b", re.IGNORECASE)
+
+
+def _classifiable(text: str) -> bool:
+    """Assez de contenu pour un rattachement sémantique fiable ?
+
+    On retire URLs / @mentions / #hashtags / préfixe « RT by », puis on compte
+    les mots « pleins » (≥ 2 lettres). En-deçà de 4, on laisse NON CLASSÉ plutôt
+    que de forcer Cohere sur un tweet vide (« Image », un simple lien, un RT sans
+    texte) — c'était la source du bruit science_techno/travail_emploi.
+    """
+    cleaned = _NOISE_RE.sub(" ", text or "")
+    words = re.findall(r"[^\W\d_]{2,}", cleaned, re.UNICODE)
+    return len(words) >= 4
 
 
 def _post_text(p: Post) -> str:
@@ -79,12 +97,14 @@ async def _classify_model(db, model, text_fn, classifier, reset, anchors, embedd
     det = 0
     misses: list[tuple] = []
     for it in items:
-        r = classifier.classify(text_fn(it))
+        text = text_fn(it)
+        r = classifier.classify(text)
         if r["theme"]:
             it.theme, it.subtheme = r["theme"], r["subtheme"]
             det += 1
-        else:
-            misses.append((it, text_fn(it)))
+        elif _classifiable(text):
+            misses.append((it, text))
+        # sinon : trop peu de contenu → laissé non classé (pas de Cohere forcé)
 
     cohere_n = 0
     if anchors and embedder and misses:
