@@ -3,10 +3,12 @@
 À lancer après une passe `/classify` pour MESURER sur données réelles (cadre §7).
 Non destructif.
 
-    railway ssh "python -m src.scripts.diag_themes"
+    railway ssh "python -m src.scripts.diag_themes"            # répartition seule
+    railway ssh "python -m src.scripts.diag_themes --examples" # + 2 exemples/thème
 """
 
 import asyncio
+import sys
 
 from sqlalchemy import func, select
 
@@ -20,7 +22,12 @@ def _bar(n: int, total: int, width: int = 30) -> str:
     return "█" * filled + "·" * (width - filled)
 
 
-async def _dist(db, model, label: str) -> None:
+def _text(model, row) -> str:
+    raw = (row.content if model is Post else f"{row.title}") or ""
+    return raw.replace("\n", " ")[:90]
+
+
+async def _dist(db, model, label: str, examples: int = 0) -> None:
     total = await db.scalar(select(func.count(model.id))) or 0
     classed = await db.scalar(
         select(func.count(model.id)).where(model.theme.isnot(None))
@@ -36,15 +43,24 @@ async def _dist(db, model, label: str) -> None:
     ).all()
     for theme, n in rows:
         print(f"  {theme:22} {n:5}  {_bar(n, classed)}")
+        if examples:
+            ex = (
+                await db.execute(
+                    select(model).where(model.theme == theme).limit(examples)
+                )
+            ).scalars().all()
+            for e in ex:
+                print(f"        · {_text(model, e)}")
     if total - classed:
         print(f"  {'(non classé)':22} {total - classed:5}")
 
 
 async def main() -> None:
+    examples = 2 if "--examples" in sys.argv else 0
     factory = get_session_factory()
     async with factory() as db:
-        await _dist(db, Post, "X / posts")
-        await _dist(db, Article, "Presse / articles")
+        await _dist(db, Post, "X / posts", examples)
+        await _dist(db, Article, "Presse / articles", examples)
 
 
 if __name__ == "__main__":

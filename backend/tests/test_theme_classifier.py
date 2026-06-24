@@ -106,3 +106,10 @@ def test_salience_breaks_tie_toward_immigration(clf):
     # la saillance (immigration très haute) tranche pour l'immigration.
     r = clf.classify("référendum sur l'immigration")
     assert r["theme"] == "immigration"
+
+
+def test_topic_words_restored(clf):
+    # Mots topiques fréquents (it.2) : doivent classer en déterministe.
+    assert clf.classify("la santé et nos hôpitaux à l'abandon")["theme"] == "sante"
+    assert clf.classify("la justice est laxiste avec les délinquants")["theme"] == "justice_securite"
+    assert clf.classify("l'économie et le budget de l'État")["theme"] == "macroeconomie"

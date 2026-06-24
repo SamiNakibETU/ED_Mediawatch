@@ -23,8 +23,10 @@ from src.services.classification.theme_classifier import _lexicon, get_classifie
 logger = structlog.get_logger(__name__)
 
 # Cosinus minimal pour accepter un rattachement Cohere (fallback). Conservateur :
-# en-deçà, on laisse l'item non classé plutôt que de forcer un thème douteux.
-_COHERE_MIN = 0.30
+# en-deçà, on laisse l'item NON CLASSÉ plutôt que de forcer un thème douteux
+# (un « non classé » honnête vaut mieux qu'un thème bruité — cf. it.2 : un seuil
+# trop bas gonflait artificiellement travail_emploi / science_techno).
+_COHERE_MIN = 0.42
 _EMBED_BATCH = 96  # limite raisonnable par appel Cohere
 _EMBED_MAXLEN = 1500  # tronque le texte embeddé (borne le coût)
 
