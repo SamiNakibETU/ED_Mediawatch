@@ -1,112 +1,132 @@
 {
-  "version": "2026.06.1",
-  "description": "Lexiques déterministes par thème CAP (et sous-thème quand pertinent) pour la classification thématique des items (§6). Frontière de mot, accents normalisés au matching. Les ids de thème/sous-thème correspondent à referentiel.json (CAP).",
+  "version": "2026.06.2",
+  "description": "Lexiques déterministes par thème CAP (et sous-thème) pour la classification thématique (§6). Frontière de mot, accents normalisés. `salience` (cadre §2) départage les ex æquo (issue ownership, §6.1). Calibrage : lexiques resserrés sur le vocabulaire QUI DÉFINIT le sujet — pas le vocabulaire politique générique (président, gouvernement, médias…) qui captait à tort institutions/culture.",
   "themes": {
     "immigration": {
-      "keywords": ["immigration", "immigré", "immigrés", "immigrationniste", "migrant", "migrants", "migratoire", "clandestin", "clandestins", "clandestine", "sans-papiers", "sans papiers", "oqtf", "expulsion", "expulsions", "expulser", "reconduite", "éloignement", "asile", "demandeur d'asile", "réfugié", "réfugiés", "naturalisation", "naturalisations", "regroupement familial", "aide médicale d'état", "ame", "titre de séjour", "titres de séjour", "visa", "visas", "frontière", "frontières", "remigration", "grand remplacement", "submersion migratoire", "submersion", "étranger", "étrangers", "double peine", "droit du sol", "schengen", "passoire migratoire", "flux migratoires"],
+      "salience": "tres_haute",
+      "keywords": ["immigration", "immigré", "immigrés", "immigrationniste", "migrant", "migrants", "migratoire", "clandestin", "clandestins", "clandestine", "sans-papiers", "sans papiers", "oqtf", "expulsion", "expulsions", "expulser", "reconduite à la frontière", "éloignement", "asile", "demandeur d'asile", "réfugié", "réfugiés", "naturalisation", "naturalisations", "regroupement familial", "aide médicale d'état", "ame", "titre de séjour", "titres de séjour", "visa", "visas", "remigration", "grand remplacement", "submersion migratoire", "submersion", "double peine", "droit du sol", "schengen", "passoire migratoire", "flux migratoires", "préférence étrangère", "frontières", "immigrationnisme"],
       "subthemes": {
         "cout_immigration": ["coût de l'immigration", "aide médicale d'état", "ame", "coût des migrants", "pompe aspirante"],
-        "expulsions": ["oqtf", "expulsion", "expulsions", "expulser", "reconduite", "éloignement", "double peine"],
+        "expulsions": ["oqtf", "expulsion", "expulsions", "expulser", "reconduite à la frontière", "éloignement", "double peine"],
         "flux": ["titre de séjour", "titres de séjour", "regroupement familial", "asile", "visa", "visas", "naturalisation", "droit du sol", "schengen"]
       }
     },
     "justice_securite": {
-      "keywords": ["sécurité", "insécurité", "délinquance", "délinquant", "délinquants", "criminalité", "criminel", "violence", "violences", "police", "policier", "policiers", "gendarmerie", "gendarme", "justice", "magistrat", "magistrats", "prison", "prisons", "incarcération", "peine", "peines plancher", "ensauvagement", "agression", "agressions", "narcotrafic", "trafic de drogue", "stupéfiants", "racaille", "laxisme", "laxiste", "terrorisme", "terroriste", "attentat", "forces de l'ordre", "ordre", "récidive", "récidiviste", "rodéo", "rodéos", "guet-apens", "mineurs délinquants", "impunité", "wanted"],
+      "salience": "tres_haute",
+      "keywords": ["sécurité", "insécurité", "délinquance", "délinquant", "délinquants", "criminalité", "criminel", "violences", "policier", "policiers", "gendarme", "gendarmes", "magistrat", "magistrats", "prison", "prisons", "incarcération", "peines plancher", "ensauvagement", "agression", "agressions", "narcotrafic", "trafic de drogue", "stupéfiants", "racaille", "laxisme", "laxiste", "terrorisme", "terroriste", "attentat", "forces de l'ordre", "récidive", "récidiviste", "rodéo", "rodéos", "guet-apens", "mineurs délinquants", "impunité", "coups de couteau", "point de deal"],
       "subthemes": {
         "prison": ["prison", "prisons", "place de prison", "places de prison", "incarcération", "cellule", "détention"],
-        "effectifs": ["effectifs", "policiers", "gendarmes", "recrutement", "forces de l'ordre", "bleus"]
+        "effectifs": ["effectifs de police", "policiers", "gendarmes", "recrutement de policiers", "forces de l'ordre"]
       }
     },
     "macroeconomie": {
-      "keywords": ["économie", "budget", "budgétaire", "déficit", "dette", "fiscalité", "fiscal", "impôt", "impôts", "taxe", "taxes", "tva", "inflation", "pouvoir d'achat", "coût de la vie", "vie chère", "croissance", "pib", "dépense publique", "dépenses publiques", "finances publiques", "prélèvements", "monnaie", "smic", "salaire", "salaires", "retraite", "retraites", "pension", "pensions", "fonctionnaires", "niches fiscales", "prélèvement", "cotisations"],
+      "salience": "haute",
+      "keywords": ["budget de l'état", "budgétaire", "déficit", "dette publique", "fiscalité", "impôt", "impôts", "taxe", "taxes", "tva", "inflation", "pouvoir d'achat", "coût de la vie", "vie chère", "dépense publique", "dépenses publiques", "finances publiques", "prélèvements", "smic", "salaire", "salaires", "retraite", "retraites", "pension", "pensions", "fonctionnaires", "niches fiscales", "cotisations", "matraquage fiscal"],
       "subthemes": {
-        "deficit_dette": ["déficit", "dette", "finances publiques", "déficit public", "dette publique", "agence de notation"],
+        "deficit_dette": ["déficit", "dette publique", "finances publiques", "déficit public", "agence de notation"],
         "depense_etat": ["fonctionnaires", "dépense publique", "économies budgétaires", "train de vie de l'état", "gabegie"],
         "salaires": ["smic", "salaire", "salaires", "augmentation de salaire", "rémunération", "feuille de paie"],
-        "fiscalite_carburant": ["tva", "carburant", "carburants", "essence", "gazole", "taxe carburant", "fiscalité de l'énergie", "prix à la pompe"],
+        "fiscalite_carburant": ["tva", "carburant", "carburants", "essence", "gazole", "taxe carburant", "prix à la pompe"],
         "retraites": ["retraite", "retraites", "pension", "pensions", "âge légal", "âge de départ", "réforme des retraites", "64 ans"]
       }
     },
     "international_ue": {
-      "keywords": ["europe", "européenne", "européen", "union européenne", "bruxelles", "commission européenne", "frexit", "souveraineté", "souverainiste", "ukraine", "russie", "poutine", "zelensky", "guerre en ukraine", "gaza", "israël", "palestine", "proche-orient", "otan", "géopolitique", "diplomatie", "international", "fédéralisme", "contribution européenne", "parlement européen", "mercosur", "traité", "puissance"],
+      "salience": "haute",
+      "keywords": ["union européenne", "bruxelles", "commission européenne", "frexit", "souverainiste", "ukraine", "russie", "poutine", "zelensky", "guerre en ukraine", "gaza", "israël", "palestine", "proche-orient", "otan", "fédéralisme", "contribution européenne", "parlement européen", "mercosur", "élargissement de l'ue", "adhésion à l'ue", "europe de bruxelles", "directive européenne", "technocrates de bruxelles"],
       "subthemes": {
         "ukraine": ["ukraine", "russie", "poutine", "zelensky", "guerre en ukraine", "livraison d'armes", "aide à l'ukraine"],
-        "ue": ["union européenne", "bruxelles", "frexit", "commission européenne", "contribution", "fédéralisme", "souveraineté européenne", "parlement européen"]
+        "ue": ["union européenne", "bruxelles", "frexit", "commission européenne", "contribution européenne", "fédéralisme", "parlement européen", "directive européenne"]
       }
     },
     "institutions": {
-      "keywords": ["institutions", "constitution", "constitutionnel", "référendum", "ric", "proportionnelle", "république", "démocratie", "président", "présidentielle", "gouvernement", "premier ministre", "assemblée nationale", "sénat", "motion de censure", "dissolution", "régalien", "décentralisation", "élu", "élus", "mandat", "scrutin", "élection", "élections", "vote", "abstention", "séparation des pouvoirs", "49.3", "49-3"],
+      "salience": "haute",
+      "keywords": ["constitution", "constitutionnel", "référendum", "ric", "référendum d'initiative citoyenne", "proportionnelle", "mode de scrutin", "assemblée nationale", "sénat", "motion de censure", "dissolution", "régalien", "décentralisation", "séparation des pouvoirs", "49.3", "49-3", "indépendance de la justice", "sixième république", "destitution", "cohabitation", "conseil constitutionnel"],
       "subthemes": {
-        "referendum": ["référendum", "ric", "référendum d'initiative citoyenne", "consultation"],
-        "proportionnelle": ["proportionnelle", "mode de scrutin", "scrutin", "réforme électorale"]
+        "referendum": ["référendum", "ric", "référendum d'initiative citoyenne"],
+        "proportionnelle": ["proportionnelle", "mode de scrutin", "réforme électorale"]
       }
     },
     "droits_civiques": {
-      "keywords": ["liberté", "libertés", "liberté d'expression", "censure", "discrimination", "racisme", "antisémitisme", "laïcité", "laïque", "voile", "voilé", "islamisme", "islamiste", "islamo-gauchisme", "wokisme", "woke", "lgbt", "minorités", "communautarisme", "communautariste", "séparatisme", "droits de l'homme", "vie privée", "fichage", "écriture inclusive", "cancel culture"]
+      "salience": "haute",
+      "keywords": ["liberté d'expression", "censure", "discrimination", "racisme", "antisémitisme", "laïcité", "voile islamique", "islamisme", "islamiste", "islamo-gauchisme", "wokisme", "woke", "lgbt", "communautarisme", "communautariste", "séparatisme", "droits de l'homme", "écriture inclusive", "cancel culture", "théorie du genre", "islamisation"]
     },
     "energie": {
-      "keywords": ["énergie", "électricité", "nucléaire", "epr", "réacteur", "réacteurs", "centrale", "éolien", "éolienne", "éoliennes", "renouvelables", "renouvelable", "edf", "prix de l'énergie", "facture d'électricité", "facture énergétique", "gaz", "pétrole", "arenh", "barrage", "hydraulique", "souveraineté énergétique"],
+      "salience": "haute",
+      "keywords": ["énergie", "électricité", "nucléaire", "epr", "réacteur", "réacteurs", "centrale nucléaire", "éolien", "éolienne", "éoliennes", "renouvelables", "edf", "prix de l'énergie", "facture d'électricité", "facture énergétique", "souveraineté énergétique", "arenh", "barrage hydraulique"],
       "subthemes": {
         "prix_energie": ["prix de l'énergie", "facture d'électricité", "facture énergétique", "prix de l'électricité", "tarif réglementé"],
         "mix_energetique": ["nucléaire", "epr", "réacteur", "réacteurs", "éolien", "éolienne", "éoliennes", "renouvelables", "mix énergétique", "démantèlement"]
       }
     },
     "protection_sociale": {
-      "keywords": ["aides sociales", "allocation", "allocations", "rsa", "prestations sociales", "préférence nationale", "fraude sociale", "caf", "minima sociaux", "assistanat", "assisté", "solidarité", "allocations familiales", "prime", "aide sociale"],
+      "salience": "haute",
+      "keywords": ["aides sociales", "allocations familiales", "rsa", "prestations sociales", "préférence nationale", "fraude sociale", "minima sociaux", "assistanat", "aide sociale", "conditionnalité des aides"],
       "subthemes": {
-        "prestations": ["préférence nationale", "conditionnalité", "aides sociales", "prestations sociales", "fraude sociale", "assistanat"]
+        "prestations": ["préférence nationale", "conditionnalité des aides", "aides sociales", "prestations sociales", "fraude sociale", "assistanat"]
       }
     },
     "culture": {
-      "keywords": ["culture", "culturel", "identité", "identitaire", "langue française", "francophonie", "patrimoine", "audiovisuel public", "france télévisions", "médias", "presse", "cinéma", "civilisation", "racines chrétiennes", "roman national", "nation", "patriotisme", "histoire de france", "wokisme culturel"]
+      "salience": "moyenne",
+      "keywords": ["identité", "identitaire", "langue française", "francophonie", "patrimoine", "audiovisuel public", "france télévisions", "racines chrétiennes", "roman national", "wokisme culturel", "assimilation", "civilisation européenne", "héritage chrétien", "déconstruction"]
     },
     "environnement": {
-      "keywords": ["écologie", "écologique", "climat", "climatique", "réchauffement", "environnement", "pollution", "biodiversité", "cop", "accord de paris", "écologie punitive", "zfe", "pesticides", "transition écologique", "carbone", "vert", "verts"],
+      "salience": "moyenne",
+      "keywords": ["écologie", "écologique", "climat", "climatique", "réchauffement climatique", "pollution", "biodiversité", "accord de paris", "écologie punitive", "zfe", "pesticides", "transition écologique", "neutralité carbone"],
       "subthemes": {
-        "climat": ["climat", "climatique", "réchauffement", "accord de paris", "cop", "carbone"]
+        "climat": ["climat", "climatique", "réchauffement climatique", "accord de paris", "neutralité carbone"]
       }
     },
     "agriculture": {
-      "keywords": ["agriculture", "agriculteur", "agriculteurs", "paysan", "paysans", "fnsea", "pac", "mercosur", "élevage", "éleveur", "pêche", "pêcheurs", "alimentation", "normes agricoles", "jachère", "ferme", "agricole", "ruralité"],
+      "salience": "moyenne",
+      "keywords": ["agriculture", "agriculteur", "agriculteurs", "paysan", "paysans", "fnsea", "mercosur", "élevage", "éleveur", "pêcheurs", "normes agricoles", "jachère", "monde agricole", "souveraineté alimentaire", "ruralité"],
       "subthemes": {
-        "revenu_agricole": ["mercosur", "revenu agricole", "prix agricoles", "normes", "concurrence déloyale", "libre-échange"]
+        "revenu_agricole": ["mercosur", "revenu agricole", "prix agricoles", "normes agricoles", "concurrence déloyale"]
       }
     },
     "defense": {
-      "keywords": ["défense", "armée", "militaire", "militaires", "soldat", "soldats", "budget militaire", "dissuasion", "réarmement", "service national", "service militaire", "loi de programmation militaire", "lpm", "casernes", "marine nationale", "armement"],
+      "salience": "moyenne",
+      "keywords": ["armée française", "militaire", "militaires", "soldat", "soldats", "budget militaire", "dissuasion nucléaire", "réarmement", "service national", "service militaire", "loi de programmation militaire", "marine nationale", "armement", "défense nationale"],
       "subthemes": {
-        "defense": ["budget de la défense", "dissuasion", "réarmement", "loi de programmation militaire", "lpm", "2% du pib"]
+        "defense": ["budget de la défense", "dissuasion nucléaire", "réarmement", "loi de programmation militaire", "2% du pib"]
       }
     },
     "logement": {
-      "keywords": ["logement", "logements", "hlm", "loyer", "loyers", "propriétaire", "locataire", "construction de logements", "foncier", "mal-logement", "squat", "squatteur", "squatteurs", "dalo", "passoire thermique", "accession à la propriété"],
+      "salience": "moyenne",
+      "keywords": ["logement", "logements", "hlm", "loyer", "loyers", "propriétaire", "locataire", "construction de logements", "mal-logement", "squat", "squatteur", "squatteurs", "dalo", "passoire thermique", "accession à la propriété"],
       "subthemes": {
-        "construction": ["construction de logements", "construire", "logements neufs", "permis de construire", "foncier"]
+        "construction": ["construction de logements", "logements neufs", "permis de construire"]
       }
     },
     "sante": {
-      "keywords": ["santé", "hôpital", "hôpitaux", "soignant", "soignants", "médecin", "médecins", "désert médical", "déserts médicaux", "sécurité sociale", "soins", "urgences", "psychiatrie", "déremboursement", "infirmier", "infirmiers", "pénurie de médecins"],
+      "salience": "moyenne",
+      "keywords": ["hôpital", "hôpitaux", "soignant", "soignants", "désert médical", "déserts médicaux", "sécurité sociale", "urgences hospitalières", "psychiatrie", "déremboursement", "pénurie de médecins", "accès aux soins"],
       "subthemes": {
         "acces_soins": ["désert médical", "déserts médicaux", "accès aux soins", "pénurie de médecins", "fermeture de service"]
       }
     },
     "travail_emploi": {
-      "keywords": ["emploi", "chômage", "chômeur", "chômeurs", "travail", "assurance chômage", "france travail", "pôle emploi", "salariés", "syndicat", "syndicats", "grève", "plein emploi", "délocalisation", "délocalisations", "licenciement", "licenciements", "usine", "réindustrialisation", "travailleurs"]
+      "salience": "moyenne",
+      "keywords": ["chômage", "chômeur", "chômeurs", "assurance chômage", "france travail", "pôle emploi", "syndicat", "syndicats", "grève", "plein emploi", "délocalisation", "délocalisations", "licenciement", "licenciements", "réindustrialisation", "code du travail", "valeur travail", "marché du travail"]
     },
     "banque_finance": {
-      "keywords": ["banque", "banques", "finance", "financier", "crédit", "épargne", "livret a", "commerce", "commerçant", "commerçants", "pme", "tpe", "entreprise", "entreprises", "faillite", "bce", "bourse", "spéculation", "multinationales"]
+      "salience": "moyenne",
+      "keywords": ["banque", "banques", "finance internationale", "crédit bancaire", "épargne", "livret a", "pme", "tpe", "faillite", "bce", "spéculation", "multinationales", "actionnaires", "dividendes"]
     },
     "commerce_exterieur": {
-      "keywords": ["commerce extérieur", "exportation", "exportations", "importation", "importations", "balance commerciale", "libre-échange", "protectionnisme", "droits de douane", "ceta", "mondialisation", "localisme", "made in france", "produire en france"]
+      "salience": "moyenne",
+      "keywords": ["commerce extérieur", "exportations", "importations", "balance commerciale", "libre-échange", "protectionnisme", "droits de douane", "ceta", "mondialisation", "made in france", "produire en france", "localisme"]
     },
     "transports": {
-      "keywords": ["transport", "transports", "sncf", "tgv", "train", "trains", "autoroute", "autoroutes", "péage", "péages", "voiture", "automobiliste", "aérien", "ferroviaire", "mobilité", "fret", "rer"]
+      "salience": "basse",
+      "keywords": ["sncf", "tgv", "autoroute", "autoroutes", "péage", "péages", "automobiliste", "ferroviaire", "fret ferroviaire", "transport en commun"]
     },
     "science_techno": {
-      "keywords": ["numérique", "technologie", "intelligence artificielle", "internet", "données personnelles", "cybersécurité", "télécommunications", "5g", "recherche", "innovation", "espace", "satellite", "réseaux sociaux", "tiktok", "souveraineté numérique"]
+      "salience": "basse",
+      "keywords": ["intelligence artificielle", "cybersécurité", "télécommunications", "5g", "souveraineté numérique", "données personnelles", "réseaux sociaux", "tiktok"]
     },
     "domaine_public": {
-      "keywords": ["gestion de l'eau", "ressource en eau", "sécheresse", "bassine", "bassines", "barrage", "barrages", "domaine public", "ressources naturelles", "pénurie d'eau"]
+      "salience": "basse",
+      "keywords": ["gestion de l'eau", "ressource en eau", "sécheresse", "bassine", "bassines", "barrages", "ressources naturelles", "pénurie d'eau"]
     }
   }
 }

@@ -79,3 +79,30 @@ def test_word_boundary_no_false_positive(clf):
     # "internationale" ne doit pas matcher "international" (frontière de mot).
     r = clf.classify("la chanson de l'Internationale a été chantée")
     assert r["theme"] != "international_ue" or r["score"] == 0
+
+
+# --- Calibrage : le vocabulaire politique générique ne doit plus capter ------
+
+def test_generic_government_word_not_institutions(clf):
+    # « gouvernement » seul (générique) ne doit plus classer en institutions.
+    r = clf.classify("Le gouvernement ne fait rien pour les Français")
+    assert r["theme"] != "institutions"
+
+
+def test_generic_media_word_not_culture(clf):
+    # « médias » seul ne doit plus classer en culture.
+    r = clf.classify("Les médias mentent tous les jours")
+    assert r["theme"] != "culture"
+
+
+def test_real_institutions_still_classified(clf):
+    # Vocabulaire institutionnel SPÉCIFIQUE → toujours bien classé.
+    r = clf.classify("Une motion de censure et la dissolution de l'Assemblée nationale")
+    assert r["theme"] == "institutions"
+
+
+def test_salience_breaks_tie_toward_immigration(clf):
+    # « référendum sur l'immigration » : ex æquo institutions/immigration ;
+    # la saillance (immigration très haute) tranche pour l'immigration.
+    r = clf.classify("référendum sur l'immigration")
+    assert r["theme"] == "immigration"

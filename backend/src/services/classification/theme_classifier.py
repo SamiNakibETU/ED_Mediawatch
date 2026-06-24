@@ -35,6 +35,12 @@ def _compile(terms) -> re.Pattern:
     return re.compile(rf"(?<![a-z0-9])(?:{_alt(terms)})(?![a-z0-9])")
 
 
+# Poids de saillance (cadre §2) : départage les ex æquo de score. L'« issue
+# ownership » (§6.1) veut que sur une égalité, les thèmes signature de l'ED
+# (immigration, sécurité = très haute) l'emportent sur le générique.
+_SALIENCE_W = {"tres_haute": 4, "haute": 3, "moyenne": 2, "basse": 1}
+
+
 @lru_cache
 def _lexicon() -> dict:
     path = BACKEND_DIR / "data" / "theme_lexicon.json"
@@ -48,7 +54,9 @@ class ThemeClassifier:
         lex = (lexicon or _lexicon())["themes"]
         self._theme_re: dict[str, re.Pattern] = {}
         self._subtheme_re: dict[str, dict[str, re.Pattern]] = {}
+        self._salience: dict[str, int] = {}
         for theme_id, spec in lex.items():
+            self._salience[theme_id] = _SALIENCE_W.get(spec.get("salience"), 0)
             kws = spec.get("keywords", [])
             if kws:
                 self._theme_re[theme_id] = _compile(kws)
@@ -70,10 +78,10 @@ class ThemeClassifier:
         scores = {
             tid: self._score(rx, norm) for tid, rx in self._theme_re.items()
         }
+        # tri : score décroissant, puis saillance (issue ownership), puis id stable
         ranked = sorted(
             ((tid, s) for tid, s in scores.items() if s > 0),
-            key=lambda kv: (kv[1], len(kv[0])),  # score, puis stable
-            reverse=True,
+            key=lambda kv: (-kv[1], -self._salience.get(kv[0], 0), kv[0]),
         )
         if not ranked:
             return {"theme": None, "subtheme": None, "score": 0, "secondary": None}
