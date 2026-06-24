@@ -44,6 +44,9 @@ class Settings(BaseSettings):
     # Scheduler
     collection_interval_hours: int = 4
     collect_on_startup: bool = False
+    # Vue de fraîcheur : une source/passe est « périmée » si rien depuis N heures.
+    # Une collecte qui échoue en silence est pire qu'une absente (cf. spec §12.1).
+    freshness_alert_hours: int = 24
 
     # Sécurité (prod). Vides en local = ouvert ; renseignés en prod.
     # Jeton requis (header X-API-Token) sur les endpoints coûteux (collecte/LLM).

@@ -20,7 +20,29 @@ from src.utils import tweet_guid
 
 logger = structlog.get_logger(__name__)
 
-_NUM_RE = re.compile(r"[\d.,]+")
+_NUM_RE = re.compile(r"([\d.,]+)\s*([KkMm])?")
+
+
+def _parse_count(text: str) -> int | None:
+    """Parse un compteur d'engagement Nitter en entier.
+
+    Gère le plein (« 1 234 », « 1,234 », « 1.234 » → 1234) ET le compact
+    (« 1.2K » → 1200, « 3M » → 3000000). Avant, « 1.2K » devenait 1 (le suffixe
+    était ignoré et 1.2 tronqué) — or l'engagement est un critère §5.
+    """
+    text = (text or "").replace(" ", "").replace(" ", "")
+    m = _NUM_RE.search(text)
+    if not m:
+        return 0
+    raw, suffix = m.group(1), (m.group(2) or "").upper()
+    try:
+        if suffix:  # compact : le point/virgule est un séparateur décimal
+            val = float(raw.replace(",", "."))
+            return int(val * (1_000 if suffix == "K" else 1_000_000))
+        # plein : ',' '.' ' ' sont des séparateurs de milliers → on les retire
+        return int(raw.replace(",", "").replace(".", ""))
+    except ValueError:
+        return None
 
 
 def _stat_value(item, icon_class: str) -> int | None:
@@ -37,16 +59,7 @@ def _stat_value(item, icon_class: str) -> int | None:
         cls = node.get("class") or ""
         if "tweet-stat" in cls:
             break
-    text = node.text_content()
-    m = _NUM_RE.search(text)
-    if not m:
-        return 0
-    raw = m.group(0).replace(",", "").replace(" ", "")
-    # Nitter shows compact-ish; keep it simple (full numbers when self-hosted)
-    try:
-        return int(float(raw)) if "." not in raw else int(float(raw))
-    except ValueError:
-        return None
+    return _parse_count(node.text_content())
 
 
 def _parse_date(item, handle: str) -> datetime | None:

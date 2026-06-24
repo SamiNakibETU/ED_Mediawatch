@@ -1,4 +1,9 @@
-"""Audit log of each collection run (per scheduler tick)."""
+"""Audit log of each collection run (per scheduler tick).
+
+`kind` ('x' | 'press') désambiguïse les deux types de passe : pour X,
+`personalities_polled`/`posts_new` = handles sondés / posts neufs ; pour la
+presse, ils portent sources scannées / articles neufs. Lire via `kind`.
+"""
 
 from datetime import datetime
 
@@ -13,6 +18,8 @@ class CollectionRun(Base):
     __tablename__ = "collection_runs"
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    # 'x' | 'press' — type de passe (cf. vocabulary.RunKind).
+    kind: Mapped[str | None] = mapped_column(String(10), index=True)
     started_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utcnow, nullable=False
     )

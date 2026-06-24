@@ -25,7 +25,7 @@ from src.models.post import Post
 from src.services.collection.nitter_client import NitterClient
 from src.services.collection.x_html_parser import parse_profile_html
 from src.utils import clean_html, feed_datetime, tweet_guid
-from src.vocabulary import RunStatus, Source
+from src.vocabulary import RunKind, RunStatus, Source
 
 logger = structlog.get_logger(__name__)
 
@@ -70,27 +70,37 @@ def parse_feed(xml: str, handle: str) -> list[dict]:
     return out
 
 
+def _post_conflict_insert(rows: list[dict]):
+    """INSERT … ON CONFLICT(guid) DO NOTHING — dialecte SQLite ou PostgreSQL.
+
+    Évite qu'un guid en double (collecte concurrente : startup vs scheduler, ou
+    réplay) ne fasse échouer le commit et perdre TOUT le lot. Idempotent par
+    nature. `insert().values(rows)` produit un seul INSERT multi-VALUES → un
+    rowcount fiable (= lignes réellement insérées, conflits exclus)."""
+    if get_settings().database_url.startswith("postgres"):
+        from sqlalchemy.dialects.postgresql import insert as _insert
+    else:
+        from sqlalchemy.dialects.sqlite import insert as _insert
+    return _insert(Post).values(rows).on_conflict_do_nothing(index_elements=["guid"])
+
+
 async def _insert_new(db: AsyncSession, personality_id: int, posts: list[dict]) -> int:
-    """Dedup by guid and insert new posts. Works for RSS and HTML dicts."""
+    """Insert new posts, deduped by guid via ON CONFLICT. RSS or HTML dicts."""
     if not posts:
         return 0
-    guids = [pd["guid"] for pd in posts]
-    known = set(
-        (await db.execute(select(Post.guid).where(Post.guid.in_(guids)))).scalars().all()
-    )
-    new_count = 0
+    now = datetime.now(timezone.utc)
+    rows: list[dict] = []
     for pd in posts:
-        if pd["guid"] in known:
-            continue
         data = dict(pd)
+        data["personality_id"] = personality_id
+        data["source"] = Source.X
         # engagement present (HTML path) → timestamp it
         if data.get("likes") is not None or data.get("retweets") is not None:
-            data["engagement_captured_at"] = datetime.now(timezone.utc)
-        db.add(Post(personality_id=personality_id, source=Source.X, **data))
-        known.add(pd["guid"])
-        new_count += 1
+            data["engagement_captured_at"] = now
+        rows.append(data)
+    result = await db.execute(_post_conflict_insert(rows))
     await db.commit()
-    return new_count
+    return result.rowcount or 0
 
 
 async def _collect_one(
@@ -214,7 +224,9 @@ async def run_collection(use_html: bool | None = None) -> dict:
         personalities = list(result.scalars().all())
 
         run = CollectionRun(
-            status=RunStatus.RUNNING, personalities_polled=len(personalities)
+            kind=RunKind.X,
+            status=RunStatus.RUNNING,
+            personalities_polled=len(personalities),
         )
         db.add(run)
         await db.commit()

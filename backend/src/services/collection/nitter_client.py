@@ -95,7 +95,9 @@ class NitterClient:
                         continue
 
                     if not _looks_like_rss(text):
-                        logger.debug(
+                        # Réponse 200 mais pas du RSS = challenge bot / page d'erreur :
+                        # signal actionnable (instance à retirer / self-host), pas du bruit.
+                        logger.info(
                             "nitter.not_rss", instance=instance, handle=handle
                         )
                         continue
@@ -137,7 +139,7 @@ class NitterClient:
                                      path=path, error=str(exc)[:120])
                         continue
                     if not _looks_like_timeline(text):
-                        logger.debug("nitter.html_blocked", instance=instance, path=path)
+                        logger.info("nitter.html_blocked", instance=instance, path=path)
                         continue
                     self._preferred = instance
                     return text, instance

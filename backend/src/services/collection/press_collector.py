@@ -25,7 +25,7 @@ from src.models.personality import Personality
 from src.services.collection.extractor_client import extract_fulltext, extract_html
 from src.services.collection.relevance import RelevanceIndex, build_index
 from src.utils import clean_html, feed_datetime, sha256
-from src.vocabulary import Nature, RunStatus
+from src.vocabulary import Nature, RunKind, RunStatus
 
 logger = structlog.get_logger(__name__)
 settings = get_settings()
@@ -197,7 +197,7 @@ async def run_press_collection(reset: bool = False) -> dict:
         logger.info("press.reset")
 
     async with factory() as db:
-        run = CollectionRun(status=RunStatus.RUNNING, notes="press")
+        run = CollectionRun(kind=RunKind.PRESS, status=RunStatus.RUNNING, notes="press")
         db.add(run)
         await db.commit()
         await db.refresh(run)
