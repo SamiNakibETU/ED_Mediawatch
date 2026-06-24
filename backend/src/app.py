@@ -17,6 +17,7 @@ from src.config import get_settings
 from src.database import init_db
 from src.routers import (
     articles,
+    classification,
     compteur,
     contradictions,
     health,
@@ -70,6 +71,7 @@ app.include_router(personalities.router)
 app.include_router(posts.router)
 app.include_router(articles.router)
 app.include_router(referentiel.router)
+app.include_router(classification.router)
 app.include_router(compteur.router)
 app.include_router(contradictions.router)
 
