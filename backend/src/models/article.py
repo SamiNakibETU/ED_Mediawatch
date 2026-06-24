@@ -46,6 +46,8 @@ class Article(Base, TimestampMixin):
     matched_personalities: Mapped[list | None] = mapped_column(JSON)
     # True when the article reports an actual RN/affiliés statement (vs a mere mention).
     is_statement: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Nature de l'item : 'prise_de_parole' (figure ED s'exprime) | 'mention'.
+    nature: Mapped[str | None] = mapped_column(String(20), index=True)
 
     # Archivage / reçus — preuve traçable même si l'article est supprimé/paywallé.
     snapshot_path: Mapped[str | None] = mapped_column(String(400))  # HTML local

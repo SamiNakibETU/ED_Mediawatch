@@ -1,7 +1,6 @@
-// Presse — revue d'articles mentionnant l'extrême droite (métadonnées de veille).
+// Presse — prises de parole de l'extrême droite dans la presse (métadonnées de veille).
 const API = "";  // même origine
 
-// Orientation éditoriale de la source (indiquée pour le lecteur).
 const LEANINGS = [
   { key: null, label: "Toutes", color: "#a1a1aa" },
   { key: "far_right", label: "Extrême droite", color: "#b91c1c" },
@@ -12,7 +11,7 @@ const LEANINGS = [
 ];
 const LEAN_LABEL = Object.fromEntries(LEANINGS.map((l) => [l.key, l]));
 
-const state = { leaning: null, statementsOnly: false, offset: 0, limit: 25, total: 0, loading: false, done: false };
+const state = { leaning: null, offset: 0, limit: 25, total: 0, loading: false, done: false };
 const $ = (s) => document.querySelector(s);
 const listEl = $("#list");
 const sentinel = $("#sentinel");
@@ -20,7 +19,6 @@ const sentinel = $("#sentinel");
 function escapeHtml(s) {
   return (s || "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 }
-
 function relTime(iso) {
   if (!iso) return "";
   const d = new Date(iso), s = (Date.now() - d.getTime()) / 1000;
@@ -33,33 +31,66 @@ const exactDate = (iso) => iso
   ? new Date(iso).toLocaleString("fr-FR", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })
   : "";
 
-function card(a) {
-  const lean = LEAN_LABEL[a.leaning] || LEAN_LABEL[null];
-  const people = (a.matched_personalities || []).slice(0, 6)
+function peopleChips(list, max = 8) {
+  return (list || []).slice(0, max)
     .map((p) => `<span class="text-[10px] px-1.5 py-0.5 rounded bg-zinc-800/70 text-zinc-300">${escapeHtml(p)}</span>`)
     .join(" ");
-  const archive = a.archived_at || a.snapshot_url
-    ? `<a href="${a.snapshot_url || a.url}" target="_blank" rel="noopener" class="text-[11px] text-emerald-400/80 hover:text-emerald-300" title="Copie archivée (reçu)">🗎 reçu</a>`
-    : "";
-  return `<article class="card-enter py-4">
+}
+
+function card(a) {
+  const lean = LEAN_LABEL[a.leaning] || LEAN_LABEL[null];
+  const truncated = (a.word_count || 0) < 80;
+  return `<article data-id="${a.id}" class="card-enter py-4 cursor-pointer group">
     <div class="flex items-center gap-2 flex-wrap text-sm">
       <span class="font-semibold" style="color:${lean.color}">${escapeHtml(a.source_name || a.media_source_id)}</span>
       <span class="text-[10px] px-1.5 py-0.5 rounded border border-line" style="color:${lean.color}">${lean.label}</span>
-      ${a.is_statement ? `<span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300" title="Contient une assertion chiffrable">chiffrable</span>` : ""}
+      <span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300">prise de parole</span>
       ${a.theme ? `<span class="text-[10px] px-1.5 py-0.5 rounded bg-figure/15 text-figure">${escapeHtml(a.theme)}</span>` : ""}
       <span class="text-muted">·</span>
       <span class="text-muted" title="${exactDate(a.published_at)}">${relTime(a.published_at)}</span>
     </div>
-    <a href="${a.url}" target="_blank" rel="noopener" class="block mt-1.5 text-[16px] font-medium text-zinc-100 hover:text-figure leading-snug">${escapeHtml(a.title)}</a>
+    <h3 class="mt-1.5 text-[16px] font-medium text-zinc-100 group-hover:text-figure leading-snug">${escapeHtml(a.title)}</h3>
     ${a.author ? `<div class="text-[11px] text-muted mt-0.5">par ${escapeHtml(a.author)}</div>` : ""}
-    ${people ? `<div class="mt-2 flex items-center gap-1 flex-wrap">${people}</div>` : ""}
+    ${a.matched_personalities && a.matched_personalities.length ? `<div class="mt-2 flex items-center gap-1 flex-wrap">${peopleChips(a.matched_personalities)}</div>` : ""}
     <div class="mt-2 flex items-center gap-3 text-[11px] text-zinc-600">
-      <span>${a.word_count || 0} mots</span>
-      ${archive}
+      <span>${truncated ? "extrait" : (a.word_count || 0) + " mots"}</span>
+      ${a.archived_at || a.snapshot_url ? `<span class="text-emerald-400/80">🗎 reçu</span>` : ""}
       <div class="flex-1"></div>
-      <a href="${a.url}" target="_blank" rel="noopener" class="hover:text-figure" title="${exactDate(a.published_at)}">lire ↗</a>
+      <span class="text-figure/80 group-hover:text-figure">lire dans l'app →</span>
     </div>
   </article>`;
+}
+
+async function openArticle(id) {
+  const reader = $("#reader");
+  reader.classList.remove("hidden");
+  $("#readerBody").textContent = "Chargement…";
+  $("#readerTitle").textContent = "";
+  $("#readerSub").innerHTML = ""; $("#readerPeople").innerHTML = ""; $("#readerFoot").innerHTML = ""; $("#readerMeta").textContent = "";
+  document.body.style.overflow = "hidden";
+  try {
+    const a = await (await fetch(`${API}/articles/${id}`)).json();
+    const lean = LEAN_LABEL[a.leaning] || LEAN_LABEL[null];
+    $("#readerMeta").innerHTML = `<span style="color:${lean.color}" class="font-medium">${escapeHtml(a.source_name || a.media_source_id)}</span> · ${lean.label}`;
+    $("#readerTitle").textContent = a.title;
+    $("#readerSub").innerHTML = [
+      a.author ? `par ${escapeHtml(a.author)}` : "",
+      exactDate(a.published_at),
+      `${a.word_count || 0} mots`,
+    ].filter(Boolean).map((x) => `<span>${x}</span>`).join('<span class="text-zinc-700">·</span>');
+    $("#readerPeople").innerHTML = peopleChips(a.matched_personalities, 12);
+    $("#readerBody").textContent = a.content || "(texte non disponible — voir la source)";
+    $("#readerFoot").innerHTML = `
+      <a href="${a.url}" target="_blank" rel="noopener" class="px-3 py-1.5 rounded-lg bg-figure/20 text-figure hover:bg-figure/30">Article original ↗</a>
+      ${a.snapshot_url ? `<a href="${a.snapshot_url}" target="_blank" rel="noopener" class="px-3 py-1.5 rounded-lg bg-emerald-600/15 text-emerald-300 hover:bg-emerald-600/25">Copie archivée 🗎</a>` : ""}`;
+  } catch (e) {
+    $("#readerBody").textContent = "Erreur de chargement de l'article.";
+  }
+}
+
+function closeReader() {
+  $("#reader").classList.add("hidden");
+  document.body.style.overflow = "";
 }
 
 async function load(reset = false) {
@@ -68,9 +99,8 @@ async function load(reset = false) {
   if (reset) { state.offset = 0; state.done = false; listEl.innerHTML = ""; }
   sentinel.textContent = "Chargement…";
 
-  const params = new URLSearchParams({ limit: state.limit, offset: state.offset });
+  const params = new URLSearchParams({ limit: state.limit, offset: state.offset, nature: "prise_de_parole" });
   if (state.leaning) params.set("leaning", state.leaning);
-  if (state.statementsOnly) params.set("statements_only", "true");
 
   try {
     const res = await fetch(`${API}/articles?${params}`);
@@ -81,9 +111,9 @@ async function load(reset = false) {
     state.offset += data.items.length;
     state.done = state.offset >= data.total || data.items.length === 0;
     sentinel.textContent = state.done
-      ? (state.total ? `— fin · ${state.total.toLocaleString("fr-FR")} articles —` : "Aucun article pour ce filtre.")
+      ? (state.total ? `— fin · ${state.total.toLocaleString("fr-FR")} prises de parole —` : "Aucune prise de parole pour ce filtre.")
       : "";
-    $("#stats").innerHTML = `<span class="text-zinc-300 font-medium">${state.total.toLocaleString("fr-FR")}</span> articles`;
+    $("#stats").innerHTML = `<span class="text-zinc-300 font-medium">${state.total.toLocaleString("fr-FR")}</span> prises de parole`;
   } catch (e) {
     sentinel.innerHTML = `<span class="text-red-400">Erreur de chargement (${e.message}).</span>`;
   } finally {
@@ -101,7 +131,13 @@ function renderPills() {
     b.onclick = () => { state.leaning = b.dataset.k || null; renderPills(); load(true); });
 }
 
-$("#statementsOnly").onchange = (e) => { state.statementsOnly = e.target.checked; load(true); };
+listEl.addEventListener("click", (e) => {
+  const art = e.target.closest("article[data-id]");
+  if (art) openArticle(art.dataset.id);
+});
+$("#readerClose").onclick = closeReader;
+$("#readerBackdrop").onclick = closeReader;
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeReader(); });
 new IntersectionObserver((entries) => { if (entries[0].isIntersecting) load(); }, { rootMargin: "600px" }).observe(sentinel);
 
 renderPills();

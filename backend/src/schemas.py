@@ -89,10 +89,17 @@ class ArticleOut(BaseModel):
     matched_keywords: list | None
     matched_personalities: list | None
     is_statement: bool
+    nature: str | None = None
     snapshot_url: str | None
     archived_at: datetime | None
     theme: str | None
     word_count: int
+
+
+class ArticleDetail(ArticleOut):
+    """Article complet (avec le texte) pour le panneau de lecture."""
+
+    content: str
 
 
 class ArticlePage(BaseModel):

@@ -42,24 +42,64 @@ async def _via_service(url: str, base: str, timeout: int) -> str | None:
         return None
 
 
+_MIN_LEN = 350  # en-deçà : on considère le texte tronqué et on tente la suite
+
+_BROWSER_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    ),
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "fr-FR,fr;q=0.9,en;q=0.8",
+}
+
+
+def _extract(html: str, *, recall: bool) -> str | None:
+    return trafilatura.extract(
+        html,
+        include_comments=False,
+        include_tables=False,
+        favor_recall=recall,
+        favor_precision=not recall,
+        deduplicate=True,
+        output_format="txt",
+    )
+
+
 async def _via_trafilatura(url: str) -> str | None:
+    """Cascade façon PMO : recall → precision → fetch direct (UA navigateur)."""
     if trafilatura is None:
         return None
+    best: str | None = None
     try:
         downloaded = await asyncio.to_thread(trafilatura.fetch_url, url)
-        if not downloaded:
-            return None
-        return await asyncio.to_thread(
-            trafilatura.extract,
-            downloaded,
-            include_comments=False,
-            include_tables=False,
-            favor_recall=True,
-            output_format="txt",
-        )
+        if downloaded:
+            for recall in (True, False):
+                txt = await asyncio.to_thread(_extract, downloaded, recall=recall)
+                if txt and len(txt) > len(best or ""):
+                    best = txt
+                if best and len(best) >= _MIN_LEN:
+                    return best
     except Exception as exc:  # noqa: BLE001
         logger.debug("extractor.trafilatura_fail", url=url, error=str(exc)[:120])
-        return None
+
+    # Repli : certains sites refusent le fetch trafilatura (UA), pas un vrai navigateur.
+    if best is None or len(best) < _MIN_LEN:
+        try:
+            async with aiohttp.ClientSession(headers=_BROWSER_HEADERS) as http:
+                async with http.get(
+                    url, timeout=aiohttp.ClientTimeout(total=30), allow_redirects=True
+                ) as resp:
+                    if resp.status == 200:
+                        html = await resp.text()
+                        if html and len(html) > 500:
+                            txt = await asyncio.to_thread(_extract, html, recall=True)
+                            if txt and len(txt) > len(best or ""):
+                                best = txt
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("extractor.direct_fetch_fail", url=url, error=str(exc)[:120])
+
+    return best
 
 
 async def extract_fulltext(url: str) -> str | None:
