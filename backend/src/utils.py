@@ -7,6 +7,7 @@ l'analyse : un seul endroit à tester et à faire évoluer.
 from __future__ import annotations
 
 import hashlib
+import html
 import re
 import unicodedata
 from datetime import datetime, timezone
@@ -15,7 +16,6 @@ from time import mktime
 _TAG_RE = re.compile(r"<[^>]+>")
 _WS_RE = re.compile(r"\s+")
 _STATUS_RE = re.compile(r"/status/(\d+)")
-_ENTITIES = {"&amp;": "&", "&lt;": "<", "&gt;": ">", "&#39;": "'", "&quot;": '"'}
 
 
 def sha256(text: str) -> str:
@@ -24,10 +24,10 @@ def sha256(text: str) -> str:
 
 
 def clean_html(raw: str | None) -> str:
-    """Retire les balises, décode les entités courantes, compacte les espaces."""
+    """Retire les balises, décode TOUTES les entités (nommées + numériques),
+    compacte les espaces."""
     text = _TAG_RE.sub(" ", raw or "")
-    for ent, char in _ENTITIES.items():
-        text = text.replace(ent, char)
+    text = html.unescape(text)  # &#8217; → ’, &eacute; → é, etc.
     return _WS_RE.sub(" ", text).strip()
 
 
