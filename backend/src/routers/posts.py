@@ -19,6 +19,7 @@ async def feed(
     group: str | None = Query(None, description="RN / UDR / FIGURE"),
     personality_id: int | None = Query(None),
     theme: str | None = Query(None),
+    subtheme: str | None = Query(None),
     q: str | None = Query(None, description="recherche : nom ou @handle de la personnalité"),
     include_retweets: bool = Query(True),
     limit: int = Query(50, ge=1, le=200),
@@ -44,6 +45,9 @@ async def feed(
     if theme:
         stmt = stmt.where(Post.theme == theme)
         count_stmt = count_stmt.where(Post.theme == theme)
+    if subtheme:
+        stmt = stmt.where(Post.subtheme == subtheme)
+        count_stmt = count_stmt.where(Post.subtheme == subtheme)
     if q and q.strip():
         # Recherche serveur sur toute la base (pas seulement la page chargée).
         like = f"%{q.strip().lstrip('@')}%"

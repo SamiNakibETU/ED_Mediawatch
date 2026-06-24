@@ -27,6 +27,7 @@ async def articles(
     nature: str | None = Query(None, description="prise_de_parole | mention"),
     statements_only: bool = Query(False),
     theme: str | None = Query(None),
+    subtheme: str | None = Query(None),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db),
@@ -52,6 +53,9 @@ async def articles(
     if theme:
         stmt = stmt.where(Article.theme == theme)
         count_stmt = count_stmt.where(Article.theme == theme)
+    if subtheme:
+        stmt = stmt.where(Article.subtheme == subtheme)
+        count_stmt = count_stmt.where(Article.subtheme == subtheme)
 
     total = await db.scalar(count_stmt) or 0
     res = await db.execute(stmt.limit(limit).offset(offset))

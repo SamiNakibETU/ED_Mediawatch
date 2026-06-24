@@ -1,9 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from src.database import get_db
+from src.models.article import Article
+from src.models.post import Post
 from src.models.referentiel import Subtheme, Theme
 from src.models.taxonomy import Actualite, Sujet
 from src.schemas import ActualiteIn, ActualiteOut, SujetIn, SujetOut
@@ -43,6 +45,50 @@ async def get_referentiel(db: AsyncSession = Depends(get_db)) -> dict:
         })
     version = themes[0].version if themes else None
     return {"version": version, "themes": out}
+
+
+async def _counts(db: AsyncSession, column) -> dict[str, int]:
+    """Compte les items par valeur de `column` (Post.theme, Article.subtheme…)."""
+    rows = (
+        await db.execute(
+            select(column, func.count()).where(column.isnot(None)).group_by(column)
+        )
+    ).all()
+    return {k: n for k, n in rows}
+
+
+@router.get("/themes/tree")
+async def themes_tree(db: AsyncSession = Depends(get_db)) -> dict:
+    """Arbre de navigation Thème → Sous-thème avec compteurs par source (X/presse).
+
+    Alimente la navigation thématique des deux surfaces (§8). Les thèmes vides
+    (backbone CAP sans item) sont marqués `empty` pour que le front puisse les
+    masquer ou les griser.
+    """
+    res = await db.execute(
+        select(Theme).options(selectinload(Theme.subthemes)).order_by(Theme.order)
+    )
+    themes = res.scalars().unique().all()
+
+    pt, at = await _counts(db, Post.theme), await _counts(db, Article.theme)
+    ps, as_ = await _counts(db, Post.subtheme), await _counts(db, Article.subtheme)
+
+    out = []
+    for t in themes:
+        subs = [
+            {
+                "id": st.id, "label": st.label,
+                "posts": ps.get(st.id, 0), "articles": as_.get(st.id, 0),
+            }
+            for st in sorted(t.subthemes, key=lambda s: s.label)
+        ]
+        posts, articles = pt.get(t.id, 0), at.get(t.id, 0)
+        out.append({
+            "id": t.id, "label": t.label, "code": t.code, "salience": t.salience,
+            "order": t.order, "posts": posts, "articles": articles,
+            "empty": (posts + articles) == 0, "subthemes": subs,
+        })
+    return {"themes": out}
 
 
 # --- Sujets (persistants) ---------------------------------------------------
