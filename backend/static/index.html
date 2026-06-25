@@ -32,7 +32,7 @@
 <body class="text-zinc-200 font-sans min-h-screen">
   <!-- Header -->
   <header class="sticky top-0 z-20 backdrop-blur-xl bg-ink/70 border-b border-line">
-    <div class="max-w-2xl mx-auto px-4 py-3">
+    <div class="max-w-6xl mx-auto px-4 py-3">
       <div class="flex items-center justify-between gap-3">
         <div class="flex items-center gap-2.5">
           <div class="h-9 w-9 rounded-xl bg-gradient-to-br from-rn to-figure grid place-items-center font-bold text-white text-sm">ED</div>
@@ -63,12 +63,21 @@
     </div>
   </header>
 
-  <!-- Feed -->
-  <main class="max-w-2xl mx-auto px-4 pb-24">
-    <div id="feed" class="divide-y divide-line"></div>
-    <div id="sentinel" class="py-8 text-center text-sm text-muted"></div>
-  </main>
+  <!-- Corps : navigation thématique (gauche) + flux (droite) -->
+  <div class="max-w-6xl mx-auto px-4 pb-24 flex gap-6">
+    <aside class="w-56 shrink-0 hidden md:block">
+      <div class="sticky top-28 max-h-[calc(100vh-8rem)] overflow-y-auto pr-1">
+        <div class="text-[11px] uppercase tracking-wide text-zinc-600 px-2 mb-1">Thèmes</div>
+        <nav id="themeTree" class="space-y-0.5"></nav>
+      </div>
+    </aside>
+    <main class="flex-1 min-w-0">
+      <div id="feed" class="divide-y divide-line"></div>
+      <div id="sentinel" class="py-8 text-center text-sm text-muted"></div>
+    </main>
+  </div>
 
+  <script src="common.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

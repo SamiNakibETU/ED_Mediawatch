@@ -1,6 +1,4 @@
-// ED · MediaWatch — feed client (vanilla JS, talks to the FastAPI backend).
-const API = "";  // même origine : le backend FastAPI sert ce front
-
+// Réseaux sociaux (X) — surface de veille. Utilitaires partagés : common.js.
 const GROUPS = {
   ALL: { label: "Tous", color: "#a1a1aa" },
   RN: { label: "RN", color: "#2563eb" },
@@ -8,21 +6,13 @@ const GROUPS = {
   FIGURE: { label: "Figures", color: "#7c3aed" },
 };
 
-const state = { group: "ALL", hideRT: false, search: "", offset: 0, limit: 25, total: 0, loading: false, done: false };
+const state = {
+  group: "ALL", hideRT: false, search: "", theme: null, subtheme: null,
+  offset: 0, limit: 25, total: 0, loading: false, done: false,
+};
 
-const $ = (s) => document.querySelector(s);
 const feedEl = $("#feed");
 const sentinel = $("#sentinel");
-
-function relTime(iso) {
-  if (!iso) return "";
-  const d = new Date(iso), s = (Date.now() - d.getTime()) / 1000;
-  if (s < 60) return "à l'instant";
-  if (s < 3600) return `il y a ${Math.floor(s / 60)} min`;
-  if (s < 86400) return `il y a ${Math.floor(s / 3600)} h`;
-  if (s < 604800) return `il y a ${Math.floor(s / 86400)} j`;
-  return d.toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
-}
 
 function avatar(p) {
   const color = GROUPS[p.group_code]?.color || "#52525b";
@@ -34,10 +24,6 @@ function avatar(p) {
       onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'h-11 w-11 rounded-full grid place-items-center text-sm font-semibold text-white',style:'background:${color}',textContent:'${initials}'}))" />`;
   }
   return `<div class="h-11 w-11 rounded-full grid place-items-center text-sm font-semibold text-white" style="background:${color}">${initials}</div>`;
-}
-
-function escapeHtml(s) {
-  return s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 }
 
 function linkify(s) {
@@ -64,9 +50,7 @@ function verifMark(p) {
   return "";
 }
 
-// Parti du locuteur À LA DATE du post (§5). Affiché seulement s'il diffère de
-// l'étiquette de groupe / famille déjà montrée (ex. Ciotti « UDR » sur un post
-// de 2025 alors que son groupe historique était LR).
+// Parti du locuteur À LA DATE du post (§5), affiché s'il diffère du groupe courant.
 function partyAtDate(it, p) {
   const v = (it.party_at_date || "").trim();
   if (!v) return "";
@@ -84,19 +68,11 @@ function metaLine(p) {
   return bits.length ? `<div class="text-[11px] text-muted mt-0.5 truncate">${bits.join(" · ")}</div>` : "";
 }
 
-function exactDate(iso) {
-  if (!iso) return "";
-  return new Date(iso).toLocaleString("fr-FR", {
-    day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
-  });
-}
-
 function engagement(it) {
-  const fmt = (n) => n.toLocaleString("fr-FR");
   const parts = [];
-  if (it.likes != null) parts.push(`♥ ${fmt(it.likes)}`);
-  if (it.retweets != null) parts.push(`🔁 ${fmt(it.retweets)}`);
-  if (it.replies != null) parts.push(`💬 ${fmt(it.replies)}`);
+  if (it.likes != null) parts.push(`♥ ${fmtNum(it.likes)}`);
+  if (it.retweets != null) parts.push(`🔁 ${fmtNum(it.retweets)}`);
+  if (it.replies != null) parts.push(`💬 ${fmtNum(it.replies)}`);
   return parts.length ? `<span class="text-[11px] text-muted tabular-nums">${parts.join("  ")}</span>` : "";
 }
 
@@ -149,22 +125,18 @@ async function load(reset = false) {
   });
   if (state.group !== "ALL") params.set("group", state.group);
   if (state.search.trim()) params.set("q", state.search.trim());
+  if (state.theme) params.set("theme", state.theme);
+  if (state.subtheme) params.set("subtheme", state.subtheme);
 
   try {
-    const res = await fetch(`${API}/feed?${params}`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
+    const data = await fetchJSON(`/feed?${params}`);
     state.total = data.total;
     feedEl.insertAdjacentHTML("beforeend", data.items.map(card).join(""));
     state.offset += data.items.length;
     state.done = state.offset >= data.total || data.items.length === 0;
-    if (state.done) {
-      sentinel.textContent = state.total
-        ? `— fin · ${state.total.toLocaleString("fr-FR")} posts —`
-        : "Aucun post pour ce filtre.";
-    } else {
-      sentinel.textContent = "";
-    }
+    sentinel.textContent = state.done
+      ? (state.total ? `— fin · ${fmtNum(state.total)} posts —` : "Aucun post pour ce filtre.")
+      : "";
     renderStats();
   } catch (e) {
     sentinel.innerHTML = `<span class="text-red-400">Erreur de chargement du flux (${e.message}).</span>`;
@@ -174,7 +146,7 @@ async function load(reset = false) {
 }
 
 function renderStats() {
-  $("#stats").innerHTML = `<span class="text-zinc-300 font-medium">${state.total.toLocaleString("fr-FR")}</span> posts`;
+  $("#stats").innerHTML = `<span class="text-zinc-300 font-medium">${fmtNum(state.total)}</span> posts`;
 }
 
 function renderPills() {
@@ -191,9 +163,10 @@ $("#hideRT").onchange = (e) => { state.hideRT = e.target.checked; load(true); };
 let searchTimer;
 $("#search").oninput = (e) => { clearTimeout(searchTimer); state.search = e.target.value; searchTimer = setTimeout(() => load(true), 250); };
 
-new IntersectionObserver((entries) => {
-  if (entries[0].isIntersecting) load();
-}, { rootMargin: "600px" }).observe(sentinel);
-
+infiniteScroll(sentinel, () => load());
+themeTree($("#themeTree"), {
+  source: "posts",
+  onSelect: ({ theme, subtheme }) => { state.theme = theme; state.subtheme = subtheme; load(true); },
+});
 renderPills();
 load(true);

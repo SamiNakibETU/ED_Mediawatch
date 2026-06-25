@@ -1,6 +1,4 @@
-// Presse — prises de parole de l'extrême droite dans la presse (métadonnées de veille).
-const API = "";  // même origine
-
+// Presse — prises de parole de l'extrême droite dans la presse. Utilitaires : common.js.
 const LEANINGS = [
   { key: null, label: "Toutes", color: "#a1a1aa" },
   { key: "far_right", label: "Extrême droite", color: "#b91c1c" },
@@ -11,25 +9,9 @@ const LEANINGS = [
 ];
 const LEAN_LABEL = Object.fromEntries(LEANINGS.map((l) => [l.key, l]));
 
-const state = { leaning: null, offset: 0, limit: 25, total: 0, loading: false, done: false };
-const $ = (s) => document.querySelector(s);
+const state = { leaning: null, theme: null, subtheme: null, offset: 0, limit: 25, total: 0, loading: false, done: false };
 const listEl = $("#list");
 const sentinel = $("#sentinel");
-
-function escapeHtml(s) {
-  return (s || "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-}
-function relTime(iso) {
-  if (!iso) return "";
-  const d = new Date(iso), s = (Date.now() - d.getTime()) / 1000;
-  if (s < 3600) return `il y a ${Math.max(1, Math.floor(s / 60))} min`;
-  if (s < 86400) return `il y a ${Math.floor(s / 3600)} h`;
-  if (s < 604800) return `il y a ${Math.floor(s / 86400)} j`;
-  return d.toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
-}
-const exactDate = (iso) => iso
-  ? new Date(iso).toLocaleString("fr-FR", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })
-  : "";
 
 function peopleChips(list, max = 8) {
   return (list || []).slice(0, max)
@@ -69,7 +51,7 @@ async function openArticle(id) {
   $("#readerSub").innerHTML = ""; $("#readerPeople").innerHTML = ""; $("#readerFoot").innerHTML = ""; $("#readerMeta").textContent = "";
   document.body.style.overflow = "hidden";
   try {
-    const a = await (await fetch(`${API}/articles/${id}`)).json();
+    const a = await fetchJSON(`/articles/${id}`);
     const lean = LEAN_LABEL[a.leaning] || LEAN_LABEL[null];
     $("#readerMeta").innerHTML = `<span style="color:${lean.color}" class="font-medium">${escapeHtml(a.source_name || a.media_source_id)}</span> · ${lean.label}`;
     $("#readerTitle").textContent = a.title;
@@ -101,19 +83,19 @@ async function load(reset = false) {
 
   const params = new URLSearchParams({ limit: state.limit, offset: state.offset, nature: "prise_de_parole" });
   if (state.leaning) params.set("leaning", state.leaning);
+  if (state.theme) params.set("theme", state.theme);
+  if (state.subtheme) params.set("subtheme", state.subtheme);
 
   try {
-    const res = await fetch(`${API}/articles?${params}`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
+    const data = await fetchJSON(`/articles?${params}`);
     state.total = data.total;
     listEl.insertAdjacentHTML("beforeend", data.items.map(card).join(""));
     state.offset += data.items.length;
     state.done = state.offset >= data.total || data.items.length === 0;
     sentinel.textContent = state.done
-      ? (state.total ? `— fin · ${state.total.toLocaleString("fr-FR")} prises de parole —` : "Aucune prise de parole pour ce filtre.")
+      ? (state.total ? `— fin · ${fmtNum(state.total)} prises de parole —` : "Aucune prise de parole pour ce filtre.")
       : "";
-    $("#stats").innerHTML = `<span class="text-zinc-300 font-medium">${state.total.toLocaleString("fr-FR")}</span> prises de parole`;
+    $("#stats").innerHTML = `<span class="text-zinc-300 font-medium">${fmtNum(state.total)}</span> prises de parole`;
   } catch (e) {
     sentinel.innerHTML = `<span class="text-red-400">Erreur de chargement (${e.message}).</span>`;
   } finally {
@@ -138,7 +120,11 @@ listEl.addEventListener("click", (e) => {
 $("#readerClose").onclick = closeReader;
 $("#readerBackdrop").onclick = closeReader;
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeReader(); });
-new IntersectionObserver((entries) => { if (entries[0].isIntersecting) load(); }, { rootMargin: "600px" }).observe(sentinel);
 
+infiniteScroll(sentinel, () => load());
+themeTree($("#themeTree"), {
+  source: "articles",
+  onSelect: ({ theme, subtheme }) => { state.theme = theme; state.subtheme = subtheme; load(true); },
+});
 renderPills();
 load(true);
