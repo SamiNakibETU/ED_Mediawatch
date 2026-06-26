@@ -9,7 +9,13 @@ const LEANINGS = [
 ];
 const LEAN_LABEL = Object.fromEntries(LEANINGS.map((l) => [l.key, l]));
 
-const state = { leaning: null, theme: null, subtheme: null, offset: 0, limit: 25, total: 0, loading: false, done: false };
+// nature : "prise_de_parole" (défaut), "mention", ou null (toutes).
+const NATURES = [
+  { key: "prise_de_parole", label: "Prises de parole" },
+  { key: "mention", label: "Mentions" },
+  { key: null, label: "Toutes" },
+];
+const state = { leaning: null, nature: "prise_de_parole", theme: null, subtheme: null, offset: 0, limit: 25, total: 0, loading: false, done: false };
 const listEl = $("#list");
 const sentinel = $("#sentinel");
 
@@ -26,7 +32,9 @@ function card(a) {
     <div class="flex items-center gap-2 flex-wrap text-sm">
       <span class="font-semibold" style="color:${lean.color}">${escapeHtml(a.source_name || a.media_source_id)}</span>
       <span class="text-[10px] px-1.5 py-0.5 rounded border border-line" style="color:${lean.color}">${lean.label}</span>
-      <span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300">prise de parole</span>
+      ${a.nature === "mention"
+        ? `<span class="text-[10px] px-1.5 py-0.5 rounded bg-zinc-700/40 text-zinc-400" title="Le RN est couvert/nommé, sans parole directe">mention</span>`
+        : `<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300" title="Une figure ED s'exprime directement">prise de parole</span>`}
       ${a.theme ? `<span class="text-[10px] px-1.5 py-0.5 rounded bg-figure/15 text-figure">${escapeHtml(a.theme)}</span>` : ""}
       <span class="text-muted">·</span>
       <span class="text-muted" title="${exactDate(a.published_at)}">${relTime(a.published_at)}</span>
@@ -81,11 +89,14 @@ async function load(reset = false) {
   if (reset) { state.offset = 0; state.done = false; listEl.innerHTML = ""; }
   sentinel.textContent = "Chargement…";
 
-  const params = new URLSearchParams({ limit: state.limit, offset: state.offset, nature: "prise_de_parole" });
+  const params = new URLSearchParams({ limit: state.limit, offset: state.offset });
+  if (state.nature) params.set("nature", state.nature);
   if (state.leaning) params.set("leaning", state.leaning);
   if (state.theme) params.set("theme", state.theme);
   if (state.subtheme) params.set("subtheme", state.subtheme);
 
+  const noun = state.nature === "mention" ? "mentions"
+    : state.nature === "prise_de_parole" ? "prises de parole" : "articles";
   try {
     const data = await fetchJSON(`/articles?${params}`);
     state.total = data.total;
@@ -93,9 +104,9 @@ async function load(reset = false) {
     state.offset += data.items.length;
     state.done = state.offset >= data.total || data.items.length === 0;
     sentinel.textContent = state.done
-      ? (state.total ? `— fin · ${fmtNum(state.total)} prises de parole —` : "Aucune prise de parole pour ce filtre.")
+      ? (state.total ? `— fin · ${fmtNum(state.total)} ${noun} —` : `Aucun résultat pour ce filtre.`)
       : "";
-    $("#stats").innerHTML = `<span class="text-zinc-300 font-medium">${fmtNum(state.total)}</span> prises de parole`;
+    $("#stats").innerHTML = `<span class="text-zinc-300 font-medium">${fmtNum(state.total)}</span> ${noun}`;
   } catch (e) {
     sentinel.innerHTML = `<span class="text-red-400">Erreur de chargement (${e.message}).</span>`;
   } finally {
@@ -113,6 +124,17 @@ function renderPills() {
     b.onclick = () => { state.leaning = b.dataset.k || null; renderPills(); load(true); });
 }
 
+function renderNaturePills() {
+  $("#naturePills").innerHTML = NATURES.map((n) => {
+    const active = state.nature === n.key;
+    return `<button data-k="${n.key ?? ''}" class="text-[11px] px-2 py-1 rounded-md border ${
+      active ? "border-figure/60 bg-figure/15 text-figure" : "border-line text-muted hover:text-zinc-100"
+    }">${n.label}</button>`;
+  }).join("");
+  document.querySelectorAll("#naturePills button").forEach((b) =>
+    b.onclick = () => { state.nature = b.dataset.k || null; renderNaturePills(); load(true); });
+}
+
 listEl.addEventListener("click", (e) => {
   const art = e.target.closest("article[data-id]");
   if (art) openArticle(art.dataset.id);
@@ -127,4 +149,5 @@ themeTree($("#themeTree"), {
   onSelect: ({ theme, subtheme }) => { state.theme = theme; state.subtheme = subtheme; load(true); },
 });
 renderPills();
+renderNaturePills();
 load(true);

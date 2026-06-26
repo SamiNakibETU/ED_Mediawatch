@@ -9,6 +9,7 @@ collector code stays unchanged.
 from __future__ import annotations
 
 import asyncio
+import re
 
 import aiohttp
 import structlog
@@ -120,14 +121,55 @@ async def _via_trafilatura(url: str) -> str | None:
     return best
 
 
+_MD_LINK_RE = re.compile(r"\[([^\]]*)\]\([^)]*\)")  # [texte](url) → texte
+
+
+async def _via_jina(url: str, timeout: int) -> str | None:
+    """Jina Reader (r.jina.ai) : texte propre rendu JS, récupéré depuis les IP de
+    Jina → contourne l'IP datacenter blacklistée et les paywalls souples."""
+    base = get_settings().jina_reader_url.rstrip("/")
+    try:
+        async with aiohttp.ClientSession(headers={"Accept": "text/plain"}) as http:
+            async with http.get(
+                f"{base}/{url}", timeout=aiohttp.ClientTimeout(total=timeout)
+            ) as resp:
+                if resp.status != 200:
+                    return None
+                md = await resp.text()
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("extractor.jina_fail", url=url, error=str(exc)[:120])
+        return None
+    if "Markdown Content:" in md:
+        md = md.split("Markdown Content:", 1)[1]
+    md = _MD_LINK_RE.sub(r"\1", md)            # déréférence les liens markdown
+    md = re.sub(r"\n{3,}", "\n\n", md).strip()
+    return md or None
+
+
 async def extract_fulltext(url: str) -> str | None:
-    """Return clean article text, via the scraper-service when configured."""
+    """Texte d'article propre via une cascade anti-blocage, meilleur candidat retenu.
+
+    Ordre : scraper-service PMO (EXTRACTOR_URL) → trafilatura (local) → Jina Reader.
+    On s'arrête au premier résultat « complet » (≥ _MIN_LEN) ; sinon on garde le
+    plus long. Jina sert de débloqueur (IP tierces) quand le fetch local échoue
+    (403 IP datacenter, rendu JS, paywall souple).
+    """
     settings = get_settings()
+    t = settings.request_timeout_seconds
+    best: str | None = None
+
+    async def consider(text: str | None) -> bool:
+        nonlocal best
+        if text and len(text) > len(best or ""):
+            best = text
+        return bool(best and len(best) >= _MIN_LEN)
+
     if settings.extractor_url.strip():
-        text = await _via_service(
-            url, settings.extractor_url, settings.request_timeout_seconds * 4
-        )
-        if text:
-            return text
-        # fall through to local extraction if the service missed
-    return await _via_trafilatura(url)
+        if await consider(await _via_service(url, settings.extractor_url, t * 4)):
+            return best
+    if await consider(await _via_trafilatura(url)):
+        return best
+    if settings.jina_reader_enabled:
+        if await consider(await _via_jina(url, t * 2)):
+            return best
+    return best

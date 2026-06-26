@@ -32,6 +32,7 @@ async def seed() -> dict:
                 rss_url=s["rss_url"],
                 category=s.get("category", "national"),
                 leaning=s.get("leaning", "center"),
+                is_active=s.get("is_active", True),  # sources mortes : is_active=false
             )
             if existing:
                 for k, v in fields.items():

@@ -2,7 +2,7 @@
   "version": "1.0",
   "description": "Pool de médias français — spectre extrême droite -> extrême gauche + national/régional. Utilisé pour capter les mentions et prises de parole du RN & affiliés.",
   "sources": [
-    { "id": "frontieres", "name": "Frontières", "homepage": "https://frontieres.media", "rss_url": "https://frontieres.media/feed/", "category": "pure_player", "leaning": "far_right" },
+    { "id": "frontieres", "name": "Frontières", "homepage": "https://frontieres.media", "rss_url": "https://frontieres.media/feed/", "category": "pure_player", "leaning": "far_right", "is_active": false, "note": "DNS mort (audit 2026-06) — désactivé" },
     { "id": "valeurs_actuelles", "name": "Valeurs actuelles", "homepage": "https://www.valeursactuelles.com", "rss_url": "https://www.valeursactuelles.com/feed", "category": "magazine", "leaning": "far_right" },
     { "id": "bvoltaire", "name": "Boulevard Voltaire", "homepage": "https://www.bvoltaire.fr", "rss_url": "https://www.bvoltaire.fr/feed/", "category": "pure_player", "leaning": "far_right" },
     { "id": "causeur", "name": "Causeur", "homepage": "https://www.causeur.fr", "rss_url": "https://www.causeur.fr/feed", "category": "magazine", "leaning": "far_right" },
@@ -10,7 +10,7 @@
     { "id": "lincorrect", "name": "L'Incorrect", "homepage": "https://lincorrect.org", "rss_url": "https://lincorrect.org/feed/", "category": "magazine", "leaning": "far_right" },
 
     { "id": "lefigaro", "name": "Le Figaro", "homepage": "https://www.lefigaro.fr", "rss_url": "https://www.lefigaro.fr/rss/figaro_actualites.xml", "category": "national", "leaning": "right" },
-    { "id": "lepoint", "name": "Le Point", "homepage": "https://www.lepoint.fr", "rss_url": "https://www.lepoint.fr/24h.xml", "category": "national", "leaning": "right" },
+    { "id": "lepoint", "name": "Le Point", "homepage": "https://www.lepoint.fr", "rss_url": "https://www.lepoint.fr/24h.xml", "category": "national", "leaning": "right", "is_active": false, "note": "RSS 404 sur toutes les variantes (audit 2026-06) — désactivé" },
     { "id": "marianne", "name": "Marianne", "homepage": "https://www.marianne.net", "rss_url": "https://www.marianne.net/rss.xml", "category": "magazine", "leaning": "center" },
 
     { "id": "lemonde", "name": "Le Monde", "homepage": "https://www.lemonde.fr", "rss_url": "https://www.lemonde.fr/rss/une.xml", "category": "national", "leaning": "center" },
@@ -31,7 +31,7 @@
     { "id": "ouestfrance", "name": "Ouest-France", "homepage": "https://www.ouest-france.fr", "rss_url": "https://www.ouest-france.fr/rss/une", "category": "regional", "leaning": "center" },
     { "id": "ladepeche", "name": "La Dépêche du Midi", "homepage": "https://www.ladepeche.fr", "rss_url": "https://www.ladepeche.fr/rss.xml", "category": "regional", "leaning": "center" },
     { "id": "sudouest", "name": "Sud Ouest", "homepage": "https://www.sudouest.fr", "rss_url": "https://www.sudouest.fr/rss.xml", "category": "regional", "leaning": "center" },
-    { "id": "lavoixdunord", "name": "La Voix du Nord", "homepage": "https://www.lavoixdunord.fr", "rss_url": "https://www.lavoixdunord.fr/rss/une.xml", "category": "regional", "leaning": "center" },
+    { "id": "lavoixdunord", "name": "La Voix du Nord", "homepage": "https://www.lavoixdunord.fr", "rss_url": "https://www.lavoixdunord.fr/rss/une.xml", "category": "regional", "leaning": "center", "is_active": false, "note": "RSS 403 (bot) sur toutes les variantes (audit 2026-06) — désactivé" },
     { "id": "letelegramme", "name": "Le Télégramme", "homepage": "https://www.letelegramme.fr", "rss_url": "https://www.letelegramme.fr/rss.xml", "category": "regional", "leaning": "center" },
     { "id": "nicematin", "name": "Nice-Matin", "homepage": "https://www.nicematin.com", "rss_url": "https://www.nicematin.com/rss", "category": "regional", "leaning": "center" },
     { "id": "dna", "name": "Dernières Nouvelles d'Alsace", "homepage": "https://www.dna.fr", "rss_url": "https://www.dna.fr/rss", "category": "regional", "leaning": "center" }

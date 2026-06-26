@@ -57,10 +57,17 @@ class Settings(BaseSettings):
     # Pool
     pool_file: str = "./data/pool_rn_udr.json"
 
-    # Full-text extraction. When set, press articles are extracted through the
-    # v2/media-watch anti-paywall scraper-service (POST {url}/extract); else
-    # we fall back to local trafilatura.
+    # Full-text extraction. Cascade : EXTRACTOR_URL (scraper-service PMO, si défini)
+    # → trafilatura direct → Jina Reader. Les « readers » publics (Jina, Wayback)
+    # récupèrent depuis LEURS IP → contournent l'IP datacenter Railway blacklistée
+    # (Figaro/Télégramme) et certains paywalls souples, sans proxy.
     extractor_url: str = ""
+    # Jina Reader (https://r.jina.ai/<url>) : gratuit, rendu JS, IP tierces.
+    jina_reader_enabled: bool = True
+    jina_reader_url: str = "https://r.jina.ai"
+    # removepaywall.com : repli paywall (format variable → désactivé par défaut).
+    removepaywall_enabled: bool = False
+    removepaywall_url: str = "https://www.removepaywall.com"
 
     # Archivage / reçus
     #   local      : snapshot HTML local seul (sans infra)

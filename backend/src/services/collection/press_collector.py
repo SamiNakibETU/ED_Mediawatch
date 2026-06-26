@@ -105,7 +105,7 @@ class PressCollector:
         )
 
         stats = {"sources": len(sources), "articles_new": 0, "scanned": 0,
-                 "mentions_skipped": 0, "errors": [], "per_source": {}}
+                 "pdp": 0, "mentions": 0, "errors": [], "per_source": {}}
         for src, res in zip(sources, results):
             if isinstance(res, Exception):
                 stats["errors"].append({"source": src.id, "error": str(res)[:160]})
@@ -113,10 +113,11 @@ class PressCollector:
             else:
                 stats["articles_new"] += res["new"]
                 stats["scanned"] += res["scanned"]
-                stats["mentions_skipped"] += res.get("mentions_skipped", 0)
+                stats["pdp"] += res.get("pdp", 0)
+                stats["mentions"] += res.get("mentions", 0)
                 stats["per_source"][src.id] = res
         logger.info("press.complete", articles_new=stats["articles_new"],
-                    mentions_skipped=stats["mentions_skipped"])
+                    pdp=stats["pdp"], mentions=stats["mentions"])
         return stats
 
     async def _collect_source(self, source: MediaSource) -> dict:
@@ -140,7 +141,7 @@ class PressCollector:
             if feed.bozo and not feed.entries:
                 return {"new": 0, "scanned": 0, "bozo": True}
 
-            new = scanned = mentions = 0
+            new = scanned = pdp = mentions = 0
             async with self._factory() as db:
                 for entry in feed.entries[:60]:
                     scanned += 1
@@ -164,12 +165,12 @@ class PressCollector:
                         continue
 
                     body = await self._resolve_body(entry, url, title, summary)
-                    # Décision de NATURE sur le texte complet.
+                    # NATURE décidée sur le texte complet. On stocke TOUT le pertinent,
+                    # étiqueté pdp|mention (la surface Presse filtre PDP par défaut).
                     verdict = self._index.assess(f"{title}. {body}")
-                    # Phase 1 : on ne garde QUE les prises de parole ED.
-                    if verdict["nature"] != Nature.PRISE_DE_PAROLE:
-                        mentions += 1
-                        continue
+                    if not verdict["relevant"]:
+                        continue  # le texte complet infirme la pertinence du chapô
+                    is_pdp = verdict["nature"] == Nature.PRISE_DE_PAROLE
 
                     db.add(Article(
                         media_source_id=source.id,
@@ -181,11 +182,12 @@ class PressCollector:
                         published_at=feed_datetime(entry),
                         matched_keywords=verdict["keywords"],
                         matched_personalities=verdict["personalities"],
-                        is_statement=True,
-                        nature=Nature.PRISE_DE_PAROLE,
+                        is_statement=is_pdp,
+                        nature=verdict["nature"],
                         word_count=len(body.split()),
                     ))
                     new += 1
+                    pdp, mentions = (pdp + 1, mentions) if is_pdp else (pdp, mentions + 1)
 
                 if new:
                     src = await db.get(MediaSource, source.id)
@@ -194,8 +196,8 @@ class PressCollector:
                 await db.commit()
 
             logger.info("press.source_done", source=source.id, new=new,
-                        scanned=scanned, mentions_skipped=mentions)
-            return {"new": new, "scanned": scanned, "mentions_skipped": mentions}
+                        scanned=scanned, pdp=pdp, mentions=mentions)
+            return {"new": new, "scanned": scanned, "pdp": pdp, "mentions": mentions}
 
 
 async def run_press_collection(reset: bool = False) -> dict:
