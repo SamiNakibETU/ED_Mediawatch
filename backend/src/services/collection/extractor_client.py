@@ -9,7 +9,10 @@ collector code stays unchanged.
 from __future__ import annotations
 
 import asyncio
+import json
 import re
+from functools import lru_cache
+from urllib.parse import urlparse
 
 import aiohttp
 import structlog
@@ -123,6 +126,20 @@ async def _via_trafilatura(url: str) -> str | None:
 
 _MD_LINK_RE = re.compile(r"\[([^\]]*)\]\([^)]*\)")  # [texte](url) → texte
 
+# Marqueurs de mur payant / texte tronqué : un extrait qui les contient n'est PAS
+# l'article complet, même s'il est long (page paywall = nav + chapô + teaser).
+_PAYWALL_RE = re.compile(
+    r"il vous reste\s+\d+|article réservé|réservé aux abonné|pour lire la suite|"
+    r"abonnez-vous|déjà abonné|%\s+à lire|s['’]abonner pour lire|"
+    r"soutenir.{0,30}journalisme|connectez-vous pour lire",
+    re.IGNORECASE,
+)
+
+
+def _is_paywalled(text: str | None) -> bool:
+    """Le texte porte-t-il un marqueur de mur payant (donc incomplet) ?"""
+    return bool(text) and bool(_PAYWALL_RE.search(text[:4000]))
+
 
 async def _via_jina(url: str, timeout: int) -> str | None:
     """Jina Reader (r.jina.ai) : texte propre rendu JS, récupéré depuis les IP de
@@ -146,30 +163,150 @@ async def _via_jina(url: str, timeout: int) -> str | None:
     return md or None
 
 
-async def extract_fulltext(url: str) -> str | None:
-    """Texte d'article propre via une cascade anti-blocage, meilleur candidat retenu.
+@lru_cache
+def _site_cookies() -> dict[str, str]:
+    """Mapping domaine → cookie d'abonné (depuis SITE_COOKIES, JSON). Vide si absent."""
+    raw = get_settings().site_cookies.strip()
+    if not raw:
+        return {}
+    try:
+        return {k.lower(): v for k, v in json.loads(raw).items()}
+    except Exception:  # noqa: BLE001
+        logger.warning("extractor.site_cookies_invalid")
+        return {}
 
-    Ordre : scraper-service PMO (EXTRACTOR_URL) → trafilatura (local) → Jina Reader.
-    On s'arrête au premier résultat « complet » (≥ _MIN_LEN) ; sinon on garde le
-    plus long. Jina sert de débloqueur (IP tierces) quand le fetch local échoue
-    (403 IP datacenter, rendu JS, paywall souple).
+
+def _cookie_for(url: str) -> str | None:
+    host = urlparse(url).hostname or ""
+    for domain, cookie in _site_cookies().items():
+        if domain in host:
+            return cookie
+    return None
+
+
+async def _via_cookies(url: str, timeout: int) -> str | None:
+    """Récupère l'article en tant qu'ABONNÉ via les cookies de session fournis
+    (SITE_COOKIES) — la façon la plus fiable de passer un paywall dur (Le Monde…)."""
+    cookie = _cookie_for(url)
+    if not cookie:
+        return None
+    headers = {**_browser_headers(), "Cookie": cookie}
+    try:
+        async with aiohttp.ClientSession(headers=headers) as http:
+            async with http.get(
+                url, timeout=aiohttp.ClientTimeout(total=timeout), allow_redirects=True
+            ) as resp:
+                if resp.status != 200:
+                    return None
+                html = await resp.text()
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("extractor.cookies_fail", url=url, error=str(exc)[:120])
+        return None
+    return await asyncio.to_thread(_extract, html, recall=True)
+
+
+async def _via_ladder(url: str, timeout: int) -> str | None:
+    """ladder (everywall/ladder) auto-hébergé : proxy anti-paywall (GET {ladder}/{url})."""
+    base = get_settings().ladder_url.strip().rstrip("/")
+    if not base:
+        return None
+    try:
+        async with aiohttp.ClientSession(headers=_browser_headers()) as http:
+            async with http.get(
+                f"{base}/{url}", timeout=aiohttp.ClientTimeout(total=timeout),
+                allow_redirects=True,
+            ) as resp:
+                if resp.status != 200:
+                    return None
+                html = await resp.text()
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("extractor.ladder_fail", url=url, error=str(exc)[:120])
+        return None
+    return await asyncio.to_thread(_extract, html, recall=True)
+
+
+async def _via_removepaywall(url: str, timeout: int) -> str | None:
+    """removepaywall.com : tente de servir l'article sans le mur. Best-effort
+    (format variable → désactivé par défaut, mais filtré par le contrôle qualité)."""
+    base = get_settings().removepaywall_url.rstrip("/")
+    try:
+        async with aiohttp.ClientSession(headers=_browser_headers()) as http:
+            async with http.get(
+                f"{base}/{url}", timeout=aiohttp.ClientTimeout(total=timeout),
+                allow_redirects=True,
+            ) as resp:
+                if resp.status != 200:
+                    return None
+                html = await resp.text()
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("extractor.removepaywall_fail", url=url, error=str(exc)[:120])
+        return None
+    return await asyncio.to_thread(_extract, html, recall=True)
+
+
+async def _via_wayback(url: str, timeout: int) -> str | None:
+    """Snapshot Wayback le plus proche, extrait : récupère souvent l'article
+    complet d'une page aujourd'hui paywallée/403 (la capture date d'avant)."""
+    from src.services.archive.wayback_availability import fetch_wayback_availability
+
+    avail = await fetch_wayback_availability(url)
+    snap = avail.get("closest_url")
+    if not snap:
+        return None
+    try:
+        async with aiohttp.ClientSession(headers=_browser_headers()) as http:
+            async with http.get(
+                snap, timeout=aiohttp.ClientTimeout(total=timeout), allow_redirects=True
+            ) as resp:
+                if resp.status != 200:
+                    return None
+                html = await resp.text()
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("extractor.wayback_fail", url=url, error=str(exc)[:120])
+        return None
+    return await asyncio.to_thread(_extract, html, recall=True)
+
+
+async def extract_fulltext(url: str) -> str | None:
+    """Texte d'article COMPLET via une cascade anti-blocage, précision d'abord.
+
+    On préfère un extrait PROPRE (≥ _MIN_LEN et SANS marqueur de mur payant) à un
+    extrait long mais tronqué (une page paywall est longue — nav + teaser — mais
+    n'est pas l'article). Cascade, façon PMO :
+      EXTRACTOR_URL (scraper PMO) → trafilatura → Jina Reader → removepaywall →
+      Wayback (capture d'avant paywall).
+    On s'arrête dès qu'un extrait propre et complet est obtenu ; sinon on rend le
+    meilleur propre, à défaut le plus long.
     """
     settings = get_settings()
     t = settings.request_timeout_seconds
-    best: str | None = None
+    best_clean: str | None = None  # le plus long SANS marqueur paywall
+    best_any: str | None = None    # le plus long tout court (dernier recours)
 
-    async def consider(text: str | None) -> bool:
-        nonlocal best
-        if text and len(text) > len(best or ""):
-            best = text
-        return bool(best and len(best) >= _MIN_LEN)
+    def offer(text: str | None) -> bool:
+        nonlocal best_clean, best_any
+        if not text:
+            return False
+        if len(text) > len(best_any or ""):
+            best_any = text
+        if not _is_paywalled(text) and len(text) > len(best_clean or ""):
+            best_clean = text
+        return bool(best_clean and len(best_clean) >= _MIN_LEN)
 
+    # 0) cookies d'abonné (le plus fiable pour les paywalls durs souscrits)
+    if offer(await _via_cookies(url, t * 2)):
+        return best_clean
     if settings.extractor_url.strip():
-        if await consider(await _via_service(url, settings.extractor_url, t * 4)):
-            return best
-    if await consider(await _via_trafilatura(url)):
-        return best
-    if settings.jina_reader_enabled:
-        if await consider(await _via_jina(url, t * 2)):
-            return best
-    return best
+        if offer(await _via_service(url, settings.extractor_url, t * 4)):
+            return best_clean
+    if settings.ladder_url.strip() and offer(await _via_ladder(url, t * 2)):
+        return best_clean
+    if offer(await _via_trafilatura(url)):
+        return best_clean
+    if settings.jina_reader_enabled and offer(await _via_jina(url, t * 2)):
+        return best_clean
+    if settings.removepaywall_enabled and offer(await _via_removepaywall(url, t * 2)):
+        return best_clean
+    if offer(await _via_wayback(url, t * 2)):
+        return best_clean
+    return best_clean or best_any

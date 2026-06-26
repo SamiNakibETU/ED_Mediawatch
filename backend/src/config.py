@@ -65,9 +65,16 @@ class Settings(BaseSettings):
     # Jina Reader (https://r.jina.ai/<url>) : gratuit, rendu JS, IP tierces.
     jina_reader_enabled: bool = True
     jina_reader_url: str = "https://r.jina.ai"
+    # ladder (everywall/ladder) : proxy anti-paywall auto-hébergeable (Railway).
+    # Si déployé, on récupère via GET {ladder_url}/{article_url}. Gratuit, open source.
+    ladder_url: str = ""
     # removepaywall.com : repli paywall (format variable → désactivé par défaut).
     removepaywall_enabled: bool = False
     removepaywall_url: str = "https://www.removepaywall.com"
+    # Cookies d'abonné par domaine (SECRET, env uniquement, jamais committé).
+    # JSON {"lemonde.fr": "ssid=…; …", "lefigaro.fr": "…"} → on récupère l'article
+    # COMPLET en tant qu'abonné (la façon la plus fiable de passer un paywall dur).
+    site_cookies: str = ""
 
     # Archivage / reçus
     #   local      : snapshot HTML local seul (sans infra)
