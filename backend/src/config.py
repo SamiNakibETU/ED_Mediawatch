@@ -23,11 +23,18 @@ class Settings(BaseSettings):
     # Database
     database_url: str = "sqlite+aiosqlite:///./ed_mediawatch.db"
 
-    # Nitter / X collection
+    # Nitter / X collection. Ordre = instances servant l'ENGAGEMENT (HTML, comptes
+    # X = colonne « Likes ») d'abord, puis RSS-fiables. La collecte sonde au runtime
+    # (html_capable) et bascule HTML+engagement dès qu'une instance le sert depuis
+    # l'IP courante. ⚠️ Surchargeable via NITTER_INSTANCES ; pour engagement garanti
+    # → NITTER_SELF_HOSTED. NB : une IP datacenter (Railway) peut être bloquée par
+    # ces instances (comme la presse) → l'engagement marchera surtout depuis une IP
+    # résidentielle ou un Nitter self-hosté. Trouver la bonne : `probe_nitter`.
     nitter_instances: str = (
-        "https://nitter.net,https://nitter.poast.org,"
-        "https://nitter.tiekoetter.com,https://nitter.catsarch.com,"
-        "https://nitter.kareem.one"
+        "https://nitter.privacydev.net,https://xcancel.com,"
+        "https://nitter.poast.org,https://twitt.re,"
+        "https://nitter.net,https://nitter.space,https://lightbrd.com,"
+        "https://nitter.tiekoetter.com,https://nitter.catsarch.com"
     )
     nitter_health_url: str = "https://status.d420.de/api/v1/instances"
     nitter_self_hosted: str = ""
