@@ -26,13 +26,28 @@ from src.config import get_settings
 from src.database import get_session_factory
 from src.models.article import Article
 from src.models.post import Post
+from urllib.parse import urlparse
+
 from src.services.archive.archivebox_client import get_archivebox_client
-from src.services.archive.wayback_availability import fetch_wayback_availability
+from src.services.archive.wayback_availability import (
+    fetch_wayback_availability,
+    save_page_now,
+)
 from src.utils import sha256
 
 logger = structlog.get_logger(__name__)
 
 _MODELS = {"press": Article, "x": Post}
+
+
+def _archive_target(kind: str, url: str) -> str:
+    """URL à archiver. Pour X, on canonicalise vers x.com (le lien Nitter pointe
+    une instance éphémère qui s'archive mal et peut disparaître)."""
+    if kind == "x":
+        path = urlparse(url).path  # /J_Bardella/status/123
+        if "/status/" in path:
+            return f"https://x.com{path}"
+    return url
 
 
 async def _save_local_html(url: str, kind: str, ua: str, timeout: int) -> str | None:
@@ -82,19 +97,34 @@ async def run_archival(kind: str = "press", limit: int = 100) -> dict:
 
     abox = get_archivebox_client() if settings.archive_backend == "archivebox" else None
 
-    archived = failed = 0
+    archived = failed = created = 0
     for row in rows:
-        # 1) copie locale qu'on possède (toujours)
-        snapshot_path = await _save_local_html(row.url, kind, ua, timeout)
+        target = _archive_target(kind, row.url)
+        # 1) copie locale qu'on possède — utile pour la presse (HTML statique).
+        #    Inutile pour X (x.com = appli JS + login wall) → on s'appuie sur Wayback.
+        #    ⚠️ FS Railway éphémère : la copie locale ne survit pas à un redeploy ;
+        #    le reçu DURABLE est l'URL Wayback ci-dessous.
+        snapshot_path = (
+            await _save_local_html(target, kind, ua, timeout) if kind == "press" else None
+        )
 
         # 2) archive externe selon le backend
         snapshot_url: str | None = None
+        slow = False
         if settings.archive_backend == "wayback":
-            # lien vers une capture Wayback existante si elle existe (rapide)
-            avail = await fetch_wayback_availability(row.url)
+            # a) lien vers une capture existante (rapide)
+            avail = await fetch_wayback_availability(target)
             snapshot_url = avail.get("closest_url")
+            # b) sinon on en CRÉE une (Save Page Now) — sinon un item frais n'a
+            #    aucun reçu. Lent + rate-limité → réservé aux items sans capture.
+            if not snapshot_url and settings.wayback_save_enabled:
+                slow = True
+                created_url = await save_page_now(target)
+                if created_url:
+                    snapshot_url = created_url
+                    created += 1
         elif settings.archive_backend == "archivebox" and abox is not None:
-            result = await abox.archive(row.url, tags=[kind])
+            result = await abox.archive(target, tags=[kind])
             if result:
                 snapshot_url = result.get("snapshot", {}).get("timestamp") or "archivebox"
 
@@ -103,15 +133,22 @@ async def run_archival(kind: str = "press", limit: int = 100) -> dict:
             if obj:
                 obj.snapshot_path = snapshot_path
                 obj.snapshot_url = snapshot_url
-                obj.archived_at = datetime.now(timezone.utc)
+                # On ne marque archivé QUE si on a un reçu durable (Wayback/ArchiveBox)
+                # ou une copie locale ; sinon on retentera au prochain passage.
+                if snapshot_path or snapshot_url:
+                    obj.archived_at = datetime.now(timezone.utc)
                 await db.commit()
 
         if snapshot_path or snapshot_url:
             archived += 1
         else:
             failed += 1
-        await asyncio.sleep(settings.archive_rate_seconds)
+        # SPN est lent et rate-limité → délai plus long quand on a créé une capture.
+        await asyncio.sleep(
+            settings.archive_save_rate_seconds if slow else settings.archive_rate_seconds
+        )
 
-    stats = {"kind": kind, "considered": len(rows), "archived": archived, "failed": failed}
+    stats = {"kind": kind, "considered": len(rows), "archived": archived,
+             "created": created, "failed": failed}
     logger.info("archive.done", **stats)
     return stats

@@ -62,3 +62,38 @@ async def fetch_wayback_availability(url: str, *, timeout_s: float = 12.0) -> di
     parsed = parse_wayback_availability_json(data)
     parsed["error"] = base.get("error")
     return parsed
+
+
+WAYBACK_SAVE = "https://web.archive.org/save/"
+
+
+async def save_page_now(url: str, *, timeout_s: float = 60.0) -> str | None:
+    """Déclenche une capture Wayback (Save Page Now) et renvoie l'URL d'archive.
+
+    Contrairement à `fetch_wayback_availability` (qui ne fait que VÉRIFIER une
+    capture existante), ceci en **crée** une — indispensable pour un item frais
+    (tweet/article récent) qui n'a encore aucune archive. SPN est lent et
+    rate-limité côté archive.org → à appeler avec parcimonie (petits lots, délai).
+
+    L'URL d'archive est lue dans l'en-tête `Content-Location` (`/web/<ts>/<url>`)
+    ou, à défaut, l'URL finale après redirection.
+    """
+    headers = {"User-Agent": "ED-MediaWatch/0.1 (wayback-save; research)"}
+    try:
+        timeout = aiohttp.ClientTimeout(total=timeout_s, connect=10)
+        async with aiohttp.ClientSession() as session:
+            async with session.get(
+                f"{WAYBACK_SAVE}{url}", timeout=timeout, headers=headers,
+                allow_redirects=True,
+            ) as resp:
+                if resp.status not in (200, 301, 302):
+                    return None
+                cl = resp.headers.get("Content-Location")
+                if cl and cl.startswith("/web/"):
+                    return f"https://web.archive.org{cl}"
+                final = str(resp.url)
+                return final if "/web/" in final else None
+    except (asyncio.TimeoutError, aiohttp.ClientError):
+        return None
+    except Exception:  # noqa: BLE001
+        return None

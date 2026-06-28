@@ -83,6 +83,14 @@ class Settings(BaseSettings):
     archive_backend: str = "wayback"  # local | wayback | archivebox | none
     snapshot_dir: str = "./data/snapshots"
     archive_rate_seconds: float = 1.5  # availability API est rapide
+    # Save Page Now (création de capture Wayback) : indispensable pour les items
+    # frais sans archive existante. Lent + rate-limité → débit dédié + lot borné.
+    wayback_save_enabled: bool = True
+    archive_save_rate_seconds: float = 6.0
+    # Taille de lot par passe d'archivage (presse/X) — conservateur (Wayback lent).
+    archive_batch_limit: int = 40
+    # Intervalle d'archivage planifié (heures). Aligné par défaut sur la collecte.
+    archive_interval_hours: int = 4
 
     # ArchiveBox (repris de la branche v2/media-watch ; nécessite ArchiveBox installé)
     archivebox_enabled: bool = False
