@@ -218,6 +218,22 @@ async def run_backfill(since: datetime, max_pages_per_handle: int = 40) -> dict:
     return stats
 
 
+async def _record_handle_health(
+    db: AsyncSession, personality_id: int, status: str, error: str | None, *, got_new: bool
+) -> None:
+    """Santé de collecte d'un handle (C4). 'ok' remet à zéro le compteur d'échecs."""
+    pr = await db.get(Personality, personality_id)
+    if pr:
+        now = datetime.now(timezone.utc)
+        pr.last_checked_at = now
+        pr.last_status = status
+        pr.last_error = error
+        pr.consecutive_failures = (pr.consecutive_failures or 0) + 1 if status != "ok" else 0
+        if got_new:
+            pr.last_collected_at = now
+        await db.commit()
+
+
 async def run_collection(use_html: bool | None = None) -> dict:
     """One full sweep over the active pool. Returns summary stats.
 
@@ -263,6 +279,7 @@ async def run_collection(use_html: bool | None = None) -> dict:
 
     async def worker(p: Personality) -> None:
         nonlocal total_new, errors, instance_used
+        status, error, new = "ok", None, 0
         async with factory() as db:
             try:
                 if use_html:
@@ -274,9 +291,15 @@ async def run_collection(use_html: bool | None = None) -> dict:
                 total_new += new
                 if inst:
                     instance_used = inst
+                else:
+                    status = "blocked"  # toutes les instances ont refusé ce handle
             except Exception as exc:  # noqa: BLE001
                 errors += 1
+                status, error = "error", str(exc)[:200]
                 logger.warning("collect.error", handle=p.handle, error=str(exc)[:160])
+            # Santé du handle (C4) : un @ muet récurrent (mauvais handle, instance qui
+            # bloque) devient visible via consecutive_failures.
+            await _record_handle_health(db, p.id, status, error, got_new=new > 0)
 
     # Bounded concurrency is enforced inside NitterClient via its semaphore.
     await asyncio.gather(*(worker(p) for p in personalities))

@@ -7,7 +7,7 @@ how each side speaks about the RN.
 
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, String
+from sqlalchemy import Boolean, DateTime, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.models.base import Base, TimestampMixin
@@ -29,6 +29,14 @@ class MediaSource(Base, TimestampMixin):
 
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     last_collected_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    # --- Santé de collecte (C4) — rend visible une source muette/cassée ---
+    last_checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # 'ok' (flux récupéré+parsé) | 'empty' (0 entrée) | 'http_403'… | 'error'
+    last_status: Mapped[str | None] = mapped_column(String(16))
+    # Échecs consécutifs (>0 = source à surveiller ; 0 = repartie).
+    consecutive_failures: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    last_error: Mapped[str | None] = mapped_column(String(200))
 
     articles: Mapped[list["Article"]] = relationship(  # noqa: F821
         back_populates="media_source"

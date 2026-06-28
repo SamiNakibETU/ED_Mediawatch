@@ -142,6 +142,21 @@ class PressCollector:
                     pdp=stats["pdp"], mentions=stats["mentions"])
         return stats
 
+    async def _record_health(self, source_id: str, status: str, error: str | None = None) -> None:
+        """Santé de collecte d'une source (C4) : succès remet à zéro, échec
+        incrémente `consecutive_failures` → un flux cassé/403 silencieux remonte."""
+        failed = status != "ok"
+        async with self._factory() as db:
+            src = await db.get(MediaSource, source_id)
+            if src:
+                src.last_checked_at = datetime.now(timezone.utc)
+                src.last_status = status
+                src.last_error = error
+                src.consecutive_failures = (
+                    (src.consecutive_failures or 0) + 1 if failed else 0
+                )
+                await db.commit()
+
     async def _collect_source(self, source: MediaSource) -> dict:
         async with self._sem:
             headers = {"User-Agent": settings.user_agent,
@@ -154,13 +169,16 @@ class PressCollector:
                         allow_redirects=True,
                     ) as resp:
                         if resp.status != 200:
+                            await self._record_health(source.id, f"http_{resp.status}")
                             return {"new": 0, "scanned": 0, "status": resp.status}
                         content = await resp.text()
             except Exception as exc:  # noqa: BLE001
+                await self._record_health(source.id, "error", str(exc)[:200])
                 return {"new": 0, "scanned": 0, "error": str(exc)[:120]}
 
             feed = feedparser.parse(content)
             if feed.bozo and not feed.entries:
+                await self._record_health(source.id, "empty", "bozo/no-entries")
                 return {"new": 0, "scanned": 0, "bozo": True}
 
             new = scanned = pdp = mentions = 0
@@ -226,10 +244,17 @@ class PressCollector:
                     new += 1
                     pdp, mentions = (pdp + 1, mentions) if is_pdp else (pdp, mentions + 1)
 
-                if new:
-                    src = await db.get(MediaSource, source.id)
-                    if src:
-                        src.last_collected_at = datetime.now(timezone.utc)
+                # Santé : flux récupéré+parsé = 'ok' (même si 0 article RN pertinent
+                # — ce n'est pas un échec). last_collected_at seulement si nouveauté.
+                src = await db.get(MediaSource, source.id)
+                if src:
+                    now = datetime.now(timezone.utc)
+                    src.last_checked_at = now
+                    src.last_status = "ok"
+                    src.last_error = None
+                    src.consecutive_failures = 0
+                    if new:
+                        src.last_collected_at = now
                 await db.commit()
 
             logger.info("press.source_done", source=source.id, new=new,

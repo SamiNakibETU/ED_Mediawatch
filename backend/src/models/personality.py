@@ -1,6 +1,8 @@
 """A monitored far-right personality (RN/UDR deputy or key figure)."""
 
-from sqlalchemy import Boolean, Index, String
+from datetime import datetime
+
+from sqlalchemy import Boolean, DateTime, Index, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.models.base import Base, TimestampMixin
@@ -32,6 +34,14 @@ class Personality(Base, TimestampMixin):
     an_id: Mapped[str | None] = mapped_column(String(40))  # Assemblée Nationale id
 
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+    # --- Santé de collecte (C4) — rend visible un handle muet/bloqué récurrent ---
+    last_checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_collected_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # 'ok' (timeline récupérée) | 'blocked' (toutes instances KO) | 'error'
+    last_status: Mapped[str | None] = mapped_column(String(16))
+    consecutive_failures: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    last_error: Mapped[str | None] = mapped_column(String(200))
 
     posts: Mapped[list["Post"]] = relationship(  # noqa: F821
         back_populates="personality", cascade="all, delete-orphan"

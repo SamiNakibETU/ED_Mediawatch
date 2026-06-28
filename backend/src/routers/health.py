@@ -134,3 +134,86 @@ async def freshness() -> dict:
         },
         "zombie_runs": zombies,
     }
+
+
+# Au-delà de N échecs consécutifs, une source/un handle est « à surveiller »
+# (flux cassé, 403 silencieux, mauvais @, instance qui bloque).
+_FAIL_THRESHOLD = 2
+
+
+@router.get("/health/collectors")
+async def collectors() -> dict:
+    """Sources presse + handles X **muets récurrents** — observabilité fine (C4).
+
+    Complète `/health/freshness` (vue agrégée) par le détail PAR source/handle :
+    qui échoue, depuis combien d'échecs, avec quelle erreur. Rend actionnable un
+    flux cassé ou un compte mal saisi, au lieu d'un simple compteur global."""
+    factory = get_session_factory()
+    async with factory() as db:
+        sources = list(
+            (
+                await db.execute(
+                    select(MediaSource)
+                    .where(
+                        MediaSource.is_active.is_(True),
+                        MediaSource.consecutive_failures >= _FAIL_THRESHOLD,
+                    )
+                    .order_by(MediaSource.consecutive_failures.desc())
+                )
+            ).scalars().all()
+        )
+        handles = list(
+            (
+                await db.execute(
+                    select(Personality)
+                    .where(
+                        Personality.is_active.is_(True),
+                        Personality.handle.isnot(None),
+                        Personality.consecutive_failures >= _FAIL_THRESHOLD,
+                    )
+                    .order_by(Personality.consecutive_failures.desc())
+                )
+            ).scalars().all()
+        )
+        n_active_sources = await db.scalar(
+            select(func.count(MediaSource.id)).where(MediaSource.is_active.is_(True))
+        )
+        n_active_handles = await db.scalar(
+            select(func.count(Personality.id)).where(
+                Personality.is_active.is_(True), Personality.handle.isnot(None)
+            )
+        )
+
+    return {
+        "fail_threshold": _FAIL_THRESHOLD,
+        "press": {
+            "active_total": n_active_sources or 0,
+            "failing_count": len(sources),
+            "failing": [
+                {
+                    "id": s.id, "name": s.name, "leaning": s.leaning,
+                    "last_status": s.last_status,
+                    "consecutive_failures": s.consecutive_failures,
+                    "last_error": s.last_error,
+                    "last_checked_at": s.last_checked_at,
+                    "last_collected_at": s.last_collected_at,
+                }
+                for s in sources
+            ],
+        },
+        "x": {
+            "active_total": n_active_handles or 0,
+            "failing_count": len(handles),
+            "failing": [
+                {
+                    "id": p.id, "full_name": p.full_name, "handle": p.handle,
+                    "last_status": p.last_status,
+                    "consecutive_failures": p.consecutive_failures,
+                    "last_error": p.last_error,
+                    "last_checked_at": p.last_checked_at,
+                    "last_collected_at": p.last_collected_at,
+                }
+                for p in handles
+            ],
+        },
+    }
