@@ -1,0 +1,3 @@
+# Les scripts shell DOIVENT rester en LF (un CRLF Windows casse le shebang dans
+# le conteneur Linux Railway).
+*.sh text eol=lf

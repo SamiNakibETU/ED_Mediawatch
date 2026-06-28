@@ -1,0 +1,11 @@
+# Railway — service Nitter self-hosté (engagement X). Root Directory = nitter
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+# L'entrypoint de l'image lance Nitter (pas de startCommand).
+healthcheckPath = "/"
+healthcheckTimeout = 120
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 3

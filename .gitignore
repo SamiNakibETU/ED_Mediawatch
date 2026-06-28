@@ -7,6 +7,10 @@ cookies.txt
 **/cookies.txt
 site_cookies*.json
 **/site_cookies*.json
+# Nitter : sessions (comptes X) + conf générée — SECRET
+**/sessions.jsonl
+**/nitter.conf
+infra/nitter_redis/
 # Transcript de travail Claude
 claude_chat_history.md
 
