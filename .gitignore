@@ -17,6 +17,7 @@ claude_chat_history.md
 .venv/
 
 # --- Base de données + données locales générées ---
+backend/data/media_candidates.json
 backend/*.db
 backend/*.db-wal
 backend/*.db-shm
