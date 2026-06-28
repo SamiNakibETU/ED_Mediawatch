@@ -56,6 +56,10 @@ class FeedItem(BaseModel):
     retweets: int | None
     replies: int | None
     quotes: int | None
+    views: int | None = None
+    engagement_captured_at: datetime | None = None
+    collected_via: str | None = None
+    lang: str | None = None
     theme: str | None
     # Parti du locuteur À LA DATE du post (≠ parti actuel), cf. §5. Attribut
     # calculé et posé sur l'objet Post par le routeur /feed.
@@ -100,6 +104,14 @@ class ArticleOut(BaseModel):
     archived_at: datetime | None
     theme: str | None
     word_count: int
+    # Qualité d'extraction (C0) : sait-on si le texte est intégral, par quelle
+    # voie, avec quel marqueur paywall, et la date est-elle estimée ?
+    extraction_method: str | None = None
+    is_full_text: bool | None = None
+    paywalled: bool | None = None
+    confidence_score: float | None = None
+    lang: str | None = None
+    published_estimated: bool | None = None
 
 
 class ArticleDetail(ArticleOut):
