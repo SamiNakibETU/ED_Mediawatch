@@ -8,6 +8,7 @@ quantitatifs (factuel_quantitatif) → Le Compteur. La source est polymorphe
 from datetime import datetime
 
 from sqlalchemy import (
+    JSON,
     Boolean,
     DateTime,
     Float,
@@ -74,6 +75,11 @@ class Claim(Base, TimestampMixin):
 
     # Dédup : une assertion (source, référent, valeur) ne doit exister qu'une fois.
     dedup_key: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+
+    # Embedding sémantique (A0) — blocking/near-dup par cosinus en mémoire à
+    # l'échelle actuelle ; deviendra VECTOR(1024)+pgvector sans changer la logique
+    # (même décision que Referent.embedding, cf services/analysis/embeddings.py).
+    embedding: Mapped[list | None] = mapped_column(JSON)
 
     __table_args__ = (
         Index("ix_claims_referent_published", "referent_key", "published_at"),

@@ -112,3 +112,20 @@ async def trigger_extract(
     from src.services.analysis.claim_extractor import run_claim_extraction
 
     return await run_claim_extraction(use_llm=use_llm, reset=reset)
+
+
+@router.post("/embed-claims", dependencies=[Depends(require_token)])
+async def trigger_embed_claims(limit: int = Query(2000, ge=1, le=10000)) -> dict:
+    """Calcule les embeddings manquants des claims (A0, idempotent)."""
+    from src.services.analysis.claim_embeddings import embed_claims
+
+    return await embed_claims(limit=limit)
+
+
+@router.get("/near-duplicate-claims")
+async def near_duplicate_claims(threshold: float = Query(0.92, ge=0.5, le=1.0)) -> dict:
+    """Groupes de claims quasi identiques (même assertion répétée) — qualité du Compteur."""
+    from src.services.analysis.claim_embeddings import near_duplicate_groups
+
+    groups = await near_duplicate_groups(threshold=threshold)
+    return {"threshold": threshold, "groups": len(groups), "items": groups}
