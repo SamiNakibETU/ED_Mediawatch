@@ -126,6 +126,7 @@ def parse_profile_html(
                 "is_retweet": is_retweet,
                 "is_reply": is_reply,
                 "media_url": media_url,
+                "collected_via": "html",
                 "replies": _stat_value(item, "icon-comment"),
                 "retweets": _stat_value(item, "icon-retweet"),
                 "quotes": _stat_value(item, "icon-quote"),

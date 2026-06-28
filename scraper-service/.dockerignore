@@ -1,0 +1,60 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+logs/
+
+# Test files
+test_*.py
+*_test.py
+.pytest_cache
+.coverage
+htmlcov/
+
+# Documentation (hors du build)
+*.md
+!README.md
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Railway (déjà dans railway.toml)
+.railway
+
+# Local env
+.env
+.env.local
+.env.*.local
+
+# Cache
+cache/
+.pytest_cache/
+.mypy_cache/
+.dmypy.json
+
+# Large files
+*.zip
+*.tar.gz
+*.rar

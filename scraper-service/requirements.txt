@@ -1,0 +1,66 @@
+# Core
+fastapi==0.115.0
+uvicorn[standard]==0.32.0
+pydantic==2.9.2
+pydantic-settings==2.6.0
+python-multipart==0.0.17
+
+# Scraping & HTTP
+playwright==1.48.0
+curl-cffi==0.7.3
+aiohttp==3.11.2
+httpx[http2]==0.27.2
+requests==2.32.3
+trafilatura==1.12.2
+scrapling==0.2.8
+beautifulsoup4==4.12.3
+lxml==5.3.0
+html5lib==1.1
+readability-lxml==0.8.1
+justext==3.0.1
+newspaper3k==0.2.8
+
+# Anti-détection
+fake-useragent==1.5.1
+cloudscraper==1.2.71
+cfscrape==2.1.1
+
+# Text processing
+langdetect==1.0.9
+# polyglot==16.7.4  # Commenté: nécessite pyicu qui pose problème de compilation
+# pycld2==0.41      # Commenté: nécessite compilation C++
+# pyicu==2.14       # Commenté: nécessite libicu-dev système
+# morfessor==2.0.6  # Commenté: dépendance de polyglot
+
+# Async & Concurrency
+# asyncio-mqtt==0.16.1  # Commenté: pas utilisé actuellement
+# aiosemaphore==1.0.0   # SUPPRIMÉ: n'existe pas sur PyPI, utiliser asyncio.Semaphore nativement
+tenacity==9.0.0
+async-lru==2.0.4
+
+# Monitoring & Logging
+structlog==24.4.0
+prometheus-client==0.21.0
+sentry-sdk==2.18.0
+
+# Data
+orjson==3.10.11
+ujson==5.10.0
+msgpack==1.1.0
+
+# Cache
+redis==5.2.0
+diskcache==5.6.3
+
+# ML/AI for content extraction (optional but powerful)
+# transformers==4.46.3  # Décommenter si besoin de modèles ML pour extraction
+# torch==2.5.1  # Décommenter si besoin
+
+# Utils
+python-dateutil==2.9.0.post0
+tzlocal==5.2
+pytz==2024.2
+# cchardet==2.1.7  # SUPPRIMÉ: échec compilation sur Python 3.11+
+# Remplacé par charset-normalizer déjà présent
+charset-normalizer==3.4.0
+tldextract==5.1.2

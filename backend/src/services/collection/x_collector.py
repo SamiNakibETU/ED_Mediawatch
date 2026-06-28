@@ -24,7 +24,7 @@ from src.models.personality import Personality
 from src.models.post import Post
 from src.services.collection.nitter_client import NitterClient
 from src.services.collection.x_html_parser import parse_profile_html
-from src.utils import clean_html, feed_datetime, tweet_guid
+from src.utils import clean_html, feed_datetime, sha256, tweet_guid
 from src.vocabulary import RunKind, RunStatus, Source
 
 logger = structlog.get_logger(__name__)
@@ -97,6 +97,10 @@ async def _insert_new(db: AsyncSession, personality_id: int, posts: list[dict]) 
         # engagement present (HTML path) → timestamp it
         if data.get("likes") is not None or data.get("retweets") is not None:
             data["engagement_captured_at"] = now
+        # Métadonnées de collecte (C0) : voie (rss|html), langue, hash de contenu.
+        data.setdefault("collected_via", "rss")
+        data.setdefault("lang", "fr")
+        data["content_hash"] = sha256((data.get("content") or "").lower())
         rows.append(data)
     result = await db.execute(_post_conflict_insert(rows))
     await db.commit()

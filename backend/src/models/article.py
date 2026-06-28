@@ -10,6 +10,7 @@ from sqlalchemy import (
     JSON,
     Boolean,
     DateTime,
+    Float,
     ForeignKey,
     Index,
     Integer,
@@ -40,6 +41,25 @@ class Article(Base, TimestampMixin):
     content: Mapped[str] = mapped_column(Text, nullable=False)
     author: Mapped[str | None] = mapped_column(String(200))
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # `published_at` n'est jamais NULL en pratique : si le flux ne date pas
+    # l'entrée, on retombe sur l'heure de collecte ET on lève ce drapeau pour ne
+    # pas polluer l'axe temporel longitudinal (C0).
+    published_estimated: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    # --- Qualité d'extraction (C0) — alimenté par le scraper-service v2 ---
+    # Stratégie gagnante : curl_cffi | googlebot_referer | archive_ph |
+    # playwright_stealth | jina_ai | wayback | llm_cleanup | rss_full | cookies…
+    extraction_method: Mapped[str | None] = mapped_column(String(24))
+    # `content` est-il l'article INTÉGRAL (vs chapô tronqué / page paywall) ?
+    is_full_text: Mapped[bool | None] = mapped_column(Boolean)
+    # Un marqueur de mur payant a-t-il été détecté dans le texte ?
+    paywalled: Mapped[bool | None] = mapped_column(Boolean)
+    # Score de complétude/qualité rendu par le scraper-service (0..1).
+    confidence_score: Mapped[float | None] = mapped_column(Float)
+    # Langue détectée (défaut fonctionnel 'fr').
+    lang: Mapped[str | None] = mapped_column(String(8))
+    # Rubrique/section si le flux la fournit.
+    section: Mapped[str | None] = mapped_column(String(80))
 
     # Relevance: which far-right keywords / personalities the text matched.
     matched_keywords: Mapped[list | None] = mapped_column(JSON)

@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 import json
 import re
+from dataclasses import dataclass
 from functools import lru_cache
 from urllib.parse import urlparse
 
@@ -27,7 +28,30 @@ except Exception:  # noqa: BLE001
     trafilatura = None
 
 
-async def _via_service(url: str, base: str, timeout: int) -> str | None:
+@dataclass
+class Extraction:
+    """Résultat d'extraction + métadonnées qualité (C0).
+
+    Propagé jusqu'à `Article` : on sait DONC, par article, quelle stratégie a
+    gagné, si le texte est intégral, s'il porte un marqueur de mur payant, et le
+    score de confiance rendu par le scraper-service.
+    """
+
+    text: str | None = None
+    method: str = "empty"           # curl_cffi | googlebot_referer | jina_ai | rss_full | cookies…
+    is_full: bool | None = None     # texte intégral (vs chapô tronqué / page paywall)
+    paywalled: bool | None = None   # marqueur de mur payant détecté
+    confidence: float | None = None  # score de complétude (0..1), si fourni
+
+    @property
+    def ok(self) -> bool:
+        return bool(self.text)
+
+
+async def _via_service(url: str, base: str, timeout: int) -> Extraction | None:
+    """Scraper-service v2 : on remonte le texte ET ses métadonnées qualité
+    (`extraction_method`, `is_complete`, `confidence_score`) — pas seulement
+    `content` — pour les écrire sur l'Article (C0)."""
     payload = {"url": url, "force_complete": True}
     try:
         async with aiohttp.ClientSession() as http:
@@ -39,11 +63,20 @@ async def _via_service(url: str, base: str, timeout: int) -> str | None:
                 if resp.status != 200:
                     return None
                 data = await resp.json()
-                # scraper-service returns {"content": "...", ...}
-                return data.get("content") or data.get("text")
     except Exception as exc:  # noqa: BLE001
         logger.debug("extractor.service_fail", url=url, error=str(exc)[:120])
         return None
+
+    text = data.get("content") or data.get("text")
+    if not text:
+        return None
+    return Extraction(
+        text=text,
+        method=data.get("extraction_method") or "service",
+        is_full=data.get("is_complete"),
+        paywalled=_is_paywalled(text),
+        confidence=data.get("confidence_score"),
+    )
 
 
 _MIN_LEN = 350  # en-deçà : on considère le texte tronqué et on tente la suite
@@ -139,6 +172,30 @@ _PAYWALL_RE = re.compile(
 def _is_paywalled(text: str | None) -> bool:
     """Le texte porte-t-il un marqueur de mur payant (donc incomplet) ?"""
     return bool(text) and bool(_PAYWALL_RE.search(text[:4000]))
+
+
+def build_extraction(
+    text: str | None,
+    method: str,
+    *,
+    is_full: bool | None = None,
+    confidence: float | None = None,
+) -> Extraction | None:
+    """Emballe un texte brut en `Extraction` en calculant paywall/complétude.
+
+    `is_full` non fourni ⇒ déduit : texte non-paywall et ≥ `_MIN_LEN`. Utilisé
+    par les stratégies qui ne rendent qu'un `str` (trafilatura, jina, cookies…)
+    et par `press_collector` pour les candidats RSS.
+    """
+    if not text:
+        return None
+    paywalled = _is_paywalled(text)
+    if is_full is None:
+        is_full = (not paywalled) and len(text) >= _MIN_LEN
+    return Extraction(
+        text=text, method=method, is_full=is_full,
+        paywalled=paywalled, confidence=confidence,
+    )
 
 
 async def _via_jina(url: str, timeout: int) -> str | None:
@@ -267,46 +324,55 @@ async def _via_wayback(url: str, timeout: int) -> str | None:
     return await asyncio.to_thread(_extract, html, recall=True)
 
 
-async def extract_fulltext(url: str) -> str | None:
+async def extract_fulltext(url: str) -> Extraction:
     """Texte d'article COMPLET via une cascade anti-blocage, précision d'abord.
 
     On préfère un extrait PROPRE (≥ _MIN_LEN et SANS marqueur de mur payant) à un
     extrait long mais tronqué (une page paywall est longue — nav + teaser — mais
-    n'est pas l'article). Cascade, façon PMO :
-      EXTRACTOR_URL (scraper PMO) → trafilatura → Jina Reader → removepaywall →
-      Wayback (capture d'avant paywall).
-    On s'arrête dès qu'un extrait propre et complet est obtenu ; sinon on rend le
-    meilleur propre, à défaut le plus long.
+    n'est pas l'article). Cascade :
+      cookies → EXTRACTOR_URL (scraper-service v2) → ladder → trafilatura →
+      Jina Reader → removepaywall → Wayback.
+    On s'arrête dès qu'un extrait propre et complet est obtenu ; sinon on rend la
+    meilleure `Extraction` propre, à défaut la plus longue. Le résultat porte la
+    stratégie gagnante + les flags qualité (C0).
     """
     settings = get_settings()
     t = settings.request_timeout_seconds
-    best_clean: str | None = None  # le plus long SANS marqueur paywall
-    best_any: str | None = None    # le plus long tout court (dernier recours)
+    best_clean: Extraction | None = None  # le plus long SANS marqueur paywall
+    best_any: Extraction | None = None    # le plus long tout court (dernier recours)
 
-    def offer(text: str | None) -> bool:
+    def consider(ext: Extraction | None) -> bool:
         nonlocal best_clean, best_any
-        if not text:
+        if not ext or not ext.text:
             return False
-        if len(text) > len(best_any or ""):
-            best_any = text
-        if not _is_paywalled(text) and len(text) > len(best_clean or ""):
-            best_clean = text
-        return bool(best_clean and len(best_clean) >= _MIN_LEN)
+        if best_any is None or len(ext.text) > len(best_any.text or ""):
+            best_any = ext
+        if not ext.paywalled and (
+            best_clean is None or len(ext.text) > len(best_clean.text or "")
+        ):
+            best_clean = ext
+        return bool(best_clean and len(best_clean.text or "") >= _MIN_LEN)
 
     # 0) cookies d'abonné (le plus fiable pour les paywalls durs souscrits)
-    if offer(await _via_cookies(url, t * 2)):
+    if consider(build_extraction(await _via_cookies(url, t * 2), "cookies")):
         return best_clean
     if settings.extractor_url.strip():
-        if offer(await _via_service(url, settings.extractor_url, t * 4)):
+        if consider(await _via_service(url, settings.extractor_url, t * 4)):
             return best_clean
-    if settings.ladder_url.strip() and offer(await _via_ladder(url, t * 2)):
+    if settings.ladder_url.strip() and consider(
+        build_extraction(await _via_ladder(url, t * 2), "ladder")
+    ):
         return best_clean
-    if offer(await _via_trafilatura(url)):
+    if consider(build_extraction(await _via_trafilatura(url), "scraped")):
         return best_clean
-    if settings.jina_reader_enabled and offer(await _via_jina(url, t * 2)):
+    if settings.jina_reader_enabled and consider(
+        build_extraction(await _via_jina(url, t * 2), "jina_ai")
+    ):
         return best_clean
-    if settings.removepaywall_enabled and offer(await _via_removepaywall(url, t * 2)):
+    if settings.removepaywall_enabled and consider(
+        build_extraction(await _via_removepaywall(url, t * 2), "removepaywall")
+    ):
         return best_clean
-    if offer(await _via_wayback(url, t * 2)):
+    if consider(build_extraction(await _via_wayback(url, t * 2), "wayback")):
         return best_clean
-    return best_clean or best_any
+    return best_clean or best_any or Extraction()

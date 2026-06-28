@@ -22,7 +22,12 @@ from src.models.article import Article
 from src.models.collection_run import CollectionRun
 from src.models.media_source import MediaSource
 from src.models.personality import Personality
-from src.services.collection.extractor_client import extract_fulltext, extract_html
+from src.services.collection.extractor_client import (
+    Extraction,
+    build_extraction,
+    extract_fulltext,
+    extract_html,
+)
 from src.services.collection.relevance import RelevanceIndex, build_index
 from src.utils import clean_html, feed_datetime, sha256
 from src.vocabulary import Nature, RunKind, RunStatus
@@ -59,25 +64,42 @@ class PressCollector:
         self._sem = asyncio.Semaphore(settings.max_concurrent_requests)
         self._index: RelevanceIndex | None = None
 
-    async def _resolve_body(self, entry, url: str, title: str, summary: str) -> str:
-        """Meilleur texte d'article disponible.
+    async def _resolve_body(self, entry, url: str, title: str, summary: str) -> Extraction:
+        """Meilleure `Extraction` d'article disponible (texte + qualité C0).
 
         1) `content:encoded` du flux s'il constitue déjà l'article complet
-           (≥ `_RSS_FULLTEXT_MIN`) → pas de scraping ;
-        2) sinon on scrape et on garde le candidat le plus long parmi
-           scrape / texte RSS propre / HTML RSS brut nettoyé / résumé / titre.
+           (≥ `_RSS_FULLTEXT_MIN`) → pas de scraping (`method='rss_full'`) ;
+        2) sinon on scrape (cascade anti-paywall, qui porte sa propre méthode) et
+           on garde le candidat le plus long parmi scrape / texte RSS propre /
+           HTML RSS brut nettoyé / résumé / titre.
         """
         rss_html = _rss_full_html(entry)
         rss_text = await extract_html(rss_html)
         if rss_text and len(rss_text) >= _RSS_FULLTEXT_MIN:
-            return rss_text
+            return build_extraction(rss_text, "rss_full", is_full=True)
+
         scraped = await extract_fulltext(url)
         rss_raw = clean_html(rss_html) if rss_html else ""
-        return max(
-            (c for c in (scraped, rss_text, rss_raw, summary, title) if c),
-            key=len,
-            default=summary or title or "",
+        # Candidats de repli (texte, méthode) ; on garde le plus long, en
+        # préférant la sortie du scraper qui porte ses propres flags qualité.
+        fallbacks: list[tuple[str, str]] = [
+            (rss_text or "", "rss_text"),
+            (rss_raw, "rss_raw"),
+            (summary, "summary"),
+            (title, "title"),
+        ]
+        best_fb_text, best_fb_method = max(
+            ((t, m) for t, m in fallbacks if t), key=lambda tm: len(tm[0]),
+            default=("", "summary"),
         )
+        scraped_len = len(scraped.text or "") if scraped else 0
+        if scraped and scraped_len >= len(best_fb_text):
+            return scraped
+        if best_fb_text:
+            return build_extraction(best_fb_text, best_fb_method) or Extraction(
+                text=best_fb_text, method=best_fb_method
+            )
+        return scraped or Extraction(text=summary or title or "", method="summary")
 
     async def collect_all(self) -> dict:
         async with self._factory() as db:
@@ -164,13 +186,21 @@ class PressCollector:
                     if exists:
                         continue
 
-                    body = await self._resolve_body(entry, url, title, summary)
+                    extraction = await self._resolve_body(entry, url, title, summary)
+                    body = extraction.text or summary or title or ""
                     # NATURE décidée sur le texte complet. On stocke TOUT le pertinent,
                     # étiqueté pdp|mention (la surface Presse filtre PDP par défaut).
                     verdict = self._index.assess(f"{title}. {body}")
                     if not verdict["relevant"]:
                         continue  # le texte complet infirme la pertinence du chapô
                     is_pdp = verdict["nature"] == Nature.PRISE_DE_PAROLE
+
+                    # `published_at` jamais NULL : à défaut de date du flux, on
+                    # retombe sur l'heure de collecte, flaggé `published_estimated`.
+                    published = feed_datetime(entry)
+                    estimated = published is None
+                    if estimated:
+                        published = datetime.now(timezone.utc)
 
                     db.add(Article(
                         media_source_id=source.id,
@@ -179,11 +209,17 @@ class PressCollector:
                         title=title or "(sans titre)",
                         content=body,
                         author=clean_html(getattr(entry, "author", "")) or None,
-                        published_at=feed_datetime(entry),
+                        published_at=published,
+                        published_estimated=estimated,
                         matched_keywords=verdict["keywords"],
                         matched_personalities=verdict["personalities"],
                         is_statement=is_pdp,
                         nature=verdict["nature"],
+                        extraction_method=extraction.method,
+                        is_full_text=extraction.is_full,
+                        paywalled=extraction.paywalled,
+                        confidence_score=extraction.confidence,
+                        lang="fr",
                         word_count=len(body.split()),
                     ))
                     new += 1

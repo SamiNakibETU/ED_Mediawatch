@@ -1,0 +1,58 @@
+{
+  "_description": "Référence informative des overrides par média (presse FR). NB : les overrides ACTIFS sont codés dans ultimate_extractor._get_strategies_for_url ; ce fichier documente l'intention et sert de base à une éventuelle externalisation.",
+  "_version": "2.0-fr",
+
+  "by_domain": {
+    "lemonde.fr": {
+      "strategies": ["googlebot_referer", "archive_ph", "curl_cffi", "playwright_stealth", "jina_ai"],
+      "special_handling": "paywall_dur_souscrit_cookies_backend"
+    },
+    "lefigaro.fr": {
+      "strategies": ["googlebot_referer", "archive_ph", "curl_cffi", "playwright_stealth"],
+      "special_handling": "403_datacenter_railway"
+    },
+    "liberation.fr": {
+      "strategies": ["googlebot_referer", "archive_ph", "curl_cffi", "jina_ai", "playwright_stealth"]
+    },
+    "lepoint.fr": {
+      "strategies": ["googlebot_referer", "archive_ph", "curl_cffi", "playwright_stealth"]
+    },
+    "lexpress.fr": {
+      "strategies": ["googlebot_referer", "archive_ph", "curl_cffi", "playwright_stealth"]
+    },
+    "nouvelobs.com": {
+      "strategies": ["googlebot_referer", "archive_ph", "curl_cffi", "playwright_stealth"]
+    },
+    "mediapart.fr": {
+      "strategies": ["archive_ph", "curl_cffi", "playwright_stealth"],
+      "special_handling": "paywall_dur_souscrit_cookies_backend"
+    },
+    "valeursactuelles.com": {
+      "strategies": ["curl_cffi", "jina_ai", "playwright_stealth"]
+    },
+    "letelegramme.fr": {
+      "strategies": ["googlebot_referer", "curl_cffi", "archive_ph", "jina_ai"],
+      "special_handling": "403_datacenter_railway"
+    },
+    "ledauphine.com": {
+      "strategies": ["googlebot_referer", "archive_ph", "curl_cffi", "jina_ai"],
+      "special_handling": "groupe_ebra_pqr_paywall"
+    },
+    "estrepublicain.fr": {
+      "strategies": ["googlebot_referer", "archive_ph", "curl_cffi", "jina_ai"],
+      "special_handling": "groupe_ebra_pqr_paywall"
+    },
+    "ouest-france.fr": {
+      "strategies": ["curl_cffi", "googlebot_referer", "jina_ai"]
+    }
+  },
+
+  "global_settings": {
+    "max_retries": 5,
+    "retry_base_delay": 2.0,
+    "request_timeout": 120,
+    "min_article_words": 150,
+    "target_article_words": 500,
+    "completeness_threshold": 0.95
+  }
+}
