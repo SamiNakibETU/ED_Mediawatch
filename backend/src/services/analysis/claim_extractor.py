@@ -80,7 +80,11 @@ def extract_from_text(text: str, triggers: dict) -> list[dict]:
             candidates = [q for q in quantities if q.unit_kind in spec["unit_kinds"]]
             if not candidates and "nb" in spec["unit_kinds"]:
                 if plains is None:
-                    plains = find_plain_numbers(sent)
+                    # Exclut les nombres déjà typés (euros/%/ans) → « 6000 euros »
+                    # ne devient pas un faux « 6000 expulsions ».
+                    plains = find_plain_numbers(
+                        sent, exclude_spans=[(q.start, q.end) for q in quantities]
+                    )
                 candidates = plains
             if not candidates:
                 continue

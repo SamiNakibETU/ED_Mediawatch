@@ -59,6 +59,21 @@ _PATTERNS: list[tuple[str, str]] = [
 _COMPILED = [(re.compile(rx, re.IGNORECASE), kind) for rx, kind in _PATTERNS]
 _PLAIN_NUM = re.compile(rf"\b({_NUM})\b")
 
+# Un nombre nu suivi de l'une de ces unités N'EST PAS un compte générique : il
+# mesure autre chose (temps, monnaie déjà typée, mesure, amendements, victimes…).
+# Élimine les faux positifs « 210 jours », « 400 sous-amendements », « 178 blessés »
+# captés à tort comme « nb d'expulsions / de recrutements » (précision §4).
+_DISQUALIFY_AFTER = re.compile(
+    r"\s*(?:de\s+|d['’])?"
+    r"(?:jours?|journ[ée]es?|mois|heures?|semaines?|minutes?|secondes?|"
+    r"euros?|€|%|amendements?|sous[-\s]?amendements?|articles?|pages?|"
+    r"degr[ée]s?|km|kg|m[²2]|litres?)\b",
+    re.IGNORECASE,
+)
+# Contexte « victimes » dans la fenêtre proche (≤ 40 car.) : un bilan de
+# blessés/morts n'est jamais un de nos référents quantitatifs.
+_CASUALTY_NEAR = re.compile(r"bless[ée]s?|morts?|tu[ée]s?|victimes?|d[ée]c[ée]d", re.IGNORECASE)
+
 
 def find_quantities(text: str) -> list[Quantity]:
     """Toutes les quantités explicites (avec unité) du texte."""
@@ -86,11 +101,17 @@ def _looks_like_year(raw: str, val: float) -> bool:
     )
 
 
-def find_plain_numbers(text: str) -> list[Quantity]:
+def find_plain_numbers(
+    text: str, exclude_spans: list[tuple[int, int]] | None = None
+) -> list[Quantity]:
     """Grands nombres « nus » (sans unité) — candidats pour les référents en `nb`.
 
-    Exclut les années (1900-2099 en 4 chiffres nus) : grosse source de faux positifs.
+    Exclut : les années (1900-2099 en 4 chiffres nus) ; les nombres déjà couverts
+    par une quantité TYPÉE (`exclude_spans` : euros/%/ans → « 6000 euros » n'est pas
+    un compte) ; les nombres suivis d'une unité disqualifiante (jours, amendements,
+    blessés… → mesurent autre chose). Précision d'abord, le LLM raffine ensuite.
     """
+    exclude_spans = exclude_spans or []
     out: list[Quantity] = []
     for m in _PLAIN_NUM.finditer(text):
         raw = m.group(1)
@@ -99,5 +120,12 @@ def find_plain_numbers(text: str) -> list[Quantity]:
             continue
         if _looks_like_year(raw, val):
             continue
-        out.append(Quantity(val, NB, m.group(0).strip(), m.start(), m.end()))
+        span = (m.start(), m.end())
+        if any(s < span[1] and span[0] < e for s, e in exclude_spans):
+            continue  # déjà capté comme quantité typée (euros, %, ans…)
+        if _DISQUALIFY_AFTER.match(text, m.end()):
+            continue  # « 210 jours », « 400 sous-amendements »…
+        if _CASUALTY_NEAR.search(text[m.end(): m.end() + 40]):
+            continue  # « 178 policiers et gendarmes blessés »…
+        out.append(Quantity(val, NB, m.group(0).strip(), *span))
     return out
