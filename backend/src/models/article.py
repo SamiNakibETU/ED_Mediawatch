@@ -68,6 +68,10 @@ class Article(Base, TimestampMixin):
     is_statement: Mapped[bool] = mapped_column(Boolean, default=False)
     # Nature de l'item : 'prise_de_parole' (figure ED s'exprime) | 'mention'.
     nature: Mapped[str | None] = mapped_column(String(20), index=True)
+    # Genre journalistique (format) : 'interview' | 'tribune' | 'communique' |
+    # None. Sert à PRIVILÉGIER les interviews/entretiens (parole directe la plus
+    # riche) tout en collectant le reste, filtrable à l'usage.
+    genre: Mapped[str | None] = mapped_column(String(16), index=True)
 
     # Archivage / reçus — preuve traçable même si l'article est supprimé/paywallé.
     snapshot_path: Mapped[str | None] = mapped_column(String(400))  # HTML local

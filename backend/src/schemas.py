@@ -51,6 +51,13 @@ class FeedItem(BaseModel):
     published_at: datetime | None
     is_retweet: bool
     is_reply: bool
+    # Typologie fine : RT simple vs RT commenté (quote) vs réponse, + contexte.
+    post_type: str | None = None
+    reply_to_handle: str | None = None
+    reply_to_url: str | None = None
+    quoted_handle: str | None = None
+    quoted_url: str | None = None
+    quoted_content: str | None = None
     media_url: str | None
     likes: int | None
     retweets: int | None
@@ -100,6 +107,7 @@ class ArticleOut(BaseModel):
     matched_personalities: list | None
     is_statement: bool
     nature: str | None = None
+    genre: str | None = None
     snapshot_url: str | None
     archived_at: datetime | None
     theme: str | None

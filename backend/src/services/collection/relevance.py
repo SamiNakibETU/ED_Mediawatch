@@ -61,6 +61,39 @@ _INTERVIEW_MARKERS = [
 
 _QUOTE_RE = re.compile(r"[«»“”]|\"")
 
+# Genre journalistique (format) — détecté sur titre+texte normalisés (sans accents).
+# Interview = parole directe la plus riche → on veut la privilégier.
+_GENRE_INTERVIEW = [
+    "interview", "entretien", "au micro", "sur le plateau", "grand jury",
+    "invite de", "invitee de", "questionne par", "repond aux questions",
+    "face a face", "le grand entretien", "interroge par",
+]
+_GENRE_TRIBUNE = ["tribune", "point de vue", "carte blanche", "billet de", "chronique de"]
+_GENRE_COMMUNIQUE = ["communique", "porte parole", "dans un communique"]
+
+
+def _alt_simple(terms) -> str:
+    uniq = sorted({t for t in terms if t}, key=len, reverse=True)
+    return "|".join(re.escape(t) for t in uniq)
+
+
+_GENRE_INTERVIEW_RE = re.compile(rf"\b(?:{_alt_simple(_GENRE_INTERVIEW)})\b")
+_GENRE_TRIBUNE_RE = re.compile(rf"\b(?:{_alt_simple(_GENRE_TRIBUNE)})\b")
+_GENRE_COMMUNIQUE_RE = re.compile(rf"\b(?:{_alt_simple(_GENRE_COMMUNIQUE)})\b")
+
+
+def classify_genre(norm_text: str) -> str | None:
+    """Genre d'un item presse : interview > tribune > communique > None.
+
+    `norm_text` doit déjà être normalisé (minuscule, sans accents)."""
+    if _GENRE_INTERVIEW_RE.search(norm_text):
+        return "interview"
+    if _GENRE_TRIBUNE_RE.search(norm_text):
+        return "tribune"
+    if _GENRE_COMMUNIQUE_RE.search(norm_text):
+        return "communique"
+    return None
+
 
 @lru_cache
 def _keywords() -> dict:
@@ -147,6 +180,7 @@ class RelevanceIndex:
             "relevant": relevant,
             "nature": nature,
             "is_statement": nature == Nature.PRISE_DE_PAROLE,
+            "genre": classify_genre(norm) if relevant else None,
             "personalities": [self._display.get(f, f.title()) for f in figures],
             "keywords": keywords,
         }

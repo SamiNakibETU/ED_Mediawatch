@@ -44,6 +44,17 @@ class Post(Base, TimestampMixin):
     # Tweet typology
     is_retweet: Mapped[bool] = mapped_column(default=False)
     is_reply: Mapped[bool] = mapped_column(default=False)
+    # Type fin du post (dérivé) : 'original' | 'retweet' (RT simple, contenu
+    # d'autrui) | 'quote' (RT commenté : texte propre + tweet cité) | 'reply'.
+    # Distingue « a juste RT » de « a RT et commenté » et de « répond à ».
+    post_type: Mapped[str | None] = mapped_column(String(12), index=True)
+    # À QUI il répond (reply) — handle sans '@' + URL du tweet visé si connue.
+    reply_to_handle: Mapped[str | None] = mapped_column(String(100))
+    reply_to_url: Mapped[str | None] = mapped_column(String(600))
+    # Tweet CITÉ (quote) — auteur, URL et texte, pour le contexte de la prise de parole.
+    quoted_handle: Mapped[str | None] = mapped_column(String(100))
+    quoted_url: Mapped[str | None] = mapped_column(String(600))
+    quoted_content: Mapped[str | None] = mapped_column(Text)
 
     # Media + engagement (engagement requires Nitter HTML; filled in P0.5)
     media_url: Mapped[str | None] = mapped_column(String(600))

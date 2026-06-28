@@ -215,6 +215,7 @@ class PressCollector:
                         matched_personalities=verdict["personalities"],
                         is_statement=is_pdp,
                         nature=verdict["nature"],
+                        genre=verdict.get("genre"),
                         extraction_method=extraction.method,
                         is_full_text=extraction.is_full,
                         paywalled=extraction.paywalled,

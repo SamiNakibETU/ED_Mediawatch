@@ -30,6 +30,8 @@ from src.vocabulary import RunKind, RunStatus, Source
 logger = structlog.get_logger(__name__)
 
 _IMG_RE = re.compile(r'<img[^>]+src="([^"]+)"', re.IGNORECASE)
+# Titre Nitter d'une réponse : « R to @username: … » → capte le handle visé.
+_RTO_RE = re.compile(r"^R to @?([A-Za-z0-9_]+)")
 
 
 def _extract_media(entry) -> str | None:
@@ -51,6 +53,12 @@ def parse_feed(xml: str, handle: str) -> list[dict]:
             bool(creator) and creator.lower() != handle.lower()
         )
         is_reply = title.startswith("R to ")
+        # Typologie best-effort en RSS (le quote n'est pas distinguable ici → HTML).
+        post_type = "retweet" if is_retweet else ("reply" if is_reply else "original")
+        reply_to = None
+        if is_reply:
+            m = _RTO_RE.match(title)
+            reply_to = m.group(1) if m else None
 
         content = clean_html(title)
         if not content:
@@ -63,7 +71,10 @@ def parse_feed(xml: str, handle: str) -> list[dict]:
                 "published_at": feed_datetime(entry),
                 "is_retweet": is_retweet,
                 "is_reply": is_reply,
+                "post_type": post_type,
+                "reply_to_handle": reply_to,
                 "media_url": _extract_media(entry),
+                "collected_via": "rss",
                 "word_count": len(content.split()),
             }
         )

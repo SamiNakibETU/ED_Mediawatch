@@ -86,6 +86,48 @@ def _tweet_link(item) -> str:
     return ""
 
 
+def _abs(link: str, base_url: str) -> str:
+    if base_url and link.startswith("/"):
+        return base_url.rstrip("/") + link
+    return link
+
+
+def _handle_from_path(href: str) -> str | None:
+    """'/J_Bardella/status/123#m' → 'J_Bardella'."""
+    seg = (href or "").lstrip("/").split("/", 1)
+    return seg[0] or None if seg and seg[0] else None
+
+
+def _reply_target(item) -> str | None:
+    """Premier @handle d'une réponse (« Replying to @x @y » → 'x')."""
+    links = item.cssselect(".replying-to a")
+    if links:
+        return (links[0].text_content() or "").lstrip("@").strip() or None
+    return None
+
+
+def _quote_info(item, base_url: str) -> dict:
+    """Tweet cité (RT commenté) : auteur, URL, texte. Vide si pas de citation."""
+    quotes = item.cssselect(".quote")
+    if not quotes:
+        return {}
+    q = quotes[0]
+    link_els = q.cssselect("a.quote-link")
+    href = link_els[0].get("href") if link_els else ""
+    user_els = q.cssselect(".username")
+    handle = (
+        (user_els[0].text_content() or "").lstrip("@").strip()
+        if user_els else _handle_from_path(href)
+    )
+    text_els = q.cssselect(".quote-text")
+    text = text_els[0].text_content().strip() if text_els else None
+    return {
+        "quoted_url": _abs(href, base_url) if href else None,
+        "quoted_handle": handle or None,
+        "quoted_content": text or None,
+    }
+
+
 def parse_profile_html(
     html_text: str, handle: str, base_url: str = ""
 ) -> tuple[list[dict], str | None]:
@@ -112,6 +154,16 @@ def parse_profile_html(
 
         is_retweet = bool(item.cssselect(".retweet-header"))
         is_reply = bool(item.cssselect(".replying-to"))
+        quote = _quote_info(item, base_url)
+        # Type fin : RT simple (contenu d'autrui) > RT commenté (quote) > réponse > original.
+        if is_retweet:
+            post_type = "retweet"
+        elif quote:
+            post_type = "quote"
+        elif is_reply:
+            post_type = "reply"
+        else:
+            post_type = "original"
         media = item.cssselect(".attachment.image img, .still-image img, video")
         media_url = (media[0].get("src") or media[0].get("data-url")) if media else None
         if media_url and base_url and media_url.startswith("/"):
@@ -125,6 +177,11 @@ def parse_profile_html(
                 "published_at": _parse_date(item, handle),
                 "is_retweet": is_retweet,
                 "is_reply": is_reply,
+                "post_type": post_type,
+                "reply_to_handle": _reply_target(item) if is_reply else None,
+                "quoted_url": quote.get("quoted_url"),
+                "quoted_handle": quote.get("quoted_handle"),
+                "quoted_content": quote.get("quoted_content"),
                 "media_url": media_url,
                 "collected_via": "html",
                 "replies": _stat_value(item, "icon-comment"),
