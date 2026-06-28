@@ -108,6 +108,14 @@ class NitterClient:
         logger.warning("nitter.all_failed", handle=handle)
         return None, None
 
+    async def html_capable(self, sample_handle: str) -> bool:
+        """Une instance sert-elle encore la timeline HTML (→ engagement dispo) ?
+
+        Sonde unique par passe : si OUI, la collecte bascule sur le HTML (likes/RT/
+        quote/reply + date exacte) gratuitement ; sinon on reste en RSS sans perte."""
+        html, _ = await self.fetch_html(f"/{sample_handle.lstrip('/')}")
+        return html is not None
+
     async def fetch_html(self, path: str) -> tuple[str | None, str | None]:
         """Fetch a Nitter HTML page (profile or ?cursor=…) with rotation.
 

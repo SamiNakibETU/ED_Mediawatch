@@ -221,13 +221,12 @@ async def run_backfill(since: datetime, max_pages_per_handle: int = 40) -> dict:
 async def run_collection(use_html: bool | None = None) -> dict:
     """One full sweep over the active pool. Returns summary stats.
 
-    Uses HTML (with engagement) when a self-hosted Nitter is configured,
-    else RSS (no engagement). Override with `use_html`.
+    Uses HTML (with engagement) when a self-hosted Nitter is configured OR a public
+    instance still serves the timeline HTML (probed once per pass), else RSS (no
+    engagement). Per-handle RSS fallback if HTML is blocked. Override with `use_html`.
     """
     factory = get_session_factory()
     client = NitterClient()
-    if use_html is None:
-        use_html = bool(get_settings().nitter_self_hosted.strip())
 
     async with factory() as db:
         result = await db.execute(
@@ -248,7 +247,15 @@ async def run_collection(use_html: bool | None = None) -> dict:
         await db.refresh(run)
         run_id = run.id
 
-    logger.info("collection.start", personalities=len(personalities))
+    if use_html is None:
+        # HTML = engagement (likes/RT/quote/reply) + date exacte. On l'utilise si un
+        # Nitter self-host est configuré OU si une instance publique sert encore la
+        # timeline HTML (sondée une fois par passe, sur le 1er handle du pool).
+        sample = next((p.handle for p in personalities if p.handle), None)
+        use_html = bool(get_settings().nitter_self_hosted.strip()) or (
+            bool(sample) and await client.html_capable(sample)
+        )
+    logger.info("collection.start", personalities=len(personalities), use_html=use_html)
 
     total_new = 0
     errors = 0
@@ -260,6 +267,8 @@ async def run_collection(use_html: bool | None = None) -> dict:
             try:
                 if use_html:
                     new, inst = await collect_one_html(client, db, p, max_pages=1)
+                    if inst is None:  # HTML bloqué pour ce handle → repli RSS (sans engagement)
+                        new, inst = await _collect_one(client, db, p)
                 else:
                     new, inst = await _collect_one(client, db, p)
                 total_new += new
