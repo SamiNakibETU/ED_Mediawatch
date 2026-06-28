@@ -29,6 +29,7 @@ from src.services.collection.extractor_client import (
     extract_html,
 )
 from src.services.collection.relevance import RelevanceIndex, build_index
+from src.services.collection.text_clean import clean_article_text
 from src.utils import clean_html, feed_datetime, sha256
 from src.vocabulary import Nature, RunKind, RunStatus
 
@@ -205,7 +206,10 @@ class PressCollector:
                         continue
 
                     extraction = await self._resolve_body(entry, url, title, summary)
-                    body = extraction.text or summary or title or ""
+                    # Nettoyage analyse-ready : retire liens + boilerplate (« Lire
+                    # aussi », partage, crédits…) AVANT l'analyse, pour ne pas
+                    # matcher la pertinence sur des teasers hors-article.
+                    body = clean_article_text(extraction.text or summary or title or "")
                     # NATURE décidée sur le texte complet. On stocke TOUT le pertinent,
                     # étiqueté pdp|mention (la surface Presse filtre PDP par défaut).
                     verdict = self._index.assess(f"{title}. {body}")

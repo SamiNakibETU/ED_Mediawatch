@@ -5,11 +5,12 @@ from sqlalchemy import func, select
 
 from src.config import get_settings
 from src.database import get_session_factory
+from src.models.article import Article
 from src.models.collection_run import CollectionRun
 from src.models.media_source import MediaSource
 from src.models.personality import Personality
 from src.models.post import Post
-from src.vocabulary import RunKind, RunStatus
+from src.vocabulary import Nature, RunKind, RunStatus
 
 router = APIRouter(tags=["health"])
 
@@ -133,6 +134,93 @@ async def freshness() -> dict:
             "sources": press_sources,
         },
         "zombie_runs": zombies,
+    }
+
+
+def _pct(part: int | None, total: int | None) -> float:
+    return round(100 * (part or 0) / total, 1) if total else 0.0
+
+
+@router.get("/health/collection-report")
+async def collection_report() -> dict:
+    """Porte « prêt pour l'analyse » (C5) — état chiffré de la collecte par canal.
+
+    Agrège couverture / complétude des métadonnées / archivage / fraîcheur. Sert à
+    décider OBJECTIVEMENT quand basculer sur l'analyse : on ne raffine que sur un
+    substrat dont on connaît la qualité (cf ROADMAP §1)."""
+    factory = get_session_factory()
+    async with factory() as db:
+        # --- X / posts ---
+        n_posts = await db.scalar(select(func.count(Post.id))) or 0
+        n_eng = await db.scalar(
+            select(func.count(Post.id)).where(Post.likes.isnot(None))
+        ) or 0
+        n_html = await db.scalar(
+            select(func.count(Post.id)).where(Post.collected_via == "html")
+        ) or 0
+        n_post_arch = await db.scalar(
+            select(func.count(Post.id)).where(Post.snapshot_url.isnot(None))
+        ) or 0
+        # --- Presse / articles ---
+        n_art = await db.scalar(select(func.count(Article.id))) or 0
+        n_full = await db.scalar(
+            select(func.count(Article.id)).where(Article.is_full_text.is_(True))
+        ) or 0
+        n_paywall = await db.scalar(
+            select(func.count(Article.id)).where(Article.paywalled.is_(True))
+        ) or 0
+        n_pdp = await db.scalar(
+            select(func.count(Article.id)).where(Article.nature == Nature.PRISE_DE_PAROLE)
+        ) or 0
+        n_estim = await db.scalar(
+            select(func.count(Article.id)).where(Article.published_estimated.is_(True))
+        ) or 0
+        n_art_arch = await db.scalar(
+            select(func.count(Article.id)).where(Article.snapshot_url.isnot(None))
+        ) or 0
+        # --- Couverture pool & sources ---
+        n_pers = await db.scalar(select(func.count(Personality.id))) or 0
+        n_handle = await db.scalar(
+            select(func.count(Personality.id)).where(
+                Personality.is_active.is_(True), Personality.handle.isnot(None)
+            )
+        ) or 0
+        n_collected = await db.scalar(
+            select(func.count(Personality.id)).where(
+                Personality.last_collected_at.isnot(None)
+            )
+        ) or 0
+        n_src_active = await db.scalar(
+            select(func.count(MediaSource.id)).where(MediaSource.is_active.is_(True))
+        ) or 0
+        n_src_failing = await db.scalar(
+            select(func.count(MediaSource.id)).where(
+                MediaSource.is_active.is_(True),
+                MediaSource.consecutive_failures >= _FAIL_THRESHOLD,
+            )
+        ) or 0
+
+    return {
+        "x": {
+            "posts": n_posts,
+            "with_engagement": n_eng, "engagement_pct": _pct(n_eng, n_posts),
+            "via_html_pct": _pct(n_html, n_posts),
+            "archived_pct": _pct(n_post_arch, n_posts),
+            "handles_active": n_handle,
+            "handles_collected": n_collected,
+            "handle_coverage_pct": _pct(n_collected, n_handle),
+        },
+        "press": {
+            "articles": n_art,
+            "full_text": n_full, "full_text_pct": _pct(n_full, n_art),
+            "paywalled_pct": _pct(n_paywall, n_art),
+            "prises_de_parole": n_pdp, "pdp_pct": _pct(n_pdp, n_art),
+            "date_estimated_pct": _pct(n_estim, n_art),
+            "archived_pct": _pct(n_art_arch, n_art),
+            "sources_active": n_src_active,
+            "sources_failing": n_src_failing,
+        },
+        "pool": {"personalities": n_pers, "with_active_handle": n_handle},
     }
 
 
