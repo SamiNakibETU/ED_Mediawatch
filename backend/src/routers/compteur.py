@@ -152,6 +152,29 @@ async def trigger_enrich_claims(limit: int = Query(5000, ge=1, le=20000)) -> dic
     return await enrich_claims(limit=limit)
 
 
+@router.get("/dossier/{personality_id}")
+async def get_dossier_endpoint(personality_id: int) -> dict:
+    """L2 — dossier vivant CACHÉ d'une figure (404 si pas encore généré)."""
+    from fastapi import HTTPException
+
+    from src.services.analysis.dossier_generator import get_dossier
+
+    d = await get_dossier(personality_id)
+    if d is None:
+        raise HTTPException(404, "dossier non généré (POST /generate-dossier/{id})")
+    return d
+
+
+@router.post("/generate-dossier/{personality_id}", dependencies=[Depends(require_token)])
+async def generate_dossier_endpoint(
+    personality_id: int, force: bool = Query(False, description="régénère même si caché")
+) -> dict:
+    """L2 — génère/rafraîchit le dossier d'une figure (1 appel LLM, à la demande)."""
+    from src.services.analysis.dossier_generator import generate_dossier
+
+    return await generate_dossier(personality_id, force=force)
+
+
 @router.get("/grand-livre")
 async def grand_livre(
     speaker: str | None = Query(None, description="nom du locuteur (sous-chaîne)"),

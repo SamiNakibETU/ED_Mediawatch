@@ -133,6 +133,48 @@ _DECL_SYSTEM = (
 )
 
 
+# =========================================================================
+# L2 — Dossier vivant par personnalité (synthèse RAG, 1 appel par figure)
+# =========================================================================
+
+DOSSIER_PROMPT_VERSION = "dossier-v1"
+
+
+class DossierSynthesis(BaseModel):
+    """Synthèse structurée d'une figure, GROUNDED sur ses déclarations fournies."""
+
+    summary: str = Field(
+        description="3 à 6 phrases NEUTRES et factuelles résumant ce que la figure "
+        "défend, d'après les déclarations fournies UNIQUEMENT. Aucun jugement, "
+        "aucune information non présente."
+    )
+    themes_principaux: list[str] = Field(default_factory=list)
+    positions_cles: list[str] = Field(
+        default_factory=list,
+        description="Positions saillantes, formulées sobrement et attribuables aux déclarations.",
+    )
+    revirements: list[str] = Field(
+        default_factory=list,
+        description="Changements de position datés OBSERVÉS dans les déclarations (sinon vide).",
+    )
+    points_de_vigilance: list[str] = Field(
+        default_factory=list,
+        description="Incohérences/tensions notables à vérifier (hypothèses prudentes, pas d'accusation).",
+    )
+
+
+_DOSSIER_SYSTEM = (
+    "Tu es un analyste politique rigoureux. On te donne les déclarations RÉELLES "
+    "(datées, sourcées) d'une figure, extraites d'un corpus de veille. Tu produis "
+    "une synthèse NEUTRE, strictement fondée sur ces déclarations.\n"
+    "Règles : 1) n'invente RIEN d'absent ; 2) reste factuel et non partisan "
+    "(pas d'éditorial) ; 3) un revirement n'est cité que s'il est OBSERVABLE dans "
+    "les déclarations datées fournies ; 4) les points de vigilance sont des "
+    "hypothèses prudentes à valider par un humain, jamais des accusations ; "
+    "5) si le matériau est trop maigre, le dire dans summary et laisser les listes vides."
+)
+
+
 _SYSTEM = (
     "Tu es un assistant d'analyse du discours politique français, rigoureux et "
     "fidèle au texte. Règles strictes :\n"
@@ -278,6 +320,31 @@ class ClaimLLM:
         if prov in self._openai:
             return await self._tier2_openai(
                 prov, prompt, schema=DeclarationSet, system=_DECL_SYSTEM, max_tokens=4000
+            )
+        return None
+
+    async def synthesize_dossier(
+        self, *, speaker: str, party: str | None, facts: str
+    ) -> DossierSynthesis | None:
+        """L2 — synthèse d'une figure à partir d'un contexte BORNÉ de déclarations
+        (RAG). Un seul appel LLM par figure. None si LLM indisponible/échec."""
+        if not facts.strip():
+            return None
+        prompt = (
+            f"Figure : {speaker}" + (f" ({party})" if party else "") + "\n\n"
+            f"Déclarations réelles (datées, échantillon borné) :\n{facts}\n\n"
+            "Tâche : produis la synthèse structurée (summary neutre, thèmes, positions, "
+            "revirements observés, points de vigilance prudents), fondée UNIQUEMENT sur "
+            "ces déclarations."
+        )
+        prov = self._s.claim_tier2_provider
+        if prov == "anthropic" and self._anthropic is not None:
+            return await self._tier2_anthropic(
+                prompt, schema=DossierSynthesis, system=_DOSSIER_SYSTEM, max_tokens=1500
+            )
+        if prov in self._openai:
+            return await self._tier2_openai(
+                prov, prompt, schema=DossierSynthesis, system=_DOSSIER_SYSTEM, max_tokens=2000
             )
         return None
 
