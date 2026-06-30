@@ -56,6 +56,19 @@ def _rationale(a: Claim, b: Claim, label: str) -> str:
     return f"{label} — {side(a)}  ≠  {side(b)}"
 
 
+# Stances opposées (contradiction normative). 'nuance'/'inconnu' ne contredisent pas.
+_OPPOSITE = {("pour", "contre"), ("contre", "pour")}
+
+
+def _rationale_norm(a: Claim, b: Claim, label: str) -> str:
+    def side(c: Claim) -> str:
+        who = c.speaker_name or (c.party or "source presse")
+        when = c.published_at.date().isoformat() if c.published_at else "?"
+        return f"{c.stance_polarity} ({who}, {when}) : « {(c.verbatim or '')[:90]} »"
+
+    return f"{label} — {side(a)}  ⇄  {side(b)}"
+
+
 async def _existing_pairs(db: AsyncSession) -> set[tuple[int, int]]:
     rows = await db.execute(select(Contradiction.claim_a_id, Contradiction.claim_b_id))
     return set(rows.all())
@@ -106,8 +119,51 @@ async def run_contradiction_detection() -> dict:
                     ))
                     seen.add((ca, cb))
                     new += 1
+
+        # --- Passe NORMATIVE (zéro coût LLM) : positions opposées sur un même
+        # référent. Bloc = referent_key ; candidat = stances opposées (pour/contre).
+        norm_claims = list(
+            (
+                await db.execute(
+                    select(Claim)
+                    .where(
+                        Claim.referent_key.isnot(None),
+                        Claim.qty_value.is_(None),  # non chiffré (le numérique est traité au-dessus)
+                        Claim.stance_polarity.in_(["pour", "contre"]),
+                    )
+                    .order_by(Claim.referent_key, Claim.published_at.asc().nullslast())
+                )
+            ).scalars().all()
+        )
+        norm_blocks: dict[str, list[Claim]] = {}
+        for c in norm_claims:
+            norm_blocks.setdefault(c.referent_key, []).append(c)
+
+        norm_new = 0
+        for ref_key, block in norm_blocks.items():
+            label = labels.get(ref_key, ref_key)
+            for i in range(len(block)):
+                for j in range(i + 1, len(block)):
+                    a, b = block[i], block[j]
+                    if (a.stance_polarity, b.stance_polarity) not in _OPPOSITE:
+                        continue
+                    ca, cb = sorted((a.id, b.id))
+                    if (ca, cb) in seen:
+                        continue
+                    ctype = _classify(a, b)
+                    # Score normatif : opposition franche + plancher de type.
+                    score = round(min(max(0.7, _TYPE_FLOOR.get(ctype, 0.0)), 1.0), 3)
+                    db.add(Contradiction(
+                        claim_a_id=ca, claim_b_id=cb, referent_key=ref_key,
+                        type=ctype, score=score,
+                        rationale=_rationale_norm(a, b, label), status="pending",
+                    ))
+                    seen.add((ca, cb))
+                    norm_new += 1
+
         await db.commit()
 
-    stats = {"blocks": len(blocks), "pairs_incompatibles": pairs, "contradictions_new": new}
+    stats = {"blocks": len(blocks), "pairs_incompatibles": pairs,
+             "contradictions_new": new + norm_new, "normative_new": norm_new}
     logger.info("contradictions.detected", **stats)
     return stats
