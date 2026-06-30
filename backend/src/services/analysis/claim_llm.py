@@ -15,6 +15,7 @@ les claims déterministes tels quels). Repris dans l'esprit du llm_router PMO.
 from __future__ import annotations
 
 import json
+from typing import Literal
 
 import structlog
 from pydantic import BaseModel, Field
@@ -58,6 +59,78 @@ class RefinedClaim(BaseModel):
     modality: str | None = Field(default=None, description="affirme|estime|promet|inconnu")
     stance: str | None = Field(default=None, description="pour|contre|nuance|inconnu")
     confidence: float = Field(ge=0.0, le=1.0)
+
+
+# =========================================================================
+# L0 — Extraction GÉNÉRALE de déclarations (Grand Livre exhaustif, tous types)
+# =========================================================================
+
+# Version du prompt d'extraction (méthode versionnée, cf specs §7.6). À bumper
+# à chaque changement de consigne pour rendre les passes rejouables/traçables.
+DECLARATION_PROMPT_VERSION = "decl-v1"
+
+# Thèmes de 1er niveau (specs §2.3) — grille fermée pour la classification grossière.
+DECLARATION_THEMES = [
+    "immigration", "securite", "economie", "pouvoir_achat", "energie",
+    "international", "logement", "social", "sante", "institutions",
+    "ecologie", "education", "agriculture", "culture_identite", "justice",
+]
+
+
+class Declaration(BaseModel):
+    """Une assertion atomique extraite d'une prise de parole (Grand Livre L0)."""
+
+    verbatim: str = Field(
+        description="Extrait EXACT du texte source (copie mot pour mot, sous-chaîne)."
+    )
+    canonical: str = Field(
+        description="Reformulation autoportante (coréférences résolues), SANS rien "
+        "ajouter d'absent du texte source ni jugement."
+    )
+    claim_type: Literal[
+        "factuel_quantitatif", "factuel_qualitatif", "normatif", "predictif", "attributif"
+    ]
+    theme: str = Field(description="Un thème de la grille fournie, ou 'autre'.")
+    stance_target: str | None = Field(
+        default=None, description="Objet de la prise de position (si normatif/attributif)."
+    )
+    stance_polarity: str | None = Field(
+        default=None, description="pour|contre|nuance|inconnu"
+    )
+    check_worthy: bool = Field(
+        description="Vrai si l'assertion est analysable/vérifiable (pas une banalité, "
+        "salutation, ou pure émotion sans contenu)."
+    )
+
+
+class DeclarationSet(BaseModel):
+    """Sortie structurée de la segmentation d'une prise de parole."""
+
+    has_declaration: bool = Field(
+        description="Faux si le texte ne contient aucune assertion analysable."
+    )
+    declarations: list[Declaration] = Field(default_factory=list)
+
+
+_DECL_SYSTEM = (
+    "Tu es un analyste du discours politique français, rigoureux et STRICTEMENT "
+    "fidèle au texte. On te donne une prise de parole (tweet ou article) d'une "
+    "personnalité ; tu la segmentes en assertions atomiques (molecular facts).\n"
+    "Règles ABSOLUES :\n"
+    "1. `verbatim` = extrait EXACT, copié mot pour mot du texte source (une "
+    "sous-chaîne). N'invente, ne paraphrase, ne corrige JAMAIS le verbatim.\n"
+    "2. `canonical` = reformulation autoportante neutre ; résous « il/le parti » "
+    "SEULEMENT si le locuteur est donné ; n'ajoute AUCUNE information absente.\n"
+    "3. Un objet par assertion distincte. Ne découpe pas une idée cohérente en "
+    "miettes ; ne fusionne pas deux idées différentes.\n"
+    "4. `claim_type` : factuel_quantitatif (chiffre), factuel_qualitatif (fait non "
+    "chiffré), normatif (ce qu'il FAUT faire / valeur), predictif (ce qui VA "
+    "arriver), attributif (impute une action/responsabilité à un acteur).\n"
+    "5. Ignore le bruit (salutations, remerciements, liens, emojis seuls, "
+    "banalités sans contenu) → check_worthy=false ou ne pas extraire.\n"
+    "6. `theme` depuis la grille fournie uniquement, sinon 'autre'.\n"
+    "Si aucune assertion analysable : has_declaration=false, declarations=[]."
+)
 
 
 _SYSTEM = (
@@ -125,30 +198,35 @@ class ClaimLLM:
             logger.debug("claim_llm.tier1_fail", error=str(exc)[:120])
             return True  # en cas d'échec, ne pas bloquer
 
-    async def _tier2_anthropic(self, prompt: str) -> RefinedClaim | None:
+    async def _tier2_anthropic(
+        self, prompt: str, *, schema=RefinedClaim, system: str = _SYSTEM, max_tokens: int = 600
+    ):
         try:
             resp = await self._anthropic.messages.parse(
                 model=self._s.claim_tier2_model,
-                max_tokens=600,
-                system=_SYSTEM,
+                max_tokens=max_tokens,
+                system=system,
                 messages=[{"role": "user", "content": prompt}],
-                output_format=RefinedClaim,
+                output_format=schema,
             )
             return resp.parsed_output
         except Exception as exc:  # noqa: BLE001
             logger.warning("claim_llm.tier2_anthropic_fail", error=str(exc)[:160])
             return None
 
-    async def _tier2_openai(self, prov: str, prompt: str) -> RefinedClaim | None:
+    async def _tier2_openai(
+        self, prov: str, prompt: str, *, schema=RefinedClaim, system: str = _SYSTEM,
+        max_tokens: int = 1500,
+    ):
         client = self._openai[prov]
         model = self._s.claim_tier2_model
         # 1) sortie structurée native (json_schema), si le provider/modèle la gère
         try:
             resp = await client.beta.chat.completions.parse(
-                model=model, max_tokens=1500, temperature=0,
-                messages=[{"role": "system", "content": _SYSTEM},
+                model=model, max_tokens=max_tokens, temperature=0,
+                messages=[{"role": "system", "content": system},
                           {"role": "user", "content": prompt}],
-                response_format=RefinedClaim,
+                response_format=schema,
             )
             parsed = resp.choices[0].message.parsed
             if parsed is not None:
@@ -158,22 +236,50 @@ class ClaimLLM:
 
         # 2) repli : mode json_object + validation Pydantic manuelle
         try:
-            schema = json.dumps(RefinedClaim.model_json_schema(), ensure_ascii=False)
+            schema_json = json.dumps(schema.model_json_schema(), ensure_ascii=False)
             resp = await client.chat.completions.create(
-                model=model, max_tokens=1500, temperature=0,
+                model=model, max_tokens=max_tokens, temperature=0,
                 response_format={"type": "json_object"},
                 messages=[
-                    {"role": "system", "content": _SYSTEM},
+                    {"role": "system", "content": system},
                     {"role": "user", "content":
                         prompt + "\n\nRéponds UNIQUEMENT par un JSON valide conforme à ce schéma "
-                        f"(mêmes clés) :\n{schema}"},
+                        f"(mêmes clés) :\n{schema_json}"},
                 ],
             )
             content = resp.choices[0].message.content or ""
-            return RefinedClaim.model_validate_json(content)
+            return schema.model_validate_json(content)
         except Exception as exc:  # noqa: BLE001
             logger.warning("claim_llm.tier2_openai_fail", prov=prov, error=str(exc)[:160])
             return None
+
+    async def segment_declarations(
+        self, *, text: str, speaker: str | None, themes: list[str] | None = None
+    ) -> DeclarationSet | None:
+        """L0 — segmente une prise de parole en déclarations atomiques (tous types).
+
+        Sortie structurée + fidèle au verbatim. None si LLM indisponible/échec
+        (le substrat ne se peuple alors pas — pas de déclaration inventée)."""
+        if not text or not text.strip():
+            return None
+        grid = ", ".join(themes or DECLARATION_THEMES)
+        prompt = (
+            f"Locuteur : {speaker or 'inconnu'}\n"
+            f"Grille de thèmes : {grid}\n\n"
+            f"Prise de parole (texte source EXACT) :\n«««\n{text.strip()[:6000]}\n»»»\n\n"
+            "Tâche : segmente en assertions atomiques selon les règles. Pour chacune : "
+            "verbatim EXACT, canonical fidèle, claim_type, theme, stance, check_worthy."
+        )
+        prov = self._s.claim_tier2_provider
+        if prov == "anthropic" and self._anthropic is not None:
+            return await self._tier2_anthropic(
+                prompt, schema=DeclarationSet, system=_DECL_SYSTEM, max_tokens=3000
+            )
+        if prov in self._openai:
+            return await self._tier2_openai(
+                prov, prompt, schema=DeclarationSet, system=_DECL_SYSTEM, max_tokens=4000
+            )
+        return None
 
     async def refine(
         self,

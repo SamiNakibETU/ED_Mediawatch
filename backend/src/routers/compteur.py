@@ -129,3 +129,66 @@ async def near_duplicate_claims(threshold: float = Query(0.92, ge=0.5, le=1.0)) 
 
     groups = await near_duplicate_groups(threshold=threshold)
     return {"threshold": threshold, "groups": len(groups), "items": groups}
+
+
+@router.post("/extract-declarations", dependencies=[Depends(require_token)])
+async def trigger_extract_declarations(
+    limit_posts: int = Query(500, ge=1, le=5000),
+    limit_articles: int = Query(300, ge=1, le=5000),
+) -> dict:
+    """L0 — segmente posts/articles en déclarations (tous types) → Grand Livre."""
+    from src.services.analysis.declaration_extractor import run_declaration_extraction
+
+    return await run_declaration_extraction(
+        limit_posts=limit_posts, limit_articles=limit_articles
+    )
+
+
+@router.get("/grand-livre")
+async def grand_livre(
+    speaker: str | None = Query(None, description="nom du locuteur (sous-chaîne)"),
+    party: str | None = Query(None),
+    theme: str | None = Query(None),
+    claim_type: str | None = Query(None, description="factuel_quantitatif|factuel_qualitatif|normatif|predictif|attributif"),
+    platform: str | None = Query(None, description="x | press"),
+    q: str | None = Query(None, description="recherche plein-texte sur le verbatim"),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Le Grand Livre (L0) — toutes les déclarations, navigables/requêtables."""
+    stmt = select(Claim).order_by(Claim.published_at.desc().nullslast(), Claim.id.desc())
+    count_stmt = select(func.count(Claim.id))
+    filters = []
+    if speaker:
+        filters.append(Claim.speaker_name.ilike(f"%{speaker}%"))
+    if party:
+        filters.append(Claim.party == party)
+    if theme:
+        filters.append(Claim.theme == theme)
+    if claim_type:
+        filters.append(Claim.claim_type == claim_type)
+    if platform:
+        filters.append(Claim.platform == platform)
+    if q:
+        filters.append(Claim.verbatim.ilike(f"%{q}%"))
+    for f in filters:
+        stmt = stmt.where(f)
+        count_stmt = count_stmt.where(f)
+
+    total = await db.scalar(count_stmt) or 0
+    rows = list((await db.execute(stmt.limit(limit).offset(offset))).scalars().all())
+    return {
+        "total": total, "limit": limit, "offset": offset,
+        "items": [
+            {
+                "id": c.id, "platform": c.platform, "speaker_name": c.speaker_name,
+                "party": c.party, "claim_type": c.claim_type, "theme": c.theme,
+                "stance_polarity": c.stance_polarity, "verbatim": c.verbatim,
+                "canonical": c.canonical, "published_at": c.published_at,
+                "referent_key": c.referent_key, "qty_value": c.qty_value,
+                "extraction_method": c.extraction_method, "human_validated": c.human_validated,
+            }
+            for c in rows
+        ],
+    }
