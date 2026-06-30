@@ -1,6 +1,27 @@
 """L0 — garde-fou anti-hallucination : le verbatim doit exister dans la source."""
 
-from src.services.analysis.declaration_extractor import verbatim_in_source
+from src.services.analysis.declaration_extractor import (
+    verbatim_in_source,
+    worth_segmenting,
+)
+
+
+def test_worth_segmenting_skips_noise():
+    # Coût : on ne segmente pas (donc pas d'appel LLM) le bruit.
+    assert not worth_segmenting("")
+    assert not worth_segmenting("https://t.co/abc")          # lien seul
+    assert not worth_segmenting("👍🔥")                         # emojis seuls
+    assert not worth_segmenting("Merci !")                    # trop court
+
+
+def test_worth_segmenting_keeps_real_content():
+    assert worth_segmenting(
+        "Il faut rétablir la double peine et expulser les délinquants étrangers."
+    )
+    # URL présente mais vrai contenu autour → on segmente.
+    assert worth_segmenting(
+        "Le coût de l'immigration explose, voir https://x.com/abc pour les chiffres."
+    )
 
 
 SOURCE = (

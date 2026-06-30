@@ -144,6 +144,14 @@ async def trigger_extract_declarations(
     )
 
 
+@router.post("/enrich-claims", dependencies=[Depends(require_token)])
+async def trigger_enrich_claims(limit: int = Query(5000, ge=1, le=20000)) -> dict:
+    """L1 — enrichit thème + référent (déterministe + cosinus en mémoire, zéro coût API)."""
+    from src.services.analysis.enrich import enrich_claims
+
+    return await enrich_claims(limit=limit)
+
+
 @router.get("/grand-livre")
 async def grand_livre(
     speaker: str | None = Query(None, description="nom du locuteur (sous-chaîne)"),

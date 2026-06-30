@@ -35,6 +35,17 @@ from src.utils import sha256, strip_accents
 logger = structlog.get_logger(__name__)
 
 _WS = re.compile(r"\s+")
+_URL = re.compile(r"https?://\S+|www\.\S+")
+_ALPHA = re.compile(r"[A-Za-zÀ-ÿ]{2,}")
+
+
+def worth_segmenting(text: str | None) -> bool:
+    """Pré-filtre DÉTERMINISTE (gratuit) avant tout appel LLM : on ne segmente que
+    du texte qui porte du contenu (≥ 5 mots alpha hors liens). Évite de brûler du
+    LLM sur des tweets « lien seul », emojis, ou trop courts (maîtrise du coût)."""
+    if not text:
+        return False
+    return len(_ALPHA.findall(_URL.sub("", text))) >= 5
 # Normalise guillemets/apostrophes/tirets « typographiques » → ASCII, pour comparer.
 _QUOTES = str.maketrans({"«": '"', "»": '"', "“": '"', "”": '"', "’": "'", "‘": "'",
                          "–": "-", "—": "-", "…": "..."})
@@ -104,10 +115,21 @@ async def run_declaration_extraction(
 
     factory = get_session_factory()
     model = f"{get_claim_llm()._s.claim_tier2_provider}:{get_claim_llm()._s.claim_tier2_model}/{DECLARATION_PROMPT_VERSION}"
-    n_new = posts_done = arts_done = 0
+    n_new = posts_done = arts_done = skipped = 0
     _SRC_CACHE.clear()
 
+    # Coût : on ne re-segmente JAMAIS une source déjà traitée (1 requête en amont).
     async with factory() as db:
+        done_posts = set((await db.execute(
+            select(Claim.post_id).where(
+                Claim.extraction_method == "llm_segment", Claim.post_id.isnot(None)
+            )
+        )).scalars().all())
+        done_arts = set((await db.execute(
+            select(Claim.article_id).where(
+                Claim.extraction_method == "llm_segment", Claim.article_id.isnot(None)
+            )
+        )).scalars().all())
         posts = (
             await db.execute(
                 select(Post, Personality)
@@ -119,6 +141,10 @@ async def run_declaration_extraction(
         ).all()
 
     for post, p in posts:
+        # Garde-fous coût (gratuits) AVANT l'appel LLM : déjà fait / bruit.
+        if post.id in done_posts or not worth_segmenting(post.content):
+            skipped += 1
+            continue
         src_ref = f"post{post.id}"
         _SRC_CACHE[src_ref] = post.content or ""
         result = await llm.segment_declarations(text=post.content, speaker=p.full_name)
@@ -145,8 +171,11 @@ async def run_declaration_extraction(
         ).scalars().all()
 
     for art in arts:
-        src_ref = f"art{art.id}"
         text = f"{art.title}. {art.content}"
+        if art.id in done_arts or not worth_segmenting(text):
+            skipped += 1
+            continue
+        src_ref = f"art{art.id}"
         _SRC_CACHE[src_ref] = text
         mp = art.matched_personalities or []
         speaker = mp[0] if len(mp) == 1 else None
@@ -165,6 +194,7 @@ async def run_declaration_extraction(
             await db.commit()
 
     stats = {"declarations_new": n_new, "posts_processed": posts_done,
-             "articles_processed": arts_done, "prompt_version": DECLARATION_PROMPT_VERSION}
+             "articles_processed": arts_done, "skipped_no_llm": skipped,
+             "prompt_version": DECLARATION_PROMPT_VERSION}
     logger.info("declarations.extracted", **stats)
     return stats
