@@ -2,7 +2,7 @@
 
 from datetime import date, datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 
 
 class PersonalityOut(BaseModel):
@@ -162,8 +162,19 @@ class ContradictionOut(BaseModel):
     referent_key: str | None
     # Provenance : « deterministe » (chiffres/stances) ou « llm_judge ». La file
     # de validation ne relit pas de la même façon une arête calculée et jugée.
-    detection_method: str
-    judge_version: str | None
+    #
+    # Tolère NULL : l'auto-migration ajoute la colonne sans réécrire les lignes
+    # existantes (cf. database.py), donc les arêtes antérieures au suivi de
+    # provenance arrivent à None. Elles sont toutes déterministes par
+    # construction — le juge n'existait pas. Sans ce défaut, l'API renvoyait 500
+    # en production alors que les tests passaient en local sur une base neuve.
+    detection_method: str | None = None
+    judge_version: str | None = None
+
+    @field_validator("detection_method", mode="before")
+    @classmethod
+    def _default_provenance(cls, v: str | None) -> str:
+        return v or "deterministe"
     validator: str | None
     detected_at: datetime
     claim_a: ClaimMini
