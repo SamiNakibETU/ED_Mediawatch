@@ -107,6 +107,8 @@ class Settings(BaseSettings):
 
     # --- LLM (extraction de claims, routage par tier — repris du llm_router PMO) ---
     # Clés API (au moins une requise pour activer le raffinage LLM).
+    # OpenRouter est la voie par défaut (choix de modèles + prix, zéro Anthropic).
+    openrouter_api_key: str = ""
     anthropic_api_key: str = ""
     groq_api_key: str = ""
     cerebras_api_key: str = ""
@@ -116,13 +118,24 @@ class Settings(BaseSettings):
 
     # Activer le raffinage LLM des claims (sinon : déterministe seul).
     llm_refine_enabled: bool = False
-    # Tier-1 (filtre de masse, open) : cerebras | groq | mistral | anthropic
-    claim_tier1_provider: str = "cerebras"
-    claim_tier1_model: str = "gpt-oss-120b"
-    # Tier-2 (canonicalisation / fidélité) : cerebras | anthropic | mistral | groq
-    # Cerebras gpt-oss-120b : open, rapide, filtre bien (Anthropic réservé/économisé).
-    claim_tier2_provider: str = "cerebras"
-    claim_tier2_model: str = "gpt-oss-120b"
+    # Tier-1 (filtre de masse) : openrouter | cerebras | groq | mistral | anthropic
+    # DeepSeek V4 Flash : 0,08/0,17 $/M — vérifier l'ID exact sur openrouter.ai/models.
+    claim_tier1_provider: str = "openrouter"
+    claim_tier1_model: str = "deepseek/deepseek-v4-flash:floor"
+    # Tier-2 (canonicalisation / fidélité, sortie structurée).
+    # GPT-5.6 Luna : 0,20/1,20 $/M, JSON strict, éprouvé sur PMO.
+    claim_tier2_provider: str = "openrouter"
+    claim_tier2_model: str = "openai/gpt-5.6-luna"
+
+    # Budgets LLM ($ ; 0 = désactivé). Sommés depuis les tokens réels
+    # (table llm_usage_events) — voir services/analysis/llm_usage.py.
+    llm_daily_budget_usd: float = 5.0
+    llm_monthly_budget_usd: float = 60.0
+
+    # Pilote L0 : CSV de handles X (sans @). Non vide → l'extraction de
+    # déclarations ne traite que ces personnalités (posts) et les articles où
+    # elles apparaissent — pour calibrer précision/rappel avant l'échelle.
+    l0_pilot_handles: str = ""
 
     @property
     def snapshot_path_dir(self) -> Path:
@@ -142,6 +155,10 @@ class Settings(BaseSettings):
         # de-dupe preserving order
         seen: set[str] = set()
         return [i for i in ordered if not (i in seen or seen.add(i))]
+
+    @property
+    def l0_pilot_handle_list(self) -> list[str]:
+        return [h.strip().lstrip("@").lower() for h in self.l0_pilot_handles.split(",") if h.strip()]
 
     @property
     def pool_path(self) -> Path:

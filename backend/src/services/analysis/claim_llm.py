@@ -21,8 +21,20 @@ import structlog
 from pydantic import BaseModel, Field
 
 from src.config import get_settings
+from src.services.analysis.llm_usage import get_llm_budget
 
 logger = structlog.get_logger(__name__)
+
+
+def _usage_tokens(resp) -> tuple[int, int]:
+    """Tokens réels (input, output) d'une réponse OpenAI-compatible ou Anthropic."""
+    u = getattr(resp, "usage", None)
+    if u is None:
+        return 0, 0
+    return (
+        int(getattr(u, "prompt_tokens", None) or getattr(u, "input_tokens", 0) or 0),
+        int(getattr(u, "completion_tokens", None) or getattr(u, "output_tokens", 0) or 0),
+    )
 
 # Imports optionnels (le déterministe doit marcher sans ces libs).
 try:
@@ -35,6 +47,7 @@ except Exception:  # noqa: BLE001
     AsyncOpenAI = None
 
 _OPENAI_BASE = {
+    "openrouter": "https://openrouter.ai/api/v1",
     "groq": "https://api.groq.com/openai/v1",
     "cerebras": "https://api.cerebras.ai/v1",
     "mistral": "https://api.mistral.ai/v1",
@@ -221,6 +234,8 @@ class ClaimLLM:
         client = self._openai.get(prov) if prov != "anthropic" else None
         if client is None:
             return True  # pas de gate dispo → on laisse passer vers le tier-2
+        # AVANT le try : BudgetExceeded doit remonter, pas être avalé en fail-open.
+        await get_llm_budget().check_or_raise()
         try:
             resp = await client.chat.completions.create(
                 model=self._s.claim_tier1_model,
@@ -234,6 +249,11 @@ class ClaimLLM:
                         f"Phrase : {sentence!r}"},
                 ],
             )
+            tin, tout = _usage_tokens(resp)
+            await get_llm_budget().record(
+                provider=prov, model=self._s.claim_tier1_model, task="tier1_gate",
+                input_tokens=tin, output_tokens=tout,
+            )
             ans = (resp.choices[0].message.content or "").strip().lower()
             return "non" not in ans  # fail-open : on ne bloque que sur un NON clair
         except Exception as exc:  # noqa: BLE001
@@ -241,8 +261,10 @@ class ClaimLLM:
             return True  # en cas d'échec, ne pas bloquer
 
     async def _tier2_anthropic(
-        self, prompt: str, *, schema=RefinedClaim, system: str = _SYSTEM, max_tokens: int = 600
+        self, prompt: str, *, schema=RefinedClaim, system: str = _SYSTEM,
+        max_tokens: int = 600, task: str = "refine",
     ):
+        await get_llm_budget().check_or_raise()
         try:
             resp = await self._anthropic.messages.parse(
                 model=self._s.claim_tier2_model,
@@ -251,6 +273,11 @@ class ClaimLLM:
                 messages=[{"role": "user", "content": prompt}],
                 output_format=schema,
             )
+            tin, tout = _usage_tokens(resp)
+            await get_llm_budget().record(
+                provider="anthropic", model=self._s.claim_tier2_model, task=task,
+                input_tokens=tin, output_tokens=tout,
+            )
             return resp.parsed_output
         except Exception as exc:  # noqa: BLE001
             logger.warning("claim_llm.tier2_anthropic_fail", error=str(exc)[:160])
@@ -258,10 +285,12 @@ class ClaimLLM:
 
     async def _tier2_openai(
         self, prov: str, prompt: str, *, schema=RefinedClaim, system: str = _SYSTEM,
-        max_tokens: int = 1500,
+        max_tokens: int = 1500, task: str = "refine",
     ):
         client = self._openai[prov]
         model = self._s.claim_tier2_model
+        budget = get_llm_budget()
+        await budget.check_or_raise()
         # 1) sortie structurée native (json_schema), si le provider/modèle la gère
         try:
             resp = await client.beta.chat.completions.parse(
@@ -270,6 +299,9 @@ class ClaimLLM:
                           {"role": "user", "content": prompt}],
                 response_format=schema,
             )
+            tin, tout = _usage_tokens(resp)
+            await budget.record(provider=prov, model=model, task=task,
+                                input_tokens=tin, output_tokens=tout)
             parsed = resp.choices[0].message.parsed
             if parsed is not None:
                 return parsed
@@ -277,6 +309,7 @@ class ClaimLLM:
             logger.debug("claim_llm.parse_unsupported", prov=prov, error=str(exc)[:120])
 
         # 2) repli : mode json_object + validation Pydantic manuelle
+        await budget.check_or_raise()
         try:
             schema_json = json.dumps(schema.model_json_schema(), ensure_ascii=False)
             resp = await client.chat.completions.create(
@@ -289,6 +322,9 @@ class ClaimLLM:
                         f"(mêmes clés) :\n{schema_json}"},
                 ],
             )
+            tin, tout = _usage_tokens(resp)
+            await budget.record(provider=prov, model=model, task=task,
+                                input_tokens=tin, output_tokens=tout)
             content = resp.choices[0].message.content or ""
             return schema.model_validate_json(content)
         except Exception as exc:  # noqa: BLE001
@@ -315,11 +351,13 @@ class ClaimLLM:
         prov = self._s.claim_tier2_provider
         if prov == "anthropic" and self._anthropic is not None:
             return await self._tier2_anthropic(
-                prompt, schema=DeclarationSet, system=_DECL_SYSTEM, max_tokens=3000
+                prompt, schema=DeclarationSet, system=_DECL_SYSTEM, max_tokens=3000,
+                task="l0_segment",
             )
         if prov in self._openai:
             return await self._tier2_openai(
-                prov, prompt, schema=DeclarationSet, system=_DECL_SYSTEM, max_tokens=4000
+                prov, prompt, schema=DeclarationSet, system=_DECL_SYSTEM,
+                max_tokens=4000, task="l0_segment",
             )
         return None
 
@@ -340,11 +378,37 @@ class ClaimLLM:
         prov = self._s.claim_tier2_provider
         if prov == "anthropic" and self._anthropic is not None:
             return await self._tier2_anthropic(
-                prompt, schema=DossierSynthesis, system=_DOSSIER_SYSTEM, max_tokens=1500
+                prompt, schema=DossierSynthesis, system=_DOSSIER_SYSTEM,
+                max_tokens=1500, task="dossier",
             )
         if prov in self._openai:
             return await self._tier2_openai(
-                prov, prompt, schema=DossierSynthesis, system=_DOSSIER_SYSTEM, max_tokens=2000
+                prov, prompt, schema=DossierSynthesis, system=_DOSSIER_SYSTEM,
+                max_tokens=2000, task="dossier",
+            )
+        return None
+
+    async def judge_contradiction(self, prompt: str):
+        """A4 — verdict structuré sur une paire de déclarations (juge sémantique).
+
+        Le schéma et la consigne vivent dans `contradiction_judge` (import tardif :
+        ce module y importe déjà `get_claim_llm`, on évite le cycle). None si LLM
+        indisponible/échec — aucune arête n'est alors créée."""
+        from src.services.analysis.contradiction_judge import (
+            ContradictionVerdict,
+            _JUDGE_SYSTEM,
+        )
+
+        prov = self._s.claim_tier2_provider
+        if prov == "anthropic" and self._anthropic is not None:
+            return await self._tier2_anthropic(
+                prompt, schema=ContradictionVerdict, system=_JUDGE_SYSTEM,
+                max_tokens=800, task="judge",
+            )
+        if prov in self._openai:
+            return await self._tier2_openai(
+                prov, prompt, schema=ContradictionVerdict, system=_JUDGE_SYSTEM,
+                max_tokens=1000, task="judge",
             )
         return None
 

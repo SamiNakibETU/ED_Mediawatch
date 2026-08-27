@@ -36,3 +36,22 @@ recrée l'existant. Procédure de bascule :
 > Tant que l'étape 3 (stamp prod) n'est pas faite, NE PAS exécuter `alembic
 > upgrade` sur la prod. Cette mise en place se fera quand on aura la main sur la
 > prod pour stamper en sécurité (à planifier avec P1 / pgvector).
+
+## 2026-08-26 — table `llm_usage_events` (comptabilité LLM)
+Nouvelle table additive → couverte par l'auto-migration au boot (aucune action).
+Budgets par env : `LLM_DAILY_BUDGET_USD` / `LLM_MONTHLY_BUDGET_USD` ; suivi via
+`GET /llm/costs`.
+
+## 2026-08-26 — colonnes de provenance sur `contradictions`
+`detection_method` (défaut « deterministe ») et `judge_version` : ajouts de
+colonnes nullable/à défaut → couverts par l'auto-migration au boot. Les arêtes
+existantes restent « deterministe », ce qui est exact.
+
+## 2026-08-26 — `posts.text_truncated` (syndication X coupe à 280)
+Colonne booléenne additive → auto-migration au boot. Marquage rétroactif des
+posts `synd` ≥ 265 caractères, puis `python -m src.scripts.enrich_x` (texte
+intégral via fxtwitter, déclarations L0 du texte coupé invalidées).
+
+## 2026-08-26 — profil X sur `personalities`
+`x_user_id`, `followers_count`, `statuses_count`, `x_protected`,
+`profile_refreshed_at` : additifs, remplis à chaque passe de syndication.
