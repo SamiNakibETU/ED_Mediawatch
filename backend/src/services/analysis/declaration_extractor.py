@@ -17,10 +17,12 @@ from __future__ import annotations
 import re
 
 import structlog
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.config import get_settings
 from src.database import get_session_factory
+from src.services.analysis.llm_usage import BudgetExceeded
 from src.models.article import Article
 from src.models.claim import Claim
 from src.models.personality import Personality
@@ -116,7 +118,20 @@ async def run_declaration_extraction(
     factory = get_session_factory()
     model = f"{get_claim_llm()._s.claim_tier2_provider}:{get_claim_llm()._s.claim_tier2_model}/{DECLARATION_PROMPT_VERSION}"
     n_new = posts_done = arts_done = skipped = 0
+    budget_hit = False
     _SRC_CACHE.clear()
+
+    # Mode pilote : périmètre restreint à quelques personnalités (calibration
+    # précision/rappel avant l'échelle). Vide = tout le pool.
+    pilot = set(get_settings().l0_pilot_handle_list)
+    pilot_names: set[str] = set()
+    if pilot:
+        async with factory() as db:
+            pilot_names = set((await db.execute(
+                select(Personality.full_name).where(
+                    func.lower(Personality.handle).in_(pilot)
+                )
+            )).scalars().all())
 
     # Coût : on ne re-segmente JAMAIS une source déjà traitée (1 requête en amont).
     async with factory() as db:
@@ -130,13 +145,22 @@ async def run_declaration_extraction(
                 Claim.extraction_method == "llm_segment", Claim.article_id.isnot(None)
             )
         )).scalars().all())
+        posts_q = (
+            select(Post, Personality)
+            .join(Personality, Post.personality_id == Personality.id)
+            .where(
+                Post.is_retweet.is_(False),
+                # Jamais de LLM sur un texte tronqué (syndication coupe à 280) :
+                # on attend `enrich_x`, sinon déclarations fausses par omission
+                # ET dépense à refaire.
+                Post.text_truncated.isnot(True),
+            )
+        )
+        if pilot:
+            posts_q = posts_q.where(func.lower(Personality.handle).in_(pilot))
         posts = (
             await db.execute(
-                select(Post, Personality)
-                .join(Personality, Post.personality_id == Personality.id)
-                .where(Post.is_retweet.is_(False))
-                .order_by(Post.published_at.desc().nullslast())
-                .limit(limit_posts)
+                posts_q.order_by(Post.published_at.desc().nullslast()).limit(limit_posts)
             )
         ).all()
 
@@ -147,7 +171,12 @@ async def run_declaration_extraction(
             continue
         src_ref = f"post{post.id}"
         _SRC_CACHE[src_ref] = post.content or ""
-        result = await llm.segment_declarations(text=post.content, speaker=p.full_name)
+        try:
+            result = await llm.segment_declarations(text=post.content, speaker=p.full_name)
+        except BudgetExceeded as exc:
+            logger.warning("declarations.budget_exceeded", detail=str(exc))
+            budget_hit = True
+            break
         posts_done += 1
         if not result or not result.has_declaration:
             continue
@@ -171,15 +200,31 @@ async def run_declaration_extraction(
         ).scalars().all()
 
     for art in arts:
+        if budget_hit:
+            break
         text = f"{art.title}. {art.content}"
         if art.id in done_arts or not worth_segmenting(text):
             skipped += 1
             continue
+        mp = art.matched_personalities or []
+        if pilot and not (set(mp) & pilot_names):
+            skipped += 1
+            continue
         src_ref = f"art{art.id}"
         _SRC_CACHE[src_ref] = text
-        mp = art.matched_personalities or []
-        speaker = mp[0] if len(mp) == 1 else None
-        result = await llm.segment_declarations(text=text, speaker=speaker)
+        # JAMAIS de locuteur présumé pour un article : un papier qui mentionne
+        # une figure contient aussi la voix du journaliste et des tiers cités.
+        # Attribuer tout le contenu à `mp[0]` fabriquait des imputations fausses
+        # (propos de Marylise Léon prêtés à Marine Le Pen, puis « contradictions »
+        # bâties dessus). Une imputation erronée est la faute la plus grave d'un
+        # observatoire : sans attribution certaine, on n'attribue pas.
+        speaker = None
+        try:
+            result = await llm.segment_declarations(text=text, speaker=speaker)
+        except BudgetExceeded as exc:
+            logger.warning("declarations.budget_exceeded", detail=str(exc))
+            budget_hit = True
+            break
         arts_done += 1
         if not result or not result.has_declaration:
             continue
@@ -195,6 +240,7 @@ async def run_declaration_extraction(
 
     stats = {"declarations_new": n_new, "posts_processed": posts_done,
              "articles_processed": arts_done, "skipped_no_llm": skipped,
+             "budget_exceeded": budget_hit, "pilot": sorted(pilot) or None,
              "prompt_version": DECLARATION_PROMPT_VERSION}
     logger.info("declarations.extracted", **stats)
     return stats

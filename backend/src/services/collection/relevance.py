@@ -34,6 +34,26 @@ _AMBIGUOUS_SURNAMES = {
     "leroy", "martin", "bernard", "robert", "richard", "michel",
 }
 
+# Prénoms français courants : sert à détecter un HOMONYME (« Renaud Girard »
+# quand on suit « Christian Girard »). Liste indicative — un prénom absent ne
+# provoque aucun faux positif, il rend seulement la garde inopérante pour ce cas.
+_KNOWN_FIRST_NAMES = {
+    "jean", "pierre", "michel", "andre", "philippe", "alain", "bernard",
+    "renaud", "christian", "daniel", "jacques", "claude", "francois", "louis",
+    "nicolas", "laurent", "olivier", "eric", "patrick", "thierry", "sebastien",
+    "julien", "david", "stephane", "pascal", "frederic", "vincent", "antoine",
+    "marie", "sophie", "sarah", "julie", "anne", "catherine", "isabelle",
+    "nathalie", "sylvie", "christine", "valerie", "caroline", "camille",
+    "marine", "jordan", "sebastien", "gilbert", "roger", "guillaume", "hugo",
+}
+
+# Mots qui, capitalisés juste APRÈS un patronyme, signalent un nom propre
+# composé sans rapport (marques, lieux, œuvres).
+_COMPOUND_STOPWORDS = {
+    "ball", "city", "land", "park", "club", "united", "world", "story",
+    "quest", "star", "king", "queen", "house", "hotel", "palace",
+}
+
 # Verbes « forts » : la figure s'exprime quel que soit le sens de phrase.
 _STRONG_VERBS = [
     "declare", "declarait", "a declare", "affirme", "affirmait", "a affirme",
@@ -127,6 +147,9 @@ class RelevanceIndex:
         sp = _static()
         names: set[str] = set(sp["figures"])
         self._display: dict[str, str] = {}
+        # Motifs qui ne valent QUE capitalisés dans le texte d'origine.
+        self._surname_only: set[str] = set()
+        self._expected_first: dict[str, set[str]] = {}
 
         for full in full_names:
             n = _norm(full)
@@ -139,6 +162,16 @@ class RelevanceIndex:
                 if len(surname) >= 5 and surname not in _AMBIGUOUS_SURNAMES:
                     names.add(surname)
                     self._display.setdefault(surname, full)
+                    # Un patronyme SEUL est ambigu par nature (« dragon »,
+                    # « bourgeois », « girard » sont aussi des noms communs) et
+                    # la liste d'exceptions ne peut pas être exhaustive. On le
+                    # retient comme candidat, à CONFIRMER par la casse d'origine
+                    # (cf. `assess`) : un nom propre porte une majuscule.
+                    self._surname_only.add(surname)
+                    # Prénom(s) attendu(s) pour ce patronyme : « Renaud Girard »
+                    # n'est pas « Christian Girard ». Un autre prénom juste
+                    # avant le nom = homonyme, pas la figure suivie.
+                    self._expected_first.setdefault(surname, set()).add(toks[0])
         for f in sp["figures"]:
             self._display.setdefault(f, f.title())
 
@@ -158,9 +191,59 @@ class RelevanceIndex:
             rf"(?:[a-z]+ement\s+)?(?:{_alt(_DIR_VERBS)})\b"
         )
 
+    def _capitalized_in_source(self, surname: str, text: str) -> bool:
+        """Le patronyme apparaît-il capitalisé dans le texte d'origine ?
+
+        `_norm` détruit accents et casse : « parc Dragon Ball » et « M. Dragon »
+        deviennent identiques. On rejoue donc la recherche sur le texte brut, en
+        exigeant une initiale majuscule — ce qui distingue le nom propre du nom
+        commun sans maintenir une liste d'exceptions vouée à être incomplète.
+        Une phrase ENTIÈREMENT en capitales (titre criard) ne prouve rien : on
+        exige que le mot ne soit pas noyé dans un bloc majuscule.
+        """
+        expected = self._expected_first.get(surname, set())
+        for m in re.finditer(r"\w+", text or ""):
+            word = m.group(0)
+            if _norm(word) != surname:
+                continue
+            if not (word[:1].isupper() and not word.isupper()):
+                continue
+            # Mot précédent : prénom d'un homonyme, ou nom commun capitalisé ?
+            before = _norm(text[:m.start()]).split()
+            prev = before[-1] if before else ""
+            if prev and prev in _KNOWN_FIRST_NAMES and prev not in expected:
+                continue  # « Renaud Girard » ≠ « Christian Girard »
+            # Mot suivant capitalisé et hors patronyme : « Dragon Ball »,
+            # « Le Pen Paris »… la suite forme un nom propre composé étranger
+            # à la figure suivie.
+            after = re.match(r"\s+(\w+)", text[m.end():] or "")
+            if after:
+                nxt = after.group(1)
+                if (nxt[:1].isupper() and not nxt.isupper()
+                        and _norm(nxt) not in _KNOWN_FIRST_NAMES
+                        and _norm(nxt) in _COMPOUND_STOPWORDS):
+                    continue
+            return True
+        return False
+
     def assess(self, text: str) -> dict:
         norm = _norm(text)
         figures = sorted({m.group(0) for m in self._name_re.finditer(norm)})
+        # Les patronymes isolés doivent être confirmés par la casse d'origine :
+        # sinon « parc Dragon Ball » attribue un article à Nicolas Dragon, et le
+        # L0 paierait pour extraire des propos attribués à la mauvaise personne.
+        figures = [
+            f for f in figures
+            if f not in self._surname_only or self._capitalized_in_source(f, text)
+        ]
+        # Un motif inclus dans un autre présent désigne la MÊME personne :
+        # « le pen » et « marine le pen » sur le même article, c'est un locuteur,
+        # pas deux. Sans cela, le regroupement par locuteur (contradictions,
+        # dossiers) verrait deux figures distinctes.
+        figures = [
+            f for f in figures
+            if not any(f != o and f in o for o in figures)
+        ]
         party = bool(self._party_re.search(norm))
         relevant = bool(figures or party)
 

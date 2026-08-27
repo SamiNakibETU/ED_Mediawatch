@@ -44,10 +44,19 @@ def _load_triggers() -> dict:
             re.compile(r"\b" + re.escape(strip_accents(t).lower()) + r"\b")
             for t in spec["triggers"]
         ]
+        # Exclusions contextuelles : un déclencheur peut être homographe d'un
+        # tout autre domaine (« déficit pluviométrique » n'est pas le déficit
+        # public). Sans elles, un pourcentage de pluie hérite de l'unité
+        # `pct_pib` et devient comparable au solde budgétaire.
+        excludes = [
+            re.compile(r"\b" + re.escape(strip_accents(t).lower()) + r"\b")
+            for t in spec.get("exclude", [])
+        ]
         out[key] = {
             "unit_kinds": set(spec["unit_kinds"]),
             "unit": spec["unit"],
             "patterns": patterns,
+            "excludes": excludes,
         }
     return out
 
@@ -76,6 +85,11 @@ def extract_from_text(text: str, triggers: dict) -> list[dict]:
                     trig_pos = m.start()
                     break
             if trig_pos < 0:
+                continue
+            # Un terme d'exclusion dans la MÊME phrase invalide le rattachement :
+            # mieux vaut rater une quantité que la ranger sous le mauvais objet
+            # (elle deviendrait comparable à des valeurs sans rapport).
+            if any(x.search(norm) for x in spec.get("excludes", [])):
                 continue
             candidates = [q for q in quantities if q.unit_kind in spec["unit_kinds"]]
             if not candidates and "nb" in spec["unit_kinds"]:
@@ -203,7 +217,14 @@ async def run_claim_extraction(
         for art in arts:
             text = f"{art.title}. {art.content}"
             mp = art.matched_personalities or []
-            speaker = mp[0] if len(mp) == 1 else None
+            # JAMAIS de locuteur présumé depuis un article : un papier qui
+            # mentionne une figure contient aussi la voix du journaliste et de
+            # tiers cités. Même piège que dans le L0 (cf. declaration_extractor)
+            # — vu en production : un chiffre énoncé par Benjamin Haddad dans un
+            # papier franceinfo crédité à Marine Le Pen parce qu'elle y était
+            # la seule figure suivie mentionnée. Une imputation fausse est la
+            # faute la plus grave d'un observatoire.
+            speaker = None
             for c in extract_from_text(text, triggers):
                 refined = await _maybe_refine(llm, use_llm, c, speaker, ref_idx, allowed)
                 if refined is None:
