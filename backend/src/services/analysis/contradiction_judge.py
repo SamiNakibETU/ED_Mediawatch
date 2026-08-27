@@ -186,16 +186,29 @@ async def run_semantic_judging(max_pairs: int = 60) -> dict:
                         # sur corpus réel, ~90 % des déclarations n'atteignent
                         # aucun des 28 référents (grille fine, discours large).
                         # Sans ce second blocking, le juge ne verrait presque rien.
-                        (Claim.referent_key.isnot(None))
+                        (Claim.subject_id.isnot(None))
+                        | (Claim.referent_key.isnot(None))
                         | (Claim.speaker_name.isnot(None) & Claim.theme.isnot(None)),
                     )
                 )
             ).scalars().all()
         )
 
+    # Bloc = SUJET. C'est la correction d'architecture du 28/08 : bloquer par
+    # thème (15 rayons) faisait comparer « les ministres macronistes ruinent la
+    # France » avec « la situation sera irréversible » — même rayon, objets
+    # différents. Un sujet (« la hausse des impôts ») garantit que les deux
+    # propos portent sur la MÊME chose ; c'est la condition pour qu'une
+    # contradiction ait un sens. Repli sur l'ancien découpage tant que les
+    # sujets ne sont pas construits.
     blocks: dict[str, list[Claim]] = {}
     for c in claims:
-        key = c.referent_key or f"speaker:{c.speaker_name}|theme:{c.theme}"
+        if c.subject_id:
+            key = f"subject:{c.subject_id}"
+        elif c.referent_key:
+            key = c.referent_key
+        else:
+            key = f"speaker:{c.speaker_name}|theme:{c.theme}"
         blocks.setdefault(key, []).append(c)
 
     candidates: list[tuple[Claim, Claim, float]] = []

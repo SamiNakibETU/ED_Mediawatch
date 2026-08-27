@@ -97,7 +97,8 @@ async def _store(
         personality_id=personality_id, speaker_name=speaker_name, party=party,
         verbatim=decl.verbatim[:2000], canonical=(decl.canonical or None),
         claim_type=decl.claim_type, theme=(decl.theme if decl.theme != "autre" else None),
-        stance_polarity=decl.stance_polarity, published_at=published_at,
+        stance_polarity=decl.stance_polarity,
+        stance_target=(decl.stance_target or None), published_at=published_at,
         extraction_method="llm_segment", extraction_model=model,
         confidence=0.7, dedup_key=dk,
     ))

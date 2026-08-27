@@ -80,7 +80,7 @@ class RefinedClaim(BaseModel):
 
 # Version du prompt d'extraction (méthode versionnée, cf specs §7.6). À bumper
 # à chaque changement de consigne pour rendre les passes rejouables/traçables.
-DECLARATION_PROMPT_VERSION = "decl-v1"
+DECLARATION_PROMPT_VERSION = "decl-v2"  # v2 : stance_target = sujet nommé, requis
 
 # Thèmes de 1er niveau (specs §2.3) — grille fermée pour la classification grossière.
 DECLARATION_THEMES = [
@@ -104,8 +104,13 @@ class Declaration(BaseModel):
         "factuel_quantitatif", "factuel_qualitatif", "normatif", "predictif", "attributif"
     ]
     theme: str = Field(description="Un thème de la grille fournie, ou 'autre'.")
-    stance_target: str | None = Field(
-        default=None, description="Objet de la prise de position (si normatif/attributif)."
+    stance_target: str = Field(
+        description="LE SUJET PRÉCIS dont parle l'assertion, en 2 à 6 mots, sous "
+        "forme de groupe nominal : « l'âge de départ à la retraite », « l'aide "
+        "militaire à l'Ukraine », « le nombre d'expulsions annuelles ». TOUJOURS "
+        "renseigné, quel que soit le type. Ni le locuteur, ni sa position, ni le "
+        "thème général : l'OBJET dont on parle. Deux déclarations sur le même "
+        "objet doivent recevoir le même libellé, aussi littéralement que possible."
     )
     stance_polarity: str | None = Field(
         default=None, description="pour|contre|nuance|inconnu"
@@ -142,6 +147,10 @@ _DECL_SYSTEM = (
     "5. Ignore le bruit (salutations, remerciements, liens, emojis seuls, "
     "banalités sans contenu) → check_worthy=false ou ne pas extraire.\n"
     "6. `theme` depuis la grille fournie uniquement, sinon 'autre'.\n"
+    "7. `stance_target` = LE SUJET : un groupe nominal de 2 à 6 mots nommant "
+    "l'objet dont parle l'assertion. Toujours renseigné. Emploie le MÊME "
+    "libellé pour un même objet d'une déclaration à l'autre : c'est ce qui "
+    "permet de confronter des propos entre eux.\n"
     "Si aucune assertion analysable : has_declaration=false, declarations=[]."
 )
 
@@ -385,6 +394,24 @@ class ClaimLLM:
             return await self._tier2_openai(
                 prov, prompt, schema=DossierSynthesis, system=_DOSSIER_SYSTEM,
                 max_tokens=2000, task="dossier",
+            )
+        return None
+
+    async def label_subject(self, prompt: str, system: str):
+        """Nomme un groupe de déclarations (cf. subject_labeller). Import tardif
+        pour éviter le cycle : ce module y est importé."""
+        from src.services.analysis.subject_labeller import SubjectLabel
+
+        prov = self._s.claim_tier2_provider
+        if prov == "anthropic" and self._anthropic is not None:
+            return await self._tier2_anthropic(
+                prompt, schema=SubjectLabel, system=system, max_tokens=300,
+                task="subject_label",
+            )
+        if prov in self._openai:
+            return await self._tier2_openai(
+                prov, prompt, schema=SubjectLabel, system=system, max_tokens=400,
+                task="subject_label",
             )
         return None
 

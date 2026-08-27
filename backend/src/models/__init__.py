@@ -9,6 +9,7 @@ from src.models.llm_usage import LlmUsageEvent
 from src.models.media_source import MediaSource
 from src.models.personality import Personality
 from src.models.post import Post
+from src.models.subject import Subject
 from src.models.referentiel import Referent, Subtheme, Theme
 from src.models.taxonomy import Actualite, Sujet
 
@@ -28,5 +29,6 @@ __all__ = [
     "Claim",
     "Contradiction",
     "Dossier",
+    "Subject",
     "LlmUsageEvent",
 ]

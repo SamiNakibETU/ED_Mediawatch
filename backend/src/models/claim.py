@@ -64,6 +64,17 @@ class Claim(Base, TimestampMixin):
     qty_modality: Mapped[str | None] = mapped_column(String(20))
 
     stance_polarity: Mapped[str | None] = mapped_column(String(20))
+    # OBJET de la prise de position (« l'âge de départ à la retraite »,
+    # « l'aide militaire à l'Ukraine »). Le LLM le produit à chaque extraction ;
+    # il n'était pas stocké. C'est pourtant LE sujet : sans lui, on ne pouvait
+    # comparer que par thème (15 rayons), granularité à laquelle deux propos
+    # n'ont rien à voir. Sert de signature primaire au regroupement en sujets.
+    stance_target: Mapped[str | None] = mapped_column(String(300), index=True)
+    # Sujet auquel la déclaration appartient — l'unité DANS LAQUELLE deux propos
+    # se confrontent utilement (cf. models/subject.py).
+    subject_id: Mapped[int | None] = mapped_column(
+        ForeignKey("subjects.id", ondelete="SET NULL"), index=True
+    )
 
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
