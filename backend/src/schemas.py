@@ -160,6 +160,10 @@ class ContradictionOut(BaseModel):
     status: str
     rationale: str | None
     referent_key: str | None
+    # Provenance : « deterministe » (chiffres/stances) ou « llm_judge ». La file
+    # de validation ne relit pas de la même façon une arête calculée et jugée.
+    detection_method: str
+    judge_version: str | None
     validator: str | None
     detected_at: datetime
     claim_a: ClaimMini

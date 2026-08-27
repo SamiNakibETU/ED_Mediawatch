@@ -18,6 +18,7 @@ from src.schemas import ContradictionPage
 from src.security import require_token
 from src.services.analysis.claim_sources import resolve_claim_urls
 from src.services.analysis.contradiction_detector import run_contradiction_detection
+from src.services.analysis.contradiction_judge import run_semantic_judging
 
 router = APIRouter(tags=["contradictions"])
 
@@ -64,6 +65,16 @@ async def list_contradictions(
 async def detect() -> dict:
     """Lance la détection (types 1/2/3/6) sur les claims chiffrés."""
     return await run_contradiction_detection()
+
+
+@router.post("/judge-contradictions", response_model=dict, dependencies=[Depends(require_token)])
+async def judge(max_pairs: int = Query(60, ge=1, le=500)) -> dict:
+    """Juge sémantique (A4) : apparie par embeddings puis qualifie via LLM.
+
+    Étape PAYANTE (un appel par paire), bornée par `max_pairs` et par le
+    garde-budget — un dépassement interrompt proprement (voir GET /llm/costs).
+    """
+    return await run_semantic_judging(max_pairs=max_pairs)
 
 
 @router.post("/contradictions/{cid}/validate", response_model=dict)

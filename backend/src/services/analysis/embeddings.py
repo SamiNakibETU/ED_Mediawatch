@@ -62,14 +62,84 @@ class CohereEmbedder:
         return list(resp.embeddings.float_)
 
 
-_embedder: CohereEmbedder | None = None
+class LocalEmbedder:
+    """Repli LOCAL (sentence-transformers) quand Cohere n'a pas de clé.
+
+    Sans lui, l'absence d'une clé tierce suffit à bloquer TOUTE la chaîne
+    d'analyse : pas d'embedding -> pas de rattachement au référent -> aucune
+    contradiction détectable. Faire dépendre le coeur du produit d'un secret
+    optionnel est une fragilité, pas un choix.
+
+    Modèle multilingue (français inclus), CPU, gratuit, ~470 Mo au premier
+    chargement puis mis en cache. Dimension 384 (vs 1024 Cohere) : les vecteurs
+    ne sont PAS comparables entre backends — d'où `backend_tag`, qui permet de
+    détecter un corpus mélangé plutôt que de comparer des choux et des carottes.
+    """
+
+    MODEL_NAME = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+    BATCH = 128
+
+    def __init__(self) -> None:
+        self._model = None
+        try:
+            from sentence_transformers import SentenceTransformer  # noqa: PLC0415
+
+            self._cls = SentenceTransformer
+        except Exception:  # noqa: BLE001
+            self._cls = None
+
+    def available(self) -> bool:
+        return self._cls is not None
+
+    def _ensure(self):
+        if self._model is None and self._cls is not None:
+            logger.info("embeddings.local_load", model=self.MODEL_NAME)
+            self._model = self._cls(self.MODEL_NAME)
+        return self._model
+
+    async def embed(self, texts: list[str], *, query: bool = False) -> list[list[float]]:
+        model = self._ensure()
+        if model is None or not texts:
+            return []
+        # `encode` est synchrone et gourmand : on le sort de la boucle d'events.
+        import asyncio  # noqa: PLC0415
+
+        # Encodage PAR LOTS : un seul appel sur 3 000+ textes fait mourir le
+        # process en silence (mémoire). Mesuré : 200 passent, 3 187 tuent le run
+        # avec un code de sortie 0 trompeur.
+        out: list[list[float]] = []
+        for i in range(0, len(texts), self.BATCH):
+            chunk = texts[i : i + self.BATCH]
+            vectors = await asyncio.to_thread(
+                model.encode, chunk, normalize_embeddings=True, show_progress_bar=False
+            )
+            out.extend(list(map(float, v)) for v in vectors)
+        return out
 
 
-def get_embedder() -> CohereEmbedder:
+_embedder = None
+
+
+def get_embedder():
+    """Cohere si une clé existe, sinon repli local. Jamais rien de bloquant."""
     global _embedder
     if _embedder is None:
-        _embedder = CohereEmbedder()
+        cohere_emb = CohereEmbedder()
+        if cohere_emb.available():
+            _embedder = cohere_emb
+        else:
+            local = LocalEmbedder()
+            if local.available():
+                logger.info("embeddings.fallback_local")
+            _embedder = local
     return _embedder
+
+
+def backend_tag() -> str:
+    """Identifiant du backend actif — les vecteurs de backends différents ne se
+    comparent pas (dimensions et espaces distincts)."""
+    emb = get_embedder()
+    return "cohere" if isinstance(emb, CohereEmbedder) else "local-minilm"
 
 
 async def embed_referents() -> dict:

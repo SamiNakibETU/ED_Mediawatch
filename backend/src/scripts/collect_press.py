@@ -6,12 +6,15 @@
 """
 
 import asyncio
+
+from src.database import init_db
 import sys
 
 from src.services.collection.press_collector import run_press_collection
 
 
 async def main() -> None:
+    await init_db()  # colonnes additives, même hors app
     reset = "--reset" in sys.argv
     stats = await run_press_collection(reset=reset)
     stats["errors"] = len(stats["errors"])

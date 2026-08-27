@@ -46,6 +46,14 @@ class Contradiction(Base):
     type: Mapped[int] = mapped_column(SmallInteger)  # 1..6
     score: Mapped[float] = mapped_column(Float, default=0.0)
     rationale: Mapped[str | None] = mapped_column(Text)
+    # Provenance du verdict : deterministe (chiffres/stances opposées) ou
+    # llm_judge (appariement sémantique + juge). Rend la file de validation
+    # lisible : on ne relit pas de la même façon une arête calculée et une arête
+    # jugée, et on peut rejouer/auditer une passe LLM par sa version de prompt.
+    detection_method: Mapped[str] = mapped_column(
+        String(20), default="deterministe", index=True
+    )
+    judge_version: Mapped[str | None] = mapped_column(String(30))
 
     # Validation humaine
     status: Mapped[str] = mapped_column(String(12), default="pending", index=True)

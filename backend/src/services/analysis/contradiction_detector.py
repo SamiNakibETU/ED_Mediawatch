@@ -25,6 +25,10 @@ logger = structlog.get_logger(__name__)
 # Écart relatif minimal pour considérer deux valeurs incompatibles (ignore l'arrondi).
 EPSILON = 0.02
 
+# Passe normative déterministe : conservée pour l'expérimentation, désarmée en
+# usage normal (elle inondait la file de validation de faux positifs).
+NORMATIVE_ENABLED = False
+
 # Plancher de score par type : un revirement (1) ou une contradiction de parti
 # (2/3) prime sur la simple ampleur numérique (cf specs : type 1 le plus accablant).
 _TYPE_FLOOR = {1: 0.85, 2: 0.6, 3: 0.6, 6: 0.0}
@@ -120,9 +124,19 @@ async def run_contradiction_detection() -> dict:
                     seen.add((ca, cb))
                     new += 1
 
-        # --- Passe NORMATIVE (zéro coût LLM) : positions opposées sur un même
-        # référent. Bloc = referent_key ; candidat = stances opposées (pour/contre).
-        norm_claims = list(
+        # --- Passe NORMATIVE : DÉSARMÉE par défaut (cf. NORMATIVE_ENABLED).
+        #
+        # Mesuré sur corpus réel le 26/08/2026 : 553 arêtes produites, 553 fausses.
+        # Deux causes, toutes deux structurelles :
+        #   1. `stance_polarity` est rempli par le LLM sur une déclaration ISOLÉE.
+        #      « voté POUR la censure du budget » et « CONTRE ce budget » sortent
+        #      avec des polarités opposées alors que les deux propos s'accordent.
+        #   2. le rattachement au référent confond des objets homographes
+        #      (« budget de l'État » → `defense::budget::pct_pib_cible`).
+        # Une opposition de polarité dans un bloc de référent n'est donc PAS un
+        # signal de contradiction. Ces paires vont au juge sémantique
+        # (`contradiction_judge`), seul capable de lire l'accord de fond.
+        norm_claims = [] if not NORMATIVE_ENABLED else list(
             (
                 await db.execute(
                     select(Claim)
@@ -146,6 +160,11 @@ async def run_contradiction_detection() -> dict:
                 for j in range(i + 1, len(block)):
                     a, b = block[i], block[j]
                     if (a.stance_polarity, b.stance_polarity) not in _OPPOSITE:
+                        continue
+                    # Une opposition n'est imputable qu'entre locuteurs connus :
+                    # un article presse non attribué (voix du journaliste, tiers
+                    # cité) ne peut « contredire » personne. Même règle que le juge.
+                    if not (a.speaker_name or a.party) or not (b.speaker_name or b.party):
                         continue
                     ca, cb = sorted((a.id, b.id))
                     if (ca, cb) in seen:

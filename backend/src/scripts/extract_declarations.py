@@ -10,6 +10,8 @@ rien n'est créé (on ne fabrique pas de substrat). Idempotent (rejouable).
 from __future__ import annotations
 
 import asyncio
+
+from src.database import init_db
 import sys
 
 from src.services.analysis.declaration_extractor import run_declaration_extraction
@@ -23,9 +25,10 @@ def _arg(i: int, default: int) -> int:
 
 
 if __name__ == "__main__":
-    stats = asyncio.run(
-        run_declaration_extraction(
+    async def _main():
+        await init_db()  # colonnes additives, même hors app
+        return await run_declaration_extraction(
             limit_posts=_arg(1, 500), limit_articles=_arg(2, 300)
         )
-    )
+    stats = asyncio.run(_main())
     print(f"Grand Livre — extraction de déclarations : {stats}")

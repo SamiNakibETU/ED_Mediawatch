@@ -18,20 +18,39 @@ from sqlalchemy import select
 from src.database import get_session_factory
 from src.models.claim import Claim
 from src.models.referentiel import Referent, Subtheme
-from src.services.analysis.embeddings import cosine
+from src.services.analysis.embeddings import backend_tag, cosine
 from src.services.classification.theme_classifier import get_classifier
 
 logger = structlog.get_logger(__name__)
 
 # Seuil conservateur de rattachement au référent (précision > rappel ; la
 # validation humaine tranche ensuite). Réglable.
-_REFERENT_MIN_COSINE = 0.5
+# Seuil de rattachement PAR BACKEND d'embeddings : les espaces vectoriels ne
+# sont pas comparables. Cohere (1024d) sépare plus largement que MiniLM local
+# (384d), dont les cosinus se tassent — mesuré sur corpus réel : le meilleur
+# score y plafonne à 0.54, donc un seuil de 0.5 hérité de Cohere ne rattache
+# quasiment rien. Recalibrer si l'on change de modèle.
+_MIN_COSINE_BY_BACKEND = {"cohere": 0.5, "local-minilm": 0.42}
+_REFERENT_MIN_COSINE = 0.5  # défaut historique (Cohere), voir _min_cosine()
+
+
+def _min_cosine() -> float:
+    from src.services.analysis.embeddings import backend_tag  # noqa: PLC0415
+
+    return _MIN_COSINE_BY_BACKEND.get(backend_tag(), _REFERENT_MIN_COSINE)
+# Marge minimale entre le meilleur référent et le suivant. Sans elle, deux
+# référents redondants (0.71 vs 0.705) font trancher le bruit numérique — et
+# comme le détecteur groupe TOUS les claims d'un même referent_key, un mauvais
+# rattachement ne range pas mal un claim : il fabrique une fausse contradiction.
+# Le doute profite au silence (claim orphelin > bloc pollué).
+_REFERENT_MIN_MARGIN = 0.03
 
 
 async def enrich_claims(limit: int = 5000) -> dict:
     clf = get_classifier()
     factory = get_session_factory()
-    themed = referred = 0
+    themed = referred = ambiguous_n = below_threshold_n = 0
+    min_cosine = _min_cosine()
 
     # 1) Thème/sous-thème déterministe (gratuit) sur les claims sans thème.
     async with factory() as db:
@@ -67,12 +86,24 @@ async def enrich_claims(limit: int = 5000) -> dict:
             ).limit(limit)
         )).scalars().all())
         for c in claims:
-            best_key, best_score = None, 0.0
+            best_key, best_score, runner_up = None, 0.0, 0.0
             for r in refs:
                 s = cosine(c.embedding, r.embedding)
                 if s > best_score:
-                    best_score, best_key = s, r.key
-            if best_key and best_score >= _REFERENT_MIN_COSINE:
+                    best_score, runner_up, best_key = s, best_score, r.key
+                elif s > runner_up:
+                    runner_up = s
+            # L'ambiguïté ne se pose QUE parmi les candidats crédibles : un
+            # claim sous le seuil est hors sujet, pas « ambigu ». Compter les
+            # deux ensemble masquait le vrai signal (264 « ambigus » dont un
+            # seul l'était réellement).
+            plausible = bool(best_key) and best_score >= min_cosine
+            ambiguous = plausible and (best_score - runner_up) < _REFERENT_MIN_MARGIN
+            if ambiguous:
+                ambiguous_n += 1
+            elif not plausible:
+                below_threshold_n += 1
+            if plausible and not ambiguous:
                 c.referent_key = best_key
                 theme, sub = ref_meta.get(best_key, (None, None))
                 if theme and not c.theme:
@@ -82,6 +113,10 @@ async def enrich_claims(limit: int = 5000) -> dict:
                 referred += 1
         await db.commit()
 
-    stats = {"themed": themed, "referred": referred, "min_cosine": _REFERENT_MIN_COSINE}
+    stats = {"themed": themed, "referred": referred,
+             "ambiguous_skipped": ambiguous_n,
+             "below_threshold": below_threshold_n,
+             "min_cosine": min_cosine, "min_margin": _REFERENT_MIN_MARGIN,
+             "embed_backend": backend_tag()}
     logger.info("enrich.done", **stats)
     return stats
