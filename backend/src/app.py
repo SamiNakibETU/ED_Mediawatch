@@ -20,7 +20,9 @@ from src.routers import (
     classification,
     compteur,
     contradictions,
+    figure,
     health,
+    llm_costs,
     meta,
     personalities,
     posts,
@@ -74,6 +76,8 @@ app.include_router(referentiel.router)
 app.include_router(classification.router)
 app.include_router(compteur.router)
 app.include_router(contradictions.router)
+app.include_router(figure.router)
+app.include_router(llm_costs.router)
 
 # Front statique servi par le backend (même origine → pas de CORS, une seule URL).
 # Monté en dernier : les routes API ci-dessus ont la priorité ; tout le reste

@@ -1,138 +1,142 @@
-// Presse — prises de parole de l'extrême droite dans la presse. Utilitaires : common.js.
-const LEANINGS = [
-  { key: null, label: "Toutes", color: "#a1a1aa" },
-  { key: "far_right", label: "Extrême droite", color: "#b91c1c" },
-  { key: "right", label: "Droite", color: "#b45309" },
-  { key: "center", label: "Centre", color: "#6b7280" },
-  { key: "left", label: "Gauche", color: "#2563eb" },
-  { key: "far_left", label: "Gauche radicale", color: "#be123c" },
-];
-const LEAN_LABEL = Object.fromEntries(LEANINGS.map((l) => [l.key, l]));
+// Revue de presse : articles où l'extrême droite parle ou est couverte.
+// L'orientation du média est un encodage de données — toujours doublée du libellé.
 
-// nature : "prise_de_parole" (défaut), "mention", ou null (toutes).
+const LEANINGS = [
+  { key: null, label: "Tous les médias", color: "var(--muted)" },
+  { key: "far_right", label: "Extrême droite", color: "var(--alert)" },
+  { key: "right", label: "Droite", color: "var(--grp-udr)" },
+  { key: "center", label: "Centre", color: "var(--muted)" },
+  { key: "left", label: "Gauche", color: "var(--grp-rn)" },
+  { key: "far_left", label: "Gauche radicale", color: "var(--grp-figure)" },
+];
+const LEAN = Object.fromEntries(LEANINGS.map((l) => [l.key, l]));
+
+// nature : prise_de_parole (défaut) | mention | null (toutes)
 const NATURES = [
   { key: "prise_de_parole", label: "Prises de parole" },
   { key: "mention", label: "Mentions" },
   { key: null, label: "Toutes" },
 ];
-const state = { leaning: null, nature: "prise_de_parole", theme: null, subtheme: null, offset: 0, limit: 25, total: 0, loading: false, done: false };
+
+const state = {
+  leaning: null, nature: "prise_de_parole", theme: null, subtheme: null,
+  offset: 0, limit: 25, total: 0, loading: false, done: false,
+};
+
 const listEl = $("#list");
 const sentinel = $("#sentinel");
 
-function peopleChips(list, max = 8) {
-  return (list || []).slice(0, max)
-    .map((p) => `<span class="text-[10px] px-1.5 py-0.5 rounded bg-zinc-800/70 text-zinc-300">${escapeHtml(p)}</span>`)
-    .join(" ");
-}
+const people = (list, max = 8) =>
+  (list || []).slice(0, max).map((p) => `<span class="tag">${escapeHtml(p)}</span>`).join("");
 
-function card(a) {
-  const lean = LEAN_LABEL[a.leaning] || LEAN_LABEL[null];
-  const truncated = (a.word_count || 0) < 80;
-  return `<article data-id="${a.id}" class="card-enter py-4 cursor-pointer group">
-    <div class="flex items-center gap-2 flex-wrap text-sm">
-      <span class="font-semibold" style="color:${lean.color}">${escapeHtml(a.source_name || a.media_source_id)}</span>
-      <span class="text-[10px] px-1.5 py-0.5 rounded border border-line" style="color:${lean.color}">${lean.label}</span>
-      ${a.nature === "mention"
-        ? `<span class="text-[10px] px-1.5 py-0.5 rounded bg-zinc-700/40 text-zinc-400" title="Le RN est couvert/nommé, sans parole directe">mention</span>`
-        : `<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300" title="Une figure ED s'exprime directement">prise de parole</span>`}
-      ${a.theme ? `<span class="text-[10px] px-1.5 py-0.5 rounded bg-figure/15 text-figure">${escapeHtml(a.theme)}</span>` : ""}
-      <span class="text-muted">·</span>
-      <span class="text-muted" title="${exactDate(a.published_at)}">${relTime(a.published_at)}</span>
+function article(a) {
+  const lean = LEAN[a.leaning] || LEAN[null];
+  const nature = a.nature === "mention"
+    ? '<span class="tag" title="Le parti est nommé, sans parole directe">mention</span>'
+    : '<span class="tag tag--receipt" title="Une figure s’exprime directement">prise de parole</span>';
+
+  return `<article class="article enter" data-id="${a.id}">
+    <div class="article__head">
+      <span class="outlet" style="color:${lean.color}">${escapeHtml(a.source_name || a.media_source_id)}</span>
+      <span class="tag" style="--grp-color:${lean.color}">${lean.label}</span>
+      ${nature}
+      ${a.theme ? `<span class="tag tag--theme">${escapeHtml(a.theme)}</span>` : ""}
+      <span class="spacer"></span>
+      <span class="stamp" title="${exactDate(a.published_at)}">${relTime(a.published_at)}</span>
     </div>
-    <h3 class="mt-1.5 text-[16px] font-medium text-zinc-100 group-hover:text-figure leading-snug">${escapeHtml(a.title)}</h3>
-    ${a.author ? `<div class="text-[11px] text-muted mt-0.5">par ${escapeHtml(a.author)}</div>` : ""}
-    ${a.matched_personalities && a.matched_personalities.length ? `<div class="mt-2 flex items-center gap-1 flex-wrap">${peopleChips(a.matched_personalities)}</div>` : ""}
-    <div class="mt-2 flex items-center gap-3 text-[11px] text-zinc-600">
-      <span>${truncated ? "extrait" : (a.word_count || 0) + " mots"}</span>
-      ${a.archived_at || a.snapshot_url ? `<span class="text-emerald-400/80">🗎 reçu</span>` : ""}
-      <div class="flex-1"></div>
-      <span class="text-figure/80 group-hover:text-figure">lire dans l'app →</span>
+    <h3 class="article__title">${escapeHtml(a.title)}</h3>
+    ${a.author ? `<p class="article__byline">par ${escapeHtml(a.author)}</p>` : ""}
+    ${a.matched_personalities?.length ? `<div class="entry__foot">${people(a.matched_personalities)}</div>` : ""}
+    <div class="entry__foot">
+      <span class="stamp">${(a.word_count || 0) < 80 ? "extrait seul" : `${fmtNum(a.word_count)} mots`}</span>
+      ${(a.archived_at || a.snapshot_url) ? '<span class="tag tag--receipt" title="Copie archivée">reçu</span>' : ""}
+      <span class="spacer"></span>
+      <span class="source-link">lire ↗</span>
     </div>
   </article>`;
 }
 
+let lastFocus = null;
+
 async function openArticle(id) {
   const reader = $("#reader");
-  reader.classList.remove("hidden");
-  $("#readerBody").textContent = "Chargement…";
-  $("#readerTitle").textContent = "";
-  $("#readerSub").innerHTML = ""; $("#readerPeople").innerHTML = ""; $("#readerFoot").innerHTML = ""; $("#readerMeta").textContent = "";
+  lastFocus = document.activeElement;
+  reader.hidden = false;
   document.body.style.overflow = "hidden";
+  $("#readerClose").focus();
+  $("#readerBody").textContent = "Chargement…";
+  for (const sel of ["#readerTitle", "#readerMeta"]) $(sel).textContent = "";
+  for (const sel of ["#readerSub", "#readerPeople", "#readerFoot"]) $(sel).innerHTML = "";
+
   try {
     const a = await fetchJSON(`/articles/${id}`);
-    const lean = LEAN_LABEL[a.leaning] || LEAN_LABEL[null];
-    $("#readerMeta").innerHTML = `<span style="color:${lean.color}" class="font-medium">${escapeHtml(a.source_name || a.media_source_id)}</span> · ${lean.label}`;
+    const lean = LEAN[a.leaning] || LEAN[null];
+    $("#readerMeta").innerHTML =
+      `<span style="color:${lean.color}">${escapeHtml(a.source_name || a.media_source_id)}</span> · ${lean.label}`;
     $("#readerTitle").textContent = a.title;
-    $("#readerSub").innerHTML = [
-      a.author ? `par ${escapeHtml(a.author)}` : "",
-      exactDate(a.published_at),
-      `${a.word_count || 0} mots`,
-    ].filter(Boolean).map((x) => `<span>${x}</span>`).join('<span class="text-zinc-700">·</span>');
-    $("#readerPeople").innerHTML = peopleChips(a.matched_personalities, 12);
-    $("#readerBody").textContent = a.content || "(texte non disponible — voir la source)";
-    $("#readerFoot").innerHTML = `
-      <a href="${a.url}" target="_blank" rel="noopener" class="px-3 py-1.5 rounded-lg bg-figure/20 text-figure hover:bg-figure/30">Article original ↗</a>
-      ${a.snapshot_url ? `<a href="${a.snapshot_url}" target="_blank" rel="noopener" class="px-3 py-1.5 rounded-lg bg-emerald-600/15 text-emerald-300 hover:bg-emerald-600/25">Copie archivée 🗎</a>` : ""}`;
+    $("#readerSub").textContent = [
+      a.author ? `par ${a.author}` : "", exactDate(a.published_at), `${fmtNum(a.word_count || 0)} mots`,
+    ].filter(Boolean).join(" · ");
+    $("#readerPeople").innerHTML = people(a.matched_personalities, 12);
+    $("#readerBody").textContent = a.content || "Texte non disponible — voir la source.";
+    $("#readerFoot").innerHTML =
+      `<a class="btn btn--primary" href="${a.url}" target="_blank" rel="noopener">Article original ↗</a>` +
+      (a.snapshot_url ? `<a class="btn" href="${a.snapshot_url}" target="_blank" rel="noopener">Copie archivée ↗</a>` : "");
   } catch (e) {
-    $("#readerBody").textContent = "Erreur de chargement de l'article.";
+    $("#readerBody").textContent = `L’article n’a pas pu être chargé (${e.message}).`;
   }
 }
 
 function closeReader() {
-  $("#reader").classList.add("hidden");
+  $("#reader").hidden = true;
   document.body.style.overflow = "";
+  lastFocus?.focus();
 }
 
 async function load(reset = false) {
   if (state.loading || (state.done && !reset)) return;
   state.loading = true;
   if (reset) { state.offset = 0; state.done = false; listEl.innerHTML = ""; }
+  sentinel.className = "state";
   sentinel.textContent = "Chargement…";
-
-  const params = new URLSearchParams({ limit: state.limit, offset: state.offset });
-  if (state.nature) params.set("nature", state.nature);
-  if (state.leaning) params.set("leaning", state.leaning);
-  if (state.theme) params.set("theme", state.theme);
-  if (state.subtheme) params.set("subtheme", state.subtheme);
 
   const noun = state.nature === "mention" ? "mentions"
     : state.nature === "prise_de_parole" ? "prises de parole" : "articles";
+  const params = new URLSearchParams({ limit: state.limit, offset: state.offset });
+  for (const [k, v] of [["nature", state.nature], ["leaning", state.leaning],
+                        ["theme", state.theme], ["subtheme", state.subtheme]]) {
+    if (v) params.set(k, v);
+  }
   try {
     const data = await fetchJSON(`/articles?${params}`);
     state.total = data.total;
-    listEl.insertAdjacentHTML("beforeend", data.items.map(card).join(""));
+    listEl.insertAdjacentHTML("beforeend", data.items.map(article).join(""));
     state.offset += data.items.length;
-    state.done = state.offset >= data.total || data.items.length === 0;
-    sentinel.textContent = state.done
-      ? (state.total ? `— fin · ${fmtNum(state.total)} ${noun} —` : `Aucun résultat pour ce filtre.`)
+    state.done = state.offset >= data.total || !data.items.length;
+    sentinel.innerHTML = state.done
+      ? (state.total
+        ? `fin de la revue · ${fmtNum(state.total)} ${noun}`
+        : `<span class="state__title">Aucun article</span><span class="state__hint">Aucun article ne correspond. Essaie « Toutes » ou un autre thème.</span>`)
       : "";
-    $("#stats").innerHTML = `<span class="text-zinc-300 font-medium">${fmtNum(state.total)}</span> ${noun}`;
+    $("#stats").innerHTML = `<strong>${fmtNum(state.total)}</strong> ${noun}`;
   } catch (e) {
-    sentinel.innerHTML = `<span class="text-red-400">Erreur de chargement (${e.message}).</span>`;
+    sentinel.className = "state state--error";
+    sentinel.textContent = `La revue n’a pas pu être chargée (${e.message}).`;
   } finally {
     state.loading = false;
   }
 }
 
-function renderPills() {
-  $("#leaningPills").innerHTML = LEANINGS.map((l) => {
-    const active = state.leaning === l.key;
-    return `<button data-k="${l.key ?? ''}" class="text-xs px-2.5 py-1 rounded-full border"
-      style="${active ? `background:${l.color}1a;border-color:${l.color}66;color:${l.color}` : "border-color:#26262b;color:#8a8a93"}">${l.label}</button>`;
-  }).join("");
-  document.querySelectorAll("#leaningPills button").forEach((b) =>
-    b.onclick = () => { state.leaning = b.dataset.k || null; renderPills(); load(true); });
-}
+function renderFilters() {
+  $("#leaningFilters").innerHTML = LEANINGS.map((l) =>
+    `<button class="filter" data-k="${l.key ?? ""}" aria-pressed="${state.leaning === l.key}">${l.label}</button>`).join("");
+  $("#natureFilters").innerHTML = NATURES.map((n) =>
+    `<button class="filter" data-n="${n.key ?? ""}" aria-pressed="${state.nature === n.key}">${n.label}</button>`).join("");
 
-function renderNaturePills() {
-  $("#naturePills").innerHTML = NATURES.map((n) => {
-    const active = state.nature === n.key;
-    return `<button data-k="${n.key ?? ''}" class="text-[11px] px-2 py-1 rounded-md border ${
-      active ? "border-figure/60 bg-figure/15 text-figure" : "border-line text-muted hover:text-zinc-100"
-    }">${n.label}</button>`;
-  }).join("");
-  document.querySelectorAll("#naturePills button").forEach((b) =>
-    b.onclick = () => { state.nature = b.dataset.k || null; renderNaturePills(); load(true); });
+  document.querySelectorAll("#leaningFilters .filter").forEach((b) =>
+    b.onclick = () => { state.leaning = b.dataset.k || null; renderFilters(); load(true); });
+  document.querySelectorAll("#natureFilters .filter").forEach((b) =>
+    b.onclick = () => { state.nature = b.dataset.n || null; renderFilters(); load(true); });
 }
 
 listEl.addEventListener("click", (e) => {
@@ -141,13 +145,12 @@ listEl.addEventListener("click", (e) => {
 });
 $("#readerClose").onclick = closeReader;
 $("#readerBackdrop").onclick = closeReader;
-document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeReader(); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("#reader").hidden) closeReader(); });
 
 infiniteScroll(sentinel, () => load());
 themeTree($("#themeTree"), {
   source: "articles",
   onSelect: ({ theme, subtheme }) => { state.theme = theme; state.subtheme = subtheme; load(true); },
 });
-renderPills();
-renderNaturePills();
+renderFilters();
 load(true);

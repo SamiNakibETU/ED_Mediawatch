@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Validation — ED Mediawatch</title>
+  <title>Figures — ED Mediawatch</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" />
@@ -12,22 +12,22 @@
     try { const t = localStorage.getItem("theme"); if (t) document.documentElement.dataset.theme = t; } catch {}
   </script>
 </head>
-<body data-page="validation" data-tagline="Rien ne se publie sans relecture">
+<body data-page="figures" data-tagline="Qui défend quoi, et depuis quand">
   <header id="masthead"></header>
 
-  <div class="controls">
-    <div class="filters" id="typeFilters" role="group" aria-label="Type d’incohérence"></div>
-  </div>
-
-  <div class="layout" style="grid-template-columns:1fr">
-    <main>
-      <p class="lede">Chaque rapprochement ci-dessous est une <em>proposition</em> de la machine. Il n’existe pas tant qu’un humain ne l’a pas confirmé : vérifie la source des deux côtés avant de trancher.</p>
-      <div class="verdicts" id="list"></div>
-      <p class="state" id="empty" hidden></p>
+  <div class="layout">
+    <aside class="rail">
+      <p class="rail__title">Figures suivies</p>
+      <label class="sr-only" for="figSearch">Chercher une figure</label>
+      <input id="figSearch" class="field" type="search" placeholder="Chercher…" style="margin-bottom:var(--s3)" />
+      <div class="referents" id="figList"></div>
+    </aside>
+    <main id="detail">
+      <p class="state">Sélectionne une figure.</p>
     </main>
   </div>
 
   <script src="common.js"></script>
-  <script src="contradictions.js"></script>
+  <script src="figure.js"></script>
 </body>
 </html>

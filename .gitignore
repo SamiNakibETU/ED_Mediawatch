@@ -23,6 +23,8 @@ claude_chat_history.md
 # --- Base de données + données locales générées ---
 backend/data/media_candidates.json
 backend/*.db
+backend/data/*.db
+backend/data/eval/
 backend/*.db-wal
 backend/*.db-shm
 backend/data/snapshots/

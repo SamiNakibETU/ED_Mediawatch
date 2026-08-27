@@ -3,77 +3,37 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>ED · MediaWatch — Veille extrême droite</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <title>Réseaux sociaux — ED Mediawatch</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" />
+  <link rel="stylesheet" href="design.css" />
   <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            ink: "#0a0a0b", panel: "#141417", line: "#26262b",
-            muted: "#8a8a93", rn: "#2563eb", udr: "#b45309", figure: "#7c3aed",
-          },
-          fontFamily: { sans: ["Inter", "system-ui", "-apple-system", "Segoe UI", "sans-serif"] },
-        },
-      },
-    };
+    // Avant peinture : évite le flash de thème.
+    try { const t = localStorage.getItem("theme"); if (t) document.documentElement.dataset.theme = t; } catch {}
   </script>
-  <link rel="preconnect" href="https://rsms.me/" />
-  <link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
-  <style>
-    html { scroll-behavior: smooth; }
-    body { background: radial-gradient(1200px 600px at 50% -10%, #1a1a20 0%, #0a0a0b 55%); }
-    .card-enter { animation: fade .35s ease both; }
-    @keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
-    ::-webkit-scrollbar { width: 10px; } ::-webkit-scrollbar-thumb { background: #26262b; border-radius: 8px; }
-    .pill { transition: all .15s ease; }
-  </style>
 </head>
-<body class="text-zinc-200 font-sans min-h-screen">
-  <!-- Header -->
-  <header class="sticky top-0 z-20 backdrop-blur-xl bg-ink/70 border-b border-line">
-    <div class="max-w-6xl mx-auto px-4 py-3">
-      <div class="flex items-center justify-between gap-3">
-        <div class="flex items-center gap-2.5">
-          <div class="h-9 w-9 rounded-xl bg-gradient-to-br from-rn to-figure grid place-items-center font-bold text-white text-sm">ED</div>
-          <div>
-            <h1 class="font-semibold leading-tight">MediaWatch</h1>
-            <p class="text-[11px] text-muted leading-tight">Veille des prises de parole · extrême droite</p>
-          </div>
-          <nav class="ml-3 hidden sm:flex items-center gap-1 text-sm">
-            <a href="index.html" class="px-3 py-1.5 rounded-lg bg-figure/20 text-figure">Réseaux sociaux</a>
-            <a href="presse.html" class="px-3 py-1.5 rounded-lg text-muted hover:text-zinc-100">Presse</a>
-            <span class="px-3 py-1.5 rounded-lg text-zinc-600 cursor-not-allowed select-none" title="En pause — phase d'analyse (MVP_SPEC §8)">Analyse · à venir</span>
-          </nav>
-        </div>
-        <div id="stats" class="text-right text-[11px] text-muted tabular-nums"></div>
-      </div>
+<body data-page="feed" data-tagline="Registre des prises de parole">
+  <header id="masthead"></header>
 
-      <!-- Filters -->
-      <div class="mt-3 flex items-center gap-2 flex-wrap">
-        <div id="groupPills" class="flex items-center gap-1.5"></div>
-        <div class="flex-1"></div>
-        <label class="flex items-center gap-1.5 text-xs text-muted cursor-pointer select-none">
-          <input id="hideRT" type="checkbox" class="accent-figure" />
-          Masquer les RT
-        </label>
-      </div>
-      <input id="search" type="search" placeholder="Filtrer une personnalité (nom ou @handle)…"
-        class="mt-2 w-full bg-panel border border-line rounded-lg px-3 py-1.5 text-sm placeholder:text-zinc-600 focus:outline-none focus:border-figure/60" />
-    </div>
-  </header>
+  <div class="controls">
+    <div class="filters" id="groupFilters" role="group" aria-label="Famille politique"></div>
+    <div class="spacer"></div>
+    <label class="switch"><input id="hideRT" type="checkbox" /> Masquer les retweets</label>
+  </div>
+  <div class="controls">
+    <label class="sr-only" for="search">Filtrer une personnalité</label>
+    <input id="search" class="field" type="search" placeholder="Filtrer une personnalité (nom ou @handle)…" />
+  </div>
 
-  <!-- Corps : navigation thématique (gauche) + flux (droite) -->
-  <div class="max-w-6xl mx-auto px-4 pb-24 flex gap-6">
-    <aside class="w-56 shrink-0 hidden md:block">
-      <div class="sticky top-28 max-h-[calc(100vh-8rem)] overflow-y-auto pr-1">
-        <div class="text-[11px] uppercase tracking-wide text-zinc-600 px-2 mb-1">Thèmes</div>
-        <nav id="themeTree" class="space-y-0.5"></nav>
-      </div>
+  <div class="layout">
+    <aside class="rail">
+      <p class="rail__title">Thèmes</p>
+      <nav class="tree" id="themeTree" aria-label="Filtrer par thème"></nav>
     </aside>
-    <main class="flex-1 min-w-0">
-      <div id="feed" class="divide-y divide-line"></div>
-      <div id="sentinel" class="py-8 text-center text-sm text-muted"></div>
+    <main>
+      <div class="register" id="feed"></div>
+      <p class="state" id="sentinel"></p>
     </main>
   </div>
 
