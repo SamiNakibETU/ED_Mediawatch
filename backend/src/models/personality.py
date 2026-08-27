@@ -43,6 +43,15 @@ class Personality(Base, TimestampMixin):
     consecutive_failures: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     last_error: Mapped[str | None] = mapped_column(String(200))
 
+    # --- Profil X (rafraîchi à chaque passe de syndication, coût nul) ---
+    # L'identifiant numérique est STABLE quand le handle change (renommages
+    # fréquents en campagne) ; l'audience sert à pondérer la portée d'un propos.
+    x_user_id: Mapped[str | None] = mapped_column(String(32), index=True)
+    followers_count: Mapped[int | None] = mapped_column(Integer)
+    statuses_count: Mapped[int | None] = mapped_column(Integer)
+    x_protected: Mapped[bool | None] = mapped_column(Boolean)
+    profile_refreshed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
     posts: Mapped[list["Post"]] = relationship(  # noqa: F821
         back_populates="personality", cascade="all, delete-orphan"
     )

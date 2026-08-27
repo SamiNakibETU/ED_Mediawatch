@@ -24,6 +24,9 @@ from src.models.personality import Personality
 from src.models.post import Post
 from src.services.collection.nitter_client import NitterClient
 from src.services.collection.x_html_parser import parse_profile_html
+from src.services.collection.x_syndication import SyndicationClient
+from src.services.collection.x_enrich import enrich_truncated_posts
+from src.services.collection.x_backfill import run_backfill as run_archive_backfill
 from src.utils import clean_html, feed_datetime, sha256, tweet_guid
 from src.vocabulary import RunKind, RunStatus, Source
 
@@ -277,11 +280,51 @@ async def run_collection(use_html: bool | None = None) -> dict:
     errors = 0
     instance_used: str | None = None
 
+    synd = SyndicationClient()
+
     async def worker(p: Personality) -> None:
         nonlocal total_new, errors, instance_used
         status, error, new = "ok", None, 0
         async with factory() as db:
             try:
+                # 1) Syndication officielle X (widgets embarqués) : texte intégral,
+                #    engagement, quote/RT distingués — sans compte ni proxy. C'est
+                #    la voie primaire depuis la mise en demeure contre Nitter.
+                posts = await synd.collect(p.handle) if p.handle else None
+                if posts is not None:
+                    new = await _insert_new(db, p.id, posts)
+                    total_new += new
+                    instance_used = "syndication"
+                    # Timeline servie mais vide = compte protégé/suspendu/muet :
+                    # visible dans la santé (C4) plutôt que confondu avec « ok ».
+                    if not posts:
+                        # Timeline syndication vide sur un compte pourtant actif
+                        # (vu : 12 813 tweets, 0 en syndication) : repli par
+                        # identifiants archivés (Wayback CDX → fxtwitter), borné.
+                        try:
+                            bf = await run_archive_backfill(
+                                handles=[p.handle], since_year=datetime.now(timezone.utc).year,
+                                per_handle=40, max_fetch=40,
+                            )
+                            new = bf.get("inserted", 0)
+                            total_new += new
+                        except Exception as exc:  # noqa: BLE001
+                            logger.warning("collect.backfill_fallback_error", handle=p.handle, error=str(exc)[:120])
+                        status = "ok" if new else "empty"
+                        error = None if new else "syndication : aucune entrée"
+                    prof = synd.last_profile
+                    if prof:
+                        obj = await db.get(Personality, p.id)
+                        if obj is not None:
+                            obj.x_user_id = prof.get("x_user_id") or obj.x_user_id
+                            obj.followers_count = prof.get("followers_count")
+                            obj.statuses_count = prof.get("statuses_count")
+                            obj.x_protected = prof.get("x_protected")
+                            obj.profile_refreshed_at = datetime.now(timezone.utc)
+                            await db.commit()
+                    await _record_handle_health(db, p.id, status, error, got_new=new > 0)
+                    return
+                # 2) Repli Nitter (HTML puis RSS) tant qu'une instance existe.
                 if use_html:
                     new, inst = await collect_one_html(client, db, p, max_pages=1)
                     if inst is None:  # HTML bloqué pour ce handle → repli RSS (sans engagement)
@@ -304,6 +347,10 @@ async def run_collection(use_html: bool | None = None) -> dict:
     # Bounded concurrency is enforced inside NitterClient via its semaphore.
     await asyncio.gather(*(worker(p) for p in personalities))
 
+    # Texte intégral des tweets tronqués à 280 par la syndication (note tweets) :
+    # une déclaration extraite d'un texte coupé serait fausse par omission.
+    enrich_stats = await enrich_truncated_posts(limit=300)
+
     async with factory() as db:
         run = await db.get(CollectionRun, run_id)
         if run:
@@ -320,6 +367,7 @@ async def run_collection(use_html: bool | None = None) -> dict:
         "posts_new": total_new,
         "errors": errors,
         "instance_used": instance_used,
+        "truncated_expanded": enrich_stats.get("expanded", 0),
     }
     logger.info("collection.complete", **stats)
     return stats

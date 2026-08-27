@@ -1,33 +1,35 @@
-"""Backfill X depuis une date (défaut : 2026-05-01) via pagination HTML Nitter.
+"""Backfill X historique SANS compte : Wayback CDX (identifiants) + fxtwitter (contenu).
 
-Nécessite une source HTML qui sert la timeline (Nitter auto-hébergé en pratique
-— configurer NITTER_SELF_HOSTED). Résumable : la dédup par guid fait qu'un
-re-run ne récupère que ce qui manque.
+Remplace l'ancien backfill par pagination HTML Nitter (mort depuis la mise en
+demeure du 24/08/2026). Résumable : dédup par guid, un identifiant déjà en base
+n'est jamais re-demandé. Rythme poli (série + délai) — fxtwitter n'est pas à nous.
 
-    python -m src.scripts.backfill_x                # depuis 2026-05-01
-    python -m src.scripts.backfill_x 2025-09-01     # depuis une autre date
+    python -m src.scripts.backfill_x                       # tout le pool, depuis 2022
+    python -m src.scripts.backfill_x 2024                  # depuis une autre année
+    python -m src.scripts.backfill_x 2022 MLP_officiel J_Bardella   # handles ciblés
+
+Bornes par défaut : 300 identifiants par handle, 2000 tweets par run — relancer
+pour continuer (ne reprend que ce qui manque).
 """
 
 import asyncio
 import sys
-from datetime import datetime, timezone
 
-from src.services.collection.x_collector import run_backfill
+from src.database import init_db
 
-DEFAULT_SINCE = "2026-05-01"
+from src.services.collection.x_backfill import run_backfill
 
 
 async def main() -> None:
-    since_str = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_SINCE
-    since = datetime.fromisoformat(since_str).replace(tzinfo=timezone.utc)
-    stats = await run_backfill(since)
-    print("Backfill terminé:", stats)
-    if stats["blocked"] == stats["handles"]:
-        print(
-            "\n⚠️  Toutes les requêtes HTML ont échoué : aucune instance Nitter ne sert\n"
-            "    la timeline. Configure un Nitter auto-hébergé (NITTER_SELF_HOSTED),\n"
-            "    voir docker-compose.nitter.yml."
-        )
+    # Schéma à jour (colonnes additives) même hors démarrage de l'app.
+    await init_db()
+    args = sys.argv[1:]
+    since_year = int(args[0]) if args and args[0].isdigit() else 2022
+    handles = [a.lstrip("@") for a in args[1:]] if len(args) > 1 else None
+    stats = await run_backfill(handles=handles, since_year=since_year)
+    print("Backfill terminé:", {k: v for k, v in stats.items() if k != "per_handle"})
+    for h, n in sorted(stats["per_handle"].items(), key=lambda kv: -kv[1])[:15]:
+        print(f"  {h:24s} +{n}")
 
 
 if __name__ == "__main__":

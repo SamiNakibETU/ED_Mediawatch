@@ -71,6 +71,10 @@ class Post(Base, TimestampMixin):
     # --- Métadonnées de collecte (C0) ---
     # Voie de collecte : 'rss' (sans engagement) | 'html' (avec engagement+date exacte).
     collected_via: Mapped[str | None] = mapped_column(String(8))
+    # Syndication X tronque à 280 caractères (les « note tweets » longs sont
+    # coupés) : vrai si le texte stocké est probablement incomplet → à enrichir
+    # par identifiant (fxtwitter). Remis à False une fois le texte intégral posé.
+    text_truncated: Mapped[bool | None] = mapped_column(default=False)
     # Langue détectée (défaut fonctionnel 'fr').
     lang: Mapped[str | None] = mapped_column(String(8))
     # Hash du texte normalisé → détecter reposts/éditions au-delà du guid d'URL.
