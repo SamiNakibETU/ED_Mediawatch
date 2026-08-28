@@ -80,7 +80,8 @@ class RefinedClaim(BaseModel):
 
 # Version du prompt d'extraction (méthode versionnée, cf specs §7.6). À bumper
 # à chaque changement de consigne pour rendre les passes rejouables/traçables.
-DECLARATION_PROMPT_VERSION = "decl-v2"  # v2 : stance_target = sujet nommé, requis
+DECLARATION_PROMPT_VERSION = "decl-v3"  # v3 : locuteur attribué par déclaration
+# v2 : stance_target = sujet nommé, requis
 
 # Thèmes de 1er niveau (specs §2.3) — grille fermée pour la classification grossière.
 DECLARATION_THEMES = [
@@ -119,6 +120,16 @@ class Declaration(BaseModel):
         description="Vrai si l'assertion est analysable/vérifiable (pas une banalité, "
         "salutation, ou pure émotion sans contenu)."
     )
+    speaker: str | None = Field(
+        default=None,
+        description="Nom de la personne à qui le TEXTE attribue explicitement cette "
+        "assertion — citation directe, discours rapporté, ou verbe d'attribution "
+        "(« X a déclaré », « selon Y », « affirme Z »). Écris le nom tel qu'il "
+        "apparaît dans le texte. Laisse null dans TOUS les autres cas : voix du "
+        "journaliste, contexte, généralité, ou attribution seulement probable. "
+        "Dans le doute, null — une imputation erronée est bien plus grave qu'une "
+        "attribution manquante."
+    )
 
 
 class DeclarationSet(BaseModel):
@@ -151,6 +162,14 @@ _DECL_SYSTEM = (
     "l'objet dont parle l'assertion. Toujours renseigné. Emploie le MÊME "
     "libellé pour un même objet d'une déclaration à l'autre : c'est ce qui "
     "permet de confronter des propos entre eux.\n"
+    "8. `speaker` = QUI parle. Un article de presse contient plusieurs voix : "
+    "celle du journaliste, celles des personnes citées, celles de tiers "
+    "commentés. N'attribue une assertion que si le texte le dit lui-même — "
+    "citation directe, discours rapporté, verbe d'attribution. Une personne "
+    "SIMPLEMENT MENTIONNÉE ou dont on PARLE n'est pas le locuteur. Sinon "
+    "null. Dans le doute, null : une imputation erronée, publiée, retourne "
+    "l'arme contre l'observatoire, alors qu'une attribution manquante ne coûte "
+    "qu'une déclaration inexploitée.\n"
     "Si aucune assertion analysable : has_declaration=false, declarations=[]."
 )
 
@@ -341,7 +360,8 @@ class ClaimLLM:
             return None
 
     async def segment_declarations(
-        self, *, text: str, speaker: str | None, themes: list[str] | None = None
+        self, *, text: str, speaker: str | None,
+        themes: list[str] | None = None, known: list[str] | None = None,
     ) -> DeclarationSet | None:
         """L0 — segmente une prise de parole en déclarations atomiques (tous types).
 
@@ -350,12 +370,28 @@ class ClaimLLM:
         if not text or not text.strip():
             return None
         grid = ", ".join(themes or DECLARATION_THEMES)
+        # `speaker` connu (un post X : le compte EST l'auteur) → on le donne et
+        # l'attribution ne se discute pas. Sinon (un article), c'est au modèle de
+        # dire qui parle, assertion par assertion, et seulement quand le texte le
+        # dit. `known` liste les figures suivies repérées dans l'article : un
+        # contexte pour orthographier un nom, pas une réponse à recopier.
+        if speaker:
+            entete = f"Locuteur : {speaker} (auteur du texte — toutes les assertions lui reviennent)\n"
+        else:
+            entete = (
+                "Locuteur : NON DONNÉ. Ce texte est un article : il contient la voix du "
+                "journaliste et celles des personnes citées. Renseigne `speaker` "
+                "assertion par assertion, uniquement quand le texte l'attribue "
+                "explicitement ; sinon null.\n"
+            )
+            if known:
+                entete += f"Figures suivies mentionnées : {', '.join(known)}\n"
         prompt = (
-            f"Locuteur : {speaker or 'inconnu'}\n"
-            f"Grille de thèmes : {grid}\n\n"
+            entete
+            + f"Grille de thèmes : {grid}\n\n"
             f"Prise de parole (texte source EXACT) :\n«««\n{text.strip()[:6000]}\n»»»\n\n"
             "Tâche : segmente en assertions atomiques selon les règles. Pour chacune : "
-            "verbatim EXACT, canonical fidèle, claim_type, theme, stance, check_worthy."
+            "verbatim EXACT, canonical fidèle, claim_type, theme, stance, check_worthy, speaker."
         )
         prov = self._s.claim_tier2_provider
         if prov == "anthropic" and self._anthropic is not None:

@@ -257,6 +257,9 @@ async def funnel() -> dict:
         truncated = await count(Post, Post.text_truncated.is_(True))
         articles = await count(Article)
         claims = await count(Claim)
+        # Un propos sans locuteur ne se compare pas : c'est la métrique qui dit
+        # si le corpus sert à quelque chose, pas le nombre brut de déclarations.
+        attributed = await count(Claim, Claim.speaker_name.isnot(None))
         embedded = await count(Claim, Claim.embedding.isnot(None))
         in_subject = await count(Claim, Claim.subject_id.isnot(None))
         subjects = await count(Subject)
@@ -289,9 +292,12 @@ async def funnel() -> dict:
                   "d'ici là, segmenter un texte coupé à 280 produit des "
                   "déclarations fausses par omission") if truncated else None},
         {"step": "Déclarations extraites", "n": claims,
-         "detail": (f"{to_segment} sources restent à segmenter" if to_segment
-                    else "tout le corpus est segmenté"),
-         "blocked": ("aucune déclaration extraite" if not claims else None),
+         "detail": (f"{attributed} attribuées à un locuteur"
+                    + (f" · {to_segment} sources restent à segmenter" if to_segment
+                       else " · tout le corpus est segmenté")),
+         "blocked": ("aucune déclaration extraite" if not claims
+                     else f"{claims - attributed} propos sans locuteur — non comparables"
+                          if claims - attributed else None),
          "todo": (f"la passe complète en traite ~1900 par cycle de 4 h"
                   if to_segment else None)},
         {"step": "Déclarations vectorisées", "n": embedded,

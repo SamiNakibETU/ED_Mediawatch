@@ -64,6 +64,51 @@ def _canon(s: str) -> str:
     return _WS.sub(" ", strip_accents(s)).strip().lower()
 
 
+_NAME_TOKEN = re.compile(r"\b[A-ZÀ-Þ][\wÀ-ÿ'’-]{2,}")
+
+
+def attributed_speaker(
+    name: str | None, source: str, known: dict[str, int] | None = None
+) -> tuple[str | None, int | None]:
+    """Le locuteur rendu par le LLM, VÉRIFIÉ contre le texte source.
+
+    Même esprit que `verbatim_in_source`, appliqué à l'attribution : le modèle
+    propose, le texte dispose. Un nom qui n'apparaît pas dans le papier n'a pas
+    pu y être désigné comme l'auteur du propos — c'est une hallucination ou une
+    déduction, et une imputation déduite est la faute la plus grave d'un
+    observatoire.
+
+    Rend `(nom, personality_id | None)`. Rattache à une figure suivie quand
+    c'est sans ambiguïté : sans ça, « Le Pen » et « Marine Le Pen » feraient
+    deux locuteurs distincts et la comparaison dans le temps s'écroulerait.
+    """
+    if not name or not name.strip():
+        return None, None
+    raw = " ".join(name.split())[:80]
+    # Un locuteur est une personne. « Le gouvernement », « le RN », « selon une
+    # source » ne sont pas des locuteurs identifiables : on ne peut pas suivre
+    # leur position dans le temps.
+    if not _NAME_TOKEN.search(raw):
+        return None, None
+
+    src = _canon(source)
+    if _canon(raw) not in src:
+        return None, None
+
+    # Rattachement aux figures suivies : on accepte l'inclusion dans un sens ou
+    # dans l'autre (« Le Pen » ⊂ « Marine Le Pen »), et UNIQUEMENT si une seule
+    # figure correspond — deux Le Pen dans le même papier, on n'attribue pas.
+    if known:
+        c = _canon(raw)
+        hits = [(full, pid) for full, pid in known.items()
+                if c in _canon(full) or _canon(full) in c]
+        if len(hits) == 1:
+            return hits[0]
+        if len(hits) > 1:
+            return None, None
+    return raw, None
+
+
 def verbatim_in_source(verbatim: str, source: str) -> bool:
     """Le verbatim est-il réellement présent dans le texte source ? (anti-hallu)
 
@@ -155,7 +200,7 @@ async def run_declaration_extraction(
 
     factory = get_session_factory()
     model = f"{get_claim_llm()._s.claim_tier2_provider}:{get_claim_llm()._s.claim_tier2_model}/{DECLARATION_PROMPT_VERSION}"
-    n_new = posts_done = arts_done = skipped = 0
+    n_new = posts_done = arts_done = skipped = attributed = 0
     budget_hit = False
     _SRC_CACHE.clear()
 
@@ -170,6 +215,14 @@ async def run_declaration_extraction(
                     func.lower(Personality.handle).in_(pilot)
                 )
             )).scalars().all())
+
+    # Répertoire nom → id des figures suivies : sert à rattacher une attribution
+    # de presse à la bonne fiche, donc à ce que « Le Pen » dans Le Monde et
+    # @MLP_officiel sur X soient la même voix dans une comparaison.
+    async with factory() as db:
+        people: dict[str, int] = dict(
+            (await db.execute(select(Personality.full_name, Personality.id))).all()
+        )
 
     async with factory() as db:
         await _backfill_done_marks(db)
@@ -278,9 +331,18 @@ async def run_declaration_extraction(
             # « contradictions » bâties dessus). Une imputation erronée est la
             # faute la plus grave d'un observatoire : sans attribution certaine,
             # on n'attribue pas.
-            speaker = None
+            #
+            # Ne rien attribuer du tout avait cependant un coût qu'on a fini par
+            # voir : TOUTE la presse tombait dans « non attribué », donc hors de
+            # la comparaison — alors que l'objet du produit est justement de
+            # rattacher un propos à quelqu'un, à une date. La réponse n'est pas
+            # de deviner mais de FAIRE DIRE au texte qui parle : le modèle
+            # renseigne `speaker` par déclaration, et `attributed_speaker` refuse
+            # tout nom qui n'est pas littéralement dans le papier.
             try:
-                result = await llm.segment_declarations(text=text, speaker=speaker)
+                result = await llm.segment_declarations(
+                    text=text, speaker=None, known=[n for n in mp if n in people],
+                )
             except BudgetExceeded as exc:
                 logger.warning("declarations.budget_exceeded", detail=str(exc))
                 budget_hit = True
@@ -290,9 +352,12 @@ async def run_declaration_extraction(
             if result and result.has_declaration:
                 async with factory() as db:
                     for decl in result.declarations:
+                        who, pid = attributed_speaker(decl.speaker, text, people)
+                        if who:
+                            attributed += 1
                         if await _store(
                             db, decl=decl, src_ref=src_ref, platform="press", post_id=None,
-                            article_id=art.id, personality_id=None, speaker_name=speaker,
+                            article_id=art.id, personality_id=pid, speaker_name=who,
                             party=None, published_at=art.published_at, model=model,
                         ):
                             n_new += 1
@@ -317,6 +382,7 @@ async def run_declaration_extraction(
 
     stats = {"declarations_new": n_new, "posts_processed": posts_done,
              "articles_processed": arts_done, "skipped_no_llm": skipped,
+             "press_attributed": attributed,
              "remaining_posts": rest_posts, "remaining_articles": rest_arts,
              "budget_exceeded": budget_hit, "pilot": sorted(pilot) or None,
              "prompt_version": DECLARATION_PROMPT_VERSION}
