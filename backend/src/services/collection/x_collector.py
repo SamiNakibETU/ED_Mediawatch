@@ -267,13 +267,13 @@ async def run_collection(use_html: bool | None = None) -> dict:
         run_id = run.id
 
     if use_html is None:
-        # HTML = engagement (likes/RT/quote/reply) + date exacte. On l'utilise si un
-        # Nitter self-host est configuré OU si une instance publique sert encore la
-        # timeline HTML (sondée une fois par passe, sur le 1er handle du pool).
-        sample = next((p.handle for p in personalities if p.handle), None)
-        use_html = bool(get_settings().nitter_self_hosted.strip()) or (
-            bool(sample) and await client.html_capable(sample)
-        )
+        # Nitter n'est plus qu'un repli : la syndication officielle est la voie
+        # primaire. On ne SONDE donc plus les instances publiques à chaque passe
+        # — elles sont toutes tombées depuis la mise en demeure de X Corp, et le
+        # sondage ne produisait que des `nitter.html_error` et cinq secondes
+        # perdues. Le HTML n'est tenté que si une instance auto-hébergée est
+        # explicitement configurée.
+        use_html = bool(get_settings().nitter_self_hosted.strip())
     logger.info("collection.start", personalities=len(personalities), use_html=use_html)
 
     total_new = 0
