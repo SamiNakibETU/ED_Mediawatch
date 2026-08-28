@@ -61,6 +61,49 @@ async def list_subjects(
     ))
     subjects = subjects[:limit]
 
+    # Une frise miniature par sujet : les dates de prise de parole, groupées par
+    # locuteur. C'est ce qui remplace la photographie d'un site de presse — un
+    # sujet n'a pas d'image, mais il a une forme : trois voix qui se répondent
+    # sur deux ans ne ressemblent pas à quinze propos tassés sur une semaine, et
+    # cette différence est exactement ce qu'on vient chercher.
+    #
+    # Une seule requête pour toute la page : le faire sujet par sujet
+    # multiplierait les allers-retours pour un élément décoratif au premier
+    # regard et informatif au second.
+    frises: dict[int, list[dict]] = {}
+    if subjects:
+        ids = [s.id for s in subjects]
+        rows = (await db.execute(
+            select(Claim.subject_id, Claim.speaker_name, Claim.published_at)
+            .where(Claim.subject_id.in_(ids), Claim.published_at.isnot(None))
+            .order_by(Claim.published_at.asc())
+        )).all()
+        grouped: dict[int, dict[str, list]] = {}
+        for sid, who, when in rows:
+            grouped.setdefault(sid, {}).setdefault(who or "non attribué", []).append(when)
+        for sid, by_who in grouped.items():
+            # Quatre voix au plus : au-delà, la miniature devient un pâté de
+            # lignes d'un pixel où l'on ne distingue plus rien.
+            top = sorted(by_who.items(), key=lambda kv: -len(kv[1]))[:4]
+            frises[sid] = [{"speaker": w, "dates": d[:40]} for w, d in top]
+
+    # Le dernier propos en date sur chaque sujet. Un sommaire qui n'affiche que
+    # des compteurs demande de cliquer pour savoir de quoi il retourne ; une
+    # phrase réelle, datée et attribuée, dit tout de suite si le sujet vit.
+    latest: dict[int, dict] = {}
+    if subjects:
+        rows = (await db.execute(
+            select(Claim.subject_id, Claim.speaker_name, Claim.published_at,
+                   Claim.canonical, Claim.verbatim)
+            .where(Claim.subject_id.in_([s.id for s in subjects]),
+                   Claim.published_at.isnot(None))
+            .order_by(Claim.published_at.desc())
+        )).all()
+        for sid, who, when, canon, verb in rows:
+            if sid not in latest:
+                latest[sid] = {"speaker": who, "published_at": when,
+                               "text": canon or verb}
+
     themes = dict(
         (
             await db.execute(
@@ -81,6 +124,8 @@ async def list_subjects(
                 "span_days": _span_days(s),
                 "first_seen": s.first_seen, "last_seen": s.last_seen,
                 "named": s.status == "labelled",
+                "frise": frises.get(s.id, []),
+                "latest": latest.get(s.id),
             }
             for s in subjects
         ],

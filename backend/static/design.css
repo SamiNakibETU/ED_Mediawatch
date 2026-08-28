@@ -83,23 +83,23 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --paper:        #14140F;
-    --surface:      #1B1B16;
-    --surface-sunk: #101009;
-    --ink:          #EDEAE1;
-    --ink-soft:     #CFCABE;
-    --muted:        #9A958A;
-    --faint:        #6F6B62;
-    --rule:         #2E2E26;
-    --rule-strong:  #45443A;
+    --paper:        #0A0A0A;
+    --surface:      #121212;
+    --surface-sunk: #000000;
+    --ink:          #F2F0EA;
+    --ink-soft:     #C9C6BF;
+    --muted:        #8C8C86;
+    --faint:        #666666;
+    --rule:         #1F1F1D;
+    --rule-strong:  #34342F;
 
     --accent:       #9FB6D6;
-    --accent-soft:  #1D2836;
-    --accent-line:  #3A4A63;
+    --accent-soft:  #14202E;
+    --accent-line:  #33455E;
 
-    --ok:      #7FA98C;
-    --pending: #C9A253;
-    --alert:   #D08272;
+    --ok:      #43A047;
+    --pending: #FBBF24;
+    --alert:   #E53935;
 
     --grp-rn:     #8AA3C0;
     --grp-udr:    #C9A253;
@@ -110,23 +110,23 @@
 }
 
 :root[data-theme="dark"] {
-  --paper:        #14140F;
-  --surface:      #1B1B16;
-  --surface-sunk: #101009;
-  --ink:          #EDEAE1;
-  --ink-soft:     #CFCABE;
-  --muted:        #9A958A;
-  --faint:        #6F6B62;
-  --rule:         #2E2E26;
-  --rule-strong:  #45443A;
+  --paper:        #0A0A0A;
+  --surface:      #121212;
+  --surface-sunk: #000000;
+  --ink:          #F2F0EA;
+  --ink-soft:     #C9C6BF;
+  --muted:        #8C8C86;
+  --faint:        #666666;
+  --rule:         #1F1F1D;
+  --rule-strong:  #34342F;
 
   --accent:       #9FB6D6;
-  --accent-soft:  #1D2836;
-  --accent-line:  #3A4A63;
+  --accent-soft:  #14202E;
+  --accent-line:  #33455E;
 
-  --ok:      #7FA98C;
-  --pending: #C9A253;
-  --alert:   #D08272;
+  --ok:      #43A047;
+  --pending: #FBBF24;
+  --alert:   #E53935;
 
   --grp-rn:     #8AA3C0;
   --grp-udr:    #C9A253;
@@ -202,22 +202,28 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   display: flex; align-items: baseline; gap: var(--s5);
 }
 
+/* Un titre de publication se voit. Il était à la taille d'un libellé de
+ * navigation : à côté de « Sujets » et « Archive », rien ne disait qu'on
+ * lisait un journal plutôt qu'un tableau de bord. */
 .wordmark {
   font-family: var(--font-display);
-  font-size: var(--t-title);
+  font-size: clamp(1.5rem, 2.6vw, 2.125rem);
   font-weight: 700;
-  letter-spacing: -0.015em;
+  letter-spacing: -0.03em;
+  line-height: 1;
   white-space: nowrap;
 }
 .wordmark span { color: var(--muted); font-weight: 400; }
 
+/* L'accroche est une phrase, pas une étiquette : en capitales monospacées elle
+ * se lisait comme un code de rubrique. */
 .masthead__tagline {
-  font-size: var(--t-micro);
-  font-family: var(--font-mono);
-  color: var(--faint);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  white-space: nowrap;
+  font-family: var(--font-display);
+  font-size: var(--t-ui);
+  line-height: 1.2;
+  color: var(--muted);
+  max-width: 15rem;
+  white-space: normal;
 }
 
 /* La navigation prend sa propre ligne, sous le titre. Sur une seule ligne, à
@@ -239,9 +245,11 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 .nav { display: flex; gap: var(--s4); align-items: baseline; }
 .nav a, .nav span { white-space: nowrap; }
 .nav a, .nav span {
-  font-size: var(--t-small);
+  display: inline-flex; align-items: center; gap: var(--s2);
+  font-size: var(--t-ui);
+  font-weight: 500;
   color: var(--muted);
-  padding-bottom: 2px;
+  padding-bottom: 3px;
   border-bottom: 2px solid transparent;
   transition: color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
 }
@@ -260,17 +268,6 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 }
 .masthead__meta strong { color: var(--ink); font-weight: 600; }
 
-.theme-toggle {
-  font-family: var(--font-mono);
-  font-size: var(--t-micro);
-  color: var(--muted);
-  border: 1px solid var(--rule);
-  border-radius: var(--r-soft);
-  padding: var(--s1) var(--s2);
-  min-height: 28px;
-  transition: border-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
-}
-.theme-toggle:hover { color: var(--ink); border-color: var(--rule-strong); }
 
 /* Sur un téléphone, le bandeau tenait 789 px dans une fenêtre de 390 : titre,
  * accroche, compteur et bascule sur une seule ligne insécable. C'était la seule
@@ -282,8 +279,10 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 @media (max-width: 720px) {
   .masthead__inner { flex-wrap: wrap; gap: var(--s3); row-gap: var(--s2); }
   .masthead__tagline { display: none; }
-  .masthead__meta { order: 3; flex-basis: 100%; white-space: normal; }
-  .theme-toggle { order: 2; }
+  /* Ligne 1 : le titre et la bascule. Ligne 2 : les indicateurs, ensemble —
+   * séparés, ils occupaient trois lignes pour deux informations. */
+  #themeToggle { order: 2; }
+  #live, .masthead__meta { order: 3; white-space: normal; }
 }
 
 /* ── Barre de contrôle ───────────────────────────────────────────────── */
@@ -568,23 +567,6 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   float: left; font-size: 3rem; line-height: 0.82;
   padding: 0.1em var(--s2) 0 0; font-weight: 600;
 }
-
-/* ── Boutons ─────────────────────────────────────────────────────────── */
-
-.btn {
-  display: inline-flex; align-items: center; gap: var(--s2);
-  min-height: 36px; padding: 0 var(--s4);
-  font-size: var(--t-small); font-weight: 500;
-  border-radius: var(--r-soft); border: 1px solid var(--rule);
-  color: var(--ink); background: var(--surface);
-  transition: border-color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
-}
-.btn:hover { border-color: var(--rule-strong); background: var(--surface-sunk); }
-.btn--primary { background: var(--accent); border-color: var(--accent); color: var(--surface); }
-:root[data-theme="dark"] .btn--primary,
-:root:not([data-theme="light"]) .btn--primary { color: var(--paper); }
-.btn--primary:hover { background: color-mix(in oklab, var(--accent) 88%, var(--ink)); border-color: transparent; }
-.btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* ── File de validation : ici, le bloc EST l'unité de décision ──────── */
 
@@ -1171,3 +1153,271 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   font-weight: 600; margin: 0; letter-spacing: -0.01em;
 }
 .band p { font-size: var(--t-small); color: var(--muted); margin: 0; }
+
+
+/* ── Le fil « en ce moment » ────────────────────────────────────────────────
+ *
+ * Sous le bandeau, ce que l'observatoire suit en ce moment : les objets de
+ * débat les plus disputés, nommés. Emprunté au « REPORTING ON » de ProPublica,
+ * pour la même raison — dire ce qu'on couvre en ce moment vaut mieux que de
+ * lister ses rubriques, qui ne changent jamais. */
+
+.now { border-bottom: 1px solid var(--rule); background: var(--surface-sunk); }
+.now__inner {
+  max-width: 76rem; margin: 0 auto; padding: var(--s2) var(--s4);
+  display: flex; align-items: baseline; gap: var(--s4);
+  overflow-x: auto; scrollbar-width: none;
+}
+.now__inner::-webkit-scrollbar { display: none; }
+.now__label {
+  font-family: var(--font-mono); font-size: var(--t-micro);
+  letter-spacing: 0.09em; text-transform: uppercase; color: var(--faint);
+  white-space: nowrap; flex: none;
+}
+.now a {
+  font-size: var(--t-small); font-weight: 600; color: var(--ink);
+  white-space: nowrap;
+  border-bottom: 2px solid transparent;
+  transition: border-color var(--dur-fast) var(--ease);
+}
+.now a:hover { border-bottom-color: var(--th, var(--accent)); }
+
+/* ── La bande : un sujet occupe toute la largeur ────────────────────────────
+ *
+ * Trois colonnes séparées par des filets : le sujet à gauche, sa forme au
+ * centre, son dernier état à droite. C'est la structure d'une une de presse —
+ * titre, image, encadré « la suite » — transposée à un objet qui n'a pas
+ * d'image mais qui a une forme : trois voix sur deux ans ne ressemblent pas à
+ * quinze propos tassés sur une semaine. */
+
+.story {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 0.85fr);
+  gap: var(--s6);
+  padding: var(--s6) 0;
+  border-bottom: 1px solid var(--rule);
+  align-items: start;
+}
+.story:first-child { padding-top: var(--s5); }
+.story__aside {
+  border-left: 1px solid var(--rule);
+  padding-left: var(--s5);
+  align-self: stretch;
+}
+@media (max-width: 900px) {
+  .story { grid-template-columns: 1fr; gap: var(--s4); }
+  .story__aside { border-left: none; padding-left: 0; border-top: 1px solid var(--rule); padding-top: var(--s3); }
+}
+
+.story__title {
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 2.3vw, 2rem);
+  font-weight: 700;
+  line-height: 1.06;
+  letter-spacing: -0.02em;
+  margin: var(--s2) 0 0;
+  text-wrap: balance;
+  transition: color var(--dur-fast) var(--ease);
+}
+a:hover > .story__title, a:hover .story__title { color: var(--accent); }
+
+/* Le dernier propos, avec sa date en gras : « il y a 3 j : » avant la phrase.
+ * Une date relative en tête dit immédiatement si le sujet est vivant. */
+.latest__when { font-weight: 600; color: var(--ink); }
+.latest__q {
+  font-family: var(--font-display);
+  font-size: var(--t-ui); line-height: 1.4; color: var(--ink-soft);
+  margin: var(--s2) 0 0;
+}
+
+/* ── Frise miniature ────────────────────────────────────────────────────────
+ * Le « visuel » d'un sujet. Pas d'axe, pas d'étiquette : à cette taille ce
+ * serait illisible, et la frise complète est à un clic. On garde la seule chose
+ * qui se lit d'un coup d'œil — la répartition dans le temps, voix par voix. */
+
+.mini { display: flex; flex-direction: column; gap: 5px; }
+.mini__row { display: grid; grid-template-columns: 7.5rem 1fr; gap: var(--s3); align-items: center; }
+.mini__who {
+  font-size: var(--t-micro); color: var(--muted);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.mini__track {
+  position: relative; height: 12px;
+  background: linear-gradient(var(--rule), var(--rule)) center / 100% 1px no-repeat;
+}
+.mini__dot {
+  position: absolute; top: 50%; width: 6px; height: 6px; border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--th, var(--accent));
+}
+.mini__scale {
+  display: flex; justify-content: space-between;
+  font-family: var(--font-mono); font-size: var(--t-micro); color: var(--faint);
+  margin-top: var(--s2); padding-left: 8.25rem;
+}
+@media (max-width: 520px) {
+  .mini__row { grid-template-columns: 5.5rem 1fr; }
+  .mini__scale { padding-left: 6.25rem; }
+}
+
+/* ── Classement ─────────────────────────────────────────────────────────────
+ * Un rang numéroté dit ce qu'un tri implicite ne dit pas : que la liste est
+ * ordonnée, et selon quoi. Le critère est écrit à côté du titre de section. */
+
+.ranked { border-top: 1px solid var(--rule); }
+.ranked__item {
+  display: grid; grid-template-columns: 2.5rem 1fr; gap: var(--s3);
+  padding: var(--s4) 0; border-bottom: 1px solid var(--rule);
+  align-items: baseline;
+}
+.ranked__n {
+  font-family: var(--font-display); font-size: var(--t-head);
+  font-weight: 700; line-height: 1; color: var(--rule-strong);
+  font-variant-numeric: tabular-nums;
+}
+.ranked__item:hover .ranked__n { color: var(--th, var(--accent)); }
+.ranked__t {
+  font-family: var(--font-display); font-size: var(--t-ui);
+  font-weight: 600; line-height: 1.2; color: var(--ink);
+  transition: color var(--dur-fast) var(--ease);
+}
+.ranked__item:hover .ranked__t { color: var(--accent); }
+.ranked__m {
+  font-family: var(--font-mono); font-size: var(--t-micro);
+  color: var(--muted); margin-top: var(--s1);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * PLATEFORME — grille bento, indicateurs, icônes
+ *
+ * Repris de Lebanon Monitor, la plateforme sœur : cellules posées sur un fond
+ * sombre avec un écart d'un pixel, l'écart FAISANT la bordure. Un cadre dessiné
+ * autour de chaque case additionne les traits ; un écart les partage. À vingt
+ * cellules, la différence entre les deux se voit.
+ *
+ * Ce qui reste du registre d'archive : les surfaces de LECTURE. Un propos cité
+ * se lit en Newsreader sur une colonne mesurée, pas en 11px capitales. Un
+ * tableau de bord et une revue n'ont pas le même métier ; ce fichier fait
+ * cohabiter les deux au lieu de choisir.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Grille bento ──────────────────────────────────────────────────────── */
+
+.bento {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 1px;
+  background: var(--rule);          /* l'écart, donc la bordure */
+  border: 1px solid var(--rule);
+}
+.cell {
+  background: var(--surface);
+  padding: var(--s4) var(--s5) var(--s5);
+  display: flex; flex-direction: column;
+  gap: var(--s2);
+  min-width: 0;
+}
+a.cell { transition: background var(--dur-fast) var(--ease); }
+a.cell:hover { background: var(--surface-sunk); }
+
+.cell--span2 { grid-column: span 2; }
+@media (max-width: 640px) { .cell--span2 { grid-column: span 1; } }
+
+/* Étiquette de cellule : le métier, en petit, au-dessus du chiffre. */
+.cell__label {
+  font-family: var(--font-mono);
+  font-size: var(--t-micro);
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--faint);
+  display: flex; align-items: center; gap: var(--s2);
+  margin: 0 0 var(--s1);
+}
+
+/* Le chiffre. Grand et LÉGER : à cette taille, une graisse normale devient un
+ * bloc noir qui écrase tout le reste de la cellule. */
+.metric {
+  font-family: var(--font-mono);
+  font-size: clamp(2rem, 4vw, 2.75rem);
+  font-weight: 300;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+/* Un mot n'est pas un chiffre : « en cours » en chasse fixe tabulaire, à la
+ * taille d'un compteur, se lit comme une sortie de terminal. */
+.metric--word {
+  font-family: var(--font-display);
+  font-size: var(--t-head);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.metric--accent { color: var(--accent); }
+.metric--ok { color: var(--ok); }
+.metric--alert { color: var(--alert); }
+.cell__sub { font-size: var(--t-small); color: var(--muted); margin: 0; }
+.cell__foot { margin-top: auto; padding-top: var(--s4); }
+
+/* ── Indicateurs d'état ────────────────────────────────────────────────── */
+
+/* Carré, pas rond : un disque coloré ressemble à une puce décorative, un carré
+ * plein se lit comme un voyant. */
+.dot {
+  display: inline-block; width: 8px; height: 8px; flex: none;
+  background: var(--muted);
+}
+.dot--ok { background: var(--ok); }
+.dot--warn { background: var(--pending); }
+.dot--alert { background: var(--alert); }
+@media (prefers-reduced-motion: no-preference) {
+  .dot--live { animation: pulse 2.4s var(--ease) infinite; }
+}
+
+.chip {
+  display: inline-flex; align-items: center; gap: var(--s2);
+  font-family: var(--font-mono); font-size: var(--t-micro);
+  color: var(--muted); white-space: nowrap;
+}
+
+/* ── Icônes ────────────────────────────────────────────────────────────────
+ * Tracées, pas pleines, 1.5px : une icône pleine à cette taille devient une
+ * tache. Elles doublent un libellé, ne le remplacent jamais — une pictogramme
+ * seul se devine, il ne se lit pas. */
+
+.ico {
+  width: 1em; height: 1em; flex: none;
+  stroke: currentColor; fill: none;
+  stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round;
+  vertical-align: -0.125em;
+}
+.ico--lg { width: 1.25em; height: 1.25em; }
+
+/* ── Boutons ───────────────────────────────────────────────────────────── */
+
+.btn {
+  display: inline-flex; align-items: center; gap: var(--s2);
+  font-family: var(--font-ui); font-size: var(--t-small); font-weight: 500;
+  padding: var(--s2) var(--s4);
+  min-height: 36px;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-soft);
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  transition: border-color var(--dur-fast) var(--ease),
+              background var(--dur-fast) var(--ease);
+}
+.btn:hover { border-color: var(--accent); background: var(--surface-sunk); }
+.btn--primary {
+  background: var(--accent); border-color: var(--accent); color: var(--paper);
+}
+.btn--primary:hover { filter: brightness(1.1); background: var(--accent); }
+.btn--ghost { border-color: transparent; background: transparent; color: var(--muted); }
+.btn--ghost:hover { color: var(--ink); border-color: var(--rule); }
+.btn--sm { min-height: 28px; padding: var(--s1) var(--s3); font-size: var(--t-micro); }
+
+.nav .ico { color: var(--faint); transition: color var(--dur-fast) var(--ease); }
+.nav a:hover .ico, .nav a[aria-current="page"] .ico { color: var(--accent); }
+@media (max-width: 560px) { .nav .ico { display: none; } }

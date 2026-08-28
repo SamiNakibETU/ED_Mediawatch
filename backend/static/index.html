@@ -9,47 +9,49 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" />
   <link rel="stylesheet" href="design.css" />
   <script>
-    try { const t = localStorage.getItem("theme"); if (t) document.documentElement.dataset.theme = t; } catch {}
+    try { document.documentElement.dataset.theme = localStorage.getItem("theme") || "dark"; } catch { document.documentElement.dataset.theme = "dark"; }
   </script>
 </head>
 <body data-page="accueil" data-tagline="Qui a dit quoi, sur quoi, quand">
   <header id="masthead"></header>
+  <div class="now" id="now" hidden></div>
 
   <div class="wrap" style="padding-top:var(--s6);padding-bottom:var(--s8)">
     <!-- L'objet du produit, écrit en clair : on ne suit pas des comptes,
          on suit des sujets, et on regarde comment le propos bouge dessus. -->
-    <p class="dek" style="max-width:44rem;margin-top:0">
+    <p class="dek" style="max-width:46rem;margin-top:0">
       Un observatoire du propos d’extrême droite dans la durée. Pas un fil d’actualité&nbsp;:
       ce qu’on cherche ici, c’est <strong>qui a défendu quoi, sur quel objet précis, et à quelle
       date</strong> — pour pouvoir le comparer. Tout ce qui se dit en ligne et dans la presse est
       consigné, daté, sourcé.
     </p>
 
+    <div id="fonds" style="margin-top:var(--s6)"></div>
+
+    <div class="band"><h2>La une</h2>
+      <span class="spacer"></span>
+      <p>Le sujet où la comparaison a le plus à révéler.</p></div>
+    <main id="une"><p class="state">Chargement…</p></main>
+
     <div class="split" style="margin-top:var(--s7)">
-      <main id="une"><p class="state">Chargement…</p></main>
+      <div>
+        <div class="band" style="margin-top:0"><h2>Sujets exploitables</h2>
+          <span class="spacer"></span>
+          <p>Classés par nombre de voix, puis par étendue.</p></div>
+        <div id="grid"></div>
+      </div>
 
       <aside>
         <section class="aside-block">
           <p class="section-label" style="margin:0">À relire</p>
           <div id="pending"></div>
         </section>
-
-        <section class="aside-block">
-          <p class="section-label" style="margin:0">Le fonds</p>
-          <div id="fonds"></div>
-        </section>
-
         <section class="aside-block">
           <p class="section-label" style="margin:0">Par thème</p>
           <div class="filters" id="themes" style="margin-top:var(--s3)"></div>
         </section>
       </aside>
     </div>
-
-    <div class="band"><h2>Sujets exploitables</h2>
-      <span class="spacer"></span>
-      <p>Plusieurs voix, sur la durée — là où une confrontation peut exister.</p></div>
-    <div id="grid"></div>
   </div>
 
   <script src="common.js"></script>

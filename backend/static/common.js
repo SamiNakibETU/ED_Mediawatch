@@ -105,6 +105,35 @@ function infiniteScroll(sentinelEl, loadMore) {
     .observe(sentinelEl);
 }
 
+
+// ── Icônes ──────────────────────────────────────────────────────────────────
+//
+// Tracées, jamais pleines : à 16 px une icône pleine devient une tache. Elles
+// DOUBLENT un libellé, ne le remplacent pas — un pictogramme seul se devine, il
+// ne se lit pas, et ce produit affirme des choses vérifiables.
+//
+// Dessinées à la main sur une grille de 24, plutôt qu'importées : une police
+// d'icônes ferait une requête réseau de plus pour une dizaine de formes.
+
+const ICONS = {
+  observatoire: '<circle cx="12" cy="12" r="9"/><path d="M15.5 8.5 10 10l-1.5 5.5L14 14z"/>',
+  sujets: '<path d="M3 6h18M3 12h18M3 18h12"/>',
+  locuteurs: '<path d="M16 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 20v-2a4 4 0 0 0-3-3.9"/>',
+  chiffres: '<path d="M3 20V10M9 20V4M15 20v-7M21 20v-11"/>',
+  archive: '<path d="M3 7h18v13H3z"/><path d="M3 7 5 3h14l2 4"/><path d="M10 12h4"/>',
+  validation: '<path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/>',
+  atelier: '<path d="M3 17l4-4 3 3 5-6 6 7"/><circle cx="7" cy="13" r="1"/>',
+  temps: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  source: '<path d="M14 4h6v6"/><path d="M20 4 10 14"/><path d="M18 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h6"/>',
+  alerte: '<path d="M12 3 2 20h20z"/><path d="M12 10v4M12 17h.01"/>',
+  recherche: '<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>',
+};
+
+const ico = (name, cls = "") =>
+  ICONS[name]
+    ? `<svg class="ico ${cls}" viewBox="0 0 24 24" aria-hidden="true">${ICONS[name]}</svg>`
+    : "";
+
 // ── Masthead ────────────────────────────────────────────────────────────
 // Une publication a un titre composé, pas un logo dans un carré dégradé.
 
@@ -113,34 +142,64 @@ function infiniteScroll(sentinelEl, loadMore) {
 // X et la presse sont le FONDS — la matière première, rangée sous « Archive »,
 // consultable mais pas la vitrine.
 const PAGES = [
-  ["index.html", "accueil", "L’observatoire"],
-  ["sujets.html", "sujets", "Sujets"],
-  ["figure.html", "figures", "Locuteurs"],
-  ["compteur.html", "compteur", "Chiffres"],
-  ["archive.html", "archive", "Archive"],
-  ["contradictions.html", "validation", "Validation"],
-  ["atelier.html", "atelier", "Atelier"],
+  ["index.html", "accueil", "L’observatoire", "observatoire"],
+  ["sujets.html", "sujets", "Sujets", "sujets"],
+  ["figure.html", "figures", "Locuteurs", "locuteurs"],
+  ["compteur.html", "compteur", "Chiffres", "chiffres"],
+  ["archive.html", "archive", "Archive", "archive"],
+  ["contradictions.html", "validation", "Validation", "validation"],
+  ["atelier.html", "atelier", "Atelier", "atelier"],
 ];
+
+
+// Voyant de collecte : un observatoire doit dire s'il regarde encore. Un site
+// figé depuis trois jours et un site à jour se ressemblent trait pour trait —
+// et c'est précisément la différence qui compte pour qui vient vérifier.
+async function liveIndicator() {
+  const el = $("#live");
+  if (!el) return;
+  try {
+    const f = await fetchJSON("/health/freshness");
+    const h = Math.min(...[f.x?.age_hours, f.press?.age_hours]
+      .filter((v) => typeof v === "number"));
+    const stale = f.x?.stale && f.press?.stale;
+    const cls = !Number.isFinite(h) ? "alert" : stale ? "warn" : "ok";
+    const quand = !Number.isFinite(h) ? "aucune collecte"
+      : h < 1 ? "collecte à l’instant"
+      : h < 48 ? `collecte il y a ${Math.round(h)} h`
+      : `collecte il y a ${Math.round(h / 24)} j`;
+    el.innerHTML = `<span class="dot dot--${cls}${cls === "ok" ? " dot--live" : ""}"></span>${quand}`;
+  } catch {
+    el.hidden = true;   // muet plutôt que menteur
+  }
+}
 
 function mountMasthead() {
   const host = $("#masthead");
   if (!host) return;
   const current = document.body.dataset.page;
-  const nav = PAGES.map(([href, key, label]) =>
-    `<a href="${href}"${key === current ? ' aria-current="page"' : ""}>${label}</a>`).join("");
+  const nav = PAGES.map(([href, key, label, icon]) =>
+    `<a href="${href}"${key === current ? ' aria-current="page"' : ""}>${
+      ico(icon)}<span>${label}</span></a>`).join("");
 
   host.className = "masthead";
   host.innerHTML = `<div class="masthead__inner">
     <a class="wordmark" href="index.html">ED <span>Mediawatch</span></a>
     <p class="masthead__tagline">${escapeHtml(document.body.dataset.tagline || "")}</p>
     <div class="spacer"></div>
+    <p class="chip" id="live"></p>
     <p class="masthead__meta" id="stats"></p>
-    <button class="theme-toggle" id="themeToggle" aria-label="Basculer le thème"></button>
+    <button class="btn btn--ghost btn--sm" id="themeToggle" aria-label="Basculer le thème"></button>
   </div>
   <div class="masthead__nav"><nav class="nav" aria-label="Sections">${nav}</nav></div>`;
 
+  liveIndicator();
+
   const toggle = $("#themeToggle");
-  const label = () => { toggle.textContent = document.documentElement.dataset.theme === "dark" ? "clair" : "sombre"; };
+  const label = () => {
+    const dark = document.documentElement.dataset.theme === "dark";
+    toggle.innerHTML = dark ? "clair" : "sombre";
+  };
   toggle.onclick = () => {
     const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
     document.documentElement.dataset.theme = next;
@@ -148,6 +207,39 @@ function mountMasthead() {
     label();
   };
   label();
+}
+
+
+// ── Frise miniature ─────────────────────────────────────────────────────────
+//
+// Le « visuel » d'un sujet. Une une de presse s'appuie sur des photographies ;
+// un sujet n'en a pas, mais il a une FORME — trois voix qui se répondent sur
+// deux ans ne ressemblent pas à quinze propos tassés sur une semaine, et c'est
+// exactement la différence qu'on vient chercher.
+//
+// Pas d'axe daté ni de repère cliquable ici : à cette taille ce serait
+// illisible, et la frise complète est à un clic. On garde ce qui se lit d'un
+// coup d'œil, rien de plus.
+
+function friseMini(frise, theme, maxLanes = 3) {
+  const lanes = (frise || []).filter((f) => f.dates?.length).slice(0, maxLanes);
+  if (!lanes.length) return "";
+
+  const all = lanes.flatMap((l) => l.dates.map((d) => asDate(d).getTime()));
+  let t0 = Math.min(...all), t1 = Math.max(...all);
+  if (t0 === t1) { t0 -= 864e5; t1 += 864e5; }
+  const pos = (d) => (((asDate(d).getTime() - t0) / (t1 - t0)) * 100).toFixed(2);
+  const mois = (t) => new Date(t).toLocaleDateString("fr-FR", { month: "short", year: "2-digit" });
+
+  return `<div class="mini" aria-hidden="true">
+    ${lanes.map((l) => `
+      <div class="mini__row">
+        <span class="mini__who">${escapeHtml(l.speaker)}</span>
+        <span class="mini__track">${l.dates.map((d) =>
+          `<span class="mini__dot" style="left:${pos(d)}%;--th:${themeVar(theme)}"></span>`).join("")}</span>
+      </div>`).join("")}
+    <div class="mini__scale"><span>${mois(t0)}</span><span>${mois(t1)}</span></div>
+  </div>`;
 }
 
 // ── Arbre thématique (Thème → Sous-thème) ───────────────────────────────

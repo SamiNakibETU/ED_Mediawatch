@@ -53,6 +53,49 @@ function renderFunnel(data) {
   return `${fmtNum(steps[1]?.n ?? 0)} déclarations · ${fmtNum(steps[3]?.n ?? 0)} sujets`;
 }
 
+
+// ── Le pouls ────────────────────────────────────────────────────────────────
+//
+// Quatre chiffres avant le détail : est-ce que ça tourne, est-ce que ça coûte,
+// est-ce que ça collecte encore. Quelqu'un qui ouvre cette page a une question
+// binaire en tête ; lui servir d'abord six lignes d'entonnoir lui fait lire un
+// rapport pour répondre par oui ou non.
+
+function renderPouls(run, costs, fresh) {
+  const [tone, word] = run ? (STATUS_WORD[run.status] || ["pending", run.status]) : ["alert", "aucune"];
+  const dayPct = costs?.daily_budget_usd
+    ? Math.min(100, (costs.day_usd / costs.daily_budget_usd) * 100) : 0;
+  const ages = [fresh?.x?.age_hours, fresh?.press?.age_hours].filter((v) => typeof v === "number");
+  const age = ages.length ? Math.min(...ages) : null;
+
+  $("#pouls").innerHTML = `<div class="bento">
+    <div class="cell">
+      <p class="cell__label">${ico("atelier")} Dernière passe</p>
+      <p class="metric metric--word ${tone === "ok" ? "metric--ok" : tone === "alert" ? "metric--alert" : ""}">${word}</p>
+      <p class="cell__sub">${run ? `n° ${run.id} · ${escapeHtml(relTime(run.started_at))}`
+                                : "le scheduler en lance une toutes les 4 h"}</p>
+    </div>
+    <div class="cell">
+      <p class="cell__label">${ico("chiffres")} Dépense du jour</p>
+      <p class="metric ${dayPct >= 80 ? "metric--alert" : ""}">${usd(costs?.day_usd)}</p>
+      <p class="cell__sub">plafond ${usd(costs?.daily_budget_usd)} — au-delà, les étapes
+        payantes s’arrêtent seules</p>
+    </div>
+    <div class="cell">
+      <p class="cell__label">${ico("chiffres")} Dépense du mois</p>
+      <p class="metric">${usd(costs?.month_usd)}</p>
+      <p class="cell__sub">plafond ${usd(costs?.monthly_budget_usd)}</p>
+    </div>
+    <div class="cell">
+      <p class="cell__label">${ico("temps")} Dernière collecte</p>
+      <p class="metric ${age == null || age > 24 ? "metric--alert" : "metric--ok"}">${
+        age == null ? "—" : age < 48 ? `${Math.round(age)} h` : `${Math.round(age / 24)} j`}</p>
+      <p class="cell__sub">une collecte muette est plus dangereuse qu’une collecte absente&nbsp;:
+        elle ne se signale pas</p>
+    </div>
+  </div>`;
+}
+
 // ── Dernière passe ──────────────────────────────────────────────────────
 
 const STATUS_WORD = {
@@ -234,6 +277,7 @@ async function load() {
     ]);
 
     $("#stats").textContent = renderFunnel(f);
+    renderPouls((runs.items || [])[0], costs, fresh);
     renderLastRun((runs.items || [])[0]);
     renderRuns(runs.items || []);
     if (costs) renderSpend(costs);
