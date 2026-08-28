@@ -185,7 +185,7 @@ function renderRuns(items) {
     $("#runs").innerHTML = '<p class="state">Aucune passe enregistrée.</p>';
     return;
   }
-  $("#runs").innerHTML = `<table class="runs">
+  $("#runs").innerHTML = `<div class="runs-wrap"><table class="runs">
     <thead><tr>
       <th>Passe</th><th>Départ</th><th>Statut</th><th>Étapes</th>
       <th style="text-align:right">Durée</th><th style="text-align:right">Coût</th>
@@ -202,7 +202,7 @@ function renderRuns(items) {
         <td class="num">${dur(total)}</td>
         <td class="num">${usd(r.cost_usd)}</td>
       </tr>`;
-    }).join("")}</tbody></table>`;
+    }).join("")}</tbody></table></div>`;
 }
 
 // ── Le graphe ───────────────────────────────────────────────────────────

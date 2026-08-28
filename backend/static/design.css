@@ -272,6 +272,20 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 }
 .theme-toggle:hover { color: var(--ink); border-color: var(--rule-strong); }
 
+/* Sur un téléphone, le bandeau tenait 789 px dans une fenêtre de 390 : titre,
+ * accroche, compteur et bascule sur une seule ligne insécable. C'était la seule
+ * cause du débordement horizontal — sur les sept pages, le corps était juste.
+ *
+ * L'accroche cède la première : elle situe le propos, elle ne le porte pas.
+ * Le relevé chiffré passe à la ligne plutôt que de disparaître — c'est une
+ * donnée, pas une décoration. */
+@media (max-width: 720px) {
+  .masthead__inner { flex-wrap: wrap; gap: var(--s3); row-gap: var(--s2); }
+  .masthead__tagline { display: none; }
+  .masthead__meta { order: 3; flex-basis: 100%; white-space: normal; }
+  .theme-toggle { order: 2; }
+}
+
 /* ── Barre de contrôle ───────────────────────────────────────────────── */
 
 .controls {
@@ -340,6 +354,11 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   .layout { grid-template-columns: 1fr; gap: var(--s5); }
   .rail { display: none; }
 }
+
+/* Un élément de grille a `min-width: auto` : sa piste s'élargit jusqu'à la
+ * largeur mini de son contenu, débordant la page sans qu'aucune règle ne le
+ * demande. Ici c'était le tableau des passes qui poussait toute la colonne. */
+.layout > * { min-width: 0; }
 
 .rail { position: sticky; top: 6.5rem; max-height: calc(100vh - 8rem); overflow-y: auto; }
 
@@ -743,9 +762,13 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   padding: var(--s4) 0;
   border-bottom: 1px solid var(--rule);
 }
+/* Sur téléphone, on garde les trois colonnes et on réduit le chiffre. Le
+ * renvoyer sous le texte le plaçait après l'explication du blocage : le
+ * compteur arrivait en conclusion d'un paragraphe au lieu de répondre tout de
+ * suite à « combien ». */
 @media (max-width: 560px) {
-  .funnel__step { grid-template-columns: 1.75rem 1fr; }
-  .funnel__n { grid-column: 2; text-align: left; }
+  .funnel__step { gap: var(--s3); }
+  .funnel__n { font-size: var(--t-title); }
 }
 
 .funnel__ord {
@@ -826,7 +849,10 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 
 /* ── Journal des passes ──────────────────────────────────────────────── */
 
-.runs { width: 100%; border-collapse: collapse; font-size: var(--t-small); }
+/* Un tableau à six colonnes ne se replie pas : il défile dans son propre
+ * cadre, plutôt que d'emporter la page avec lui. */
+.runs-wrap { overflow-x: auto; }
+.runs { width: 100%; min-width: 30rem; border-collapse: collapse; font-size: var(--t-small); }
 .runs th {
   font-family: var(--font-mono); font-size: var(--t-micro);
   letter-spacing: 0.09em; text-transform: uppercase; color: var(--faint);
