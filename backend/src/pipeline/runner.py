@@ -15,17 +15,90 @@ Garanties tenues ici, et c'est ce qui distingue un système d'une pile de script
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import structlog
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 
 from src.database import get_session_factory
 from src.models.pipeline_run import PipelineRun, PipelineStep
 from src.pipeline.stages import FREE, PAID, Stage, resolve_order
 
 logger = structlog.get_logger(__name__)
+
+# Le processus signe sa présence à ce rythme ; on le déclare mort après cinq
+# battements manqués. Volontairement tolérant : un battement raté à cause d'une
+# base momentanément indisponible ne doit pas faire passer un run vivant pour
+# un cadavre.
+HEARTBEAT_S = 60
+STALE_AFTER_S = 5 * HEARTBEAT_S
+
+
+def _aware(dt: datetime | None) -> datetime | None:
+    """SQLite rend des datetimes naïfs là où Postgres les rend datés.
+
+    Comparer les deux lève un TypeError — au pire endroit possible, dans le
+    code qui sert justement à dire ce qui va mal.
+    """
+    if dt is None:
+        return None
+    return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+
+
+async def _beat(run_id: int) -> None:
+    """Rafraîchit le signe de vie tant que ce processus tourne.
+
+    Tâche de fond plutôt qu'un battement entre deux étapes : une collecte peut
+    dormir un quart d'heure en attendant le quota X, et une étape longue reste
+    une étape vivante.
+    """
+    factory = get_session_factory()
+    while True:
+        await asyncio.sleep(HEARTBEAT_S)
+        try:
+            async with factory() as db:
+                await db.execute(
+                    update(PipelineRun)
+                    .where(PipelineRun.id == run_id)
+                    .values(heartbeat_at=datetime.now(timezone.utc))
+                )
+                await db.commit()
+        except Exception:  # noqa: BLE001 — un battement manqué n'arrête rien
+            logger.debug("pipeline.heartbeat_failed", run_id=run_id)
+
+
+async def reap_stale_runs() -> int:
+    """Clôt les runs dont le processus a disparu.
+
+    Le cas concret : `railway ssh "… pipeline --full"` attache l'exécution au
+    terminal. La collecte X dort en attendant la remise à zéro du quota, la
+    session SSH est coupée faute de trafic, le processus meurt avec elle — et
+    le run reste « en cours » pour toujours. L'écran affirmait alors qu'un
+    travail avançait alors que rien ne tournait, ce qui est pire que pas
+    d'information du tout.
+    """
+    cutoff = datetime.now(timezone.utc) - timedelta(seconds=STALE_AFTER_S)
+    factory = get_session_factory()
+    async with factory() as db:
+        running = list((await db.execute(
+            select(PipelineRun).where(PipelineRun.status == "running")
+        )).scalars().all())
+
+        reaped = 0
+        for run in running:
+            last = _aware(run.heartbeat_at) or _aware(run.started_at)
+            if last is not None and last >= cutoff:
+                continue                      # bat encore : bien vivant
+            run.status = "interrupted"
+            run.finished_at = _aware(run.heartbeat_at) or datetime.now(timezone.utc)
+            reaped += 1
+        if reaped:
+            await db.commit()
+            logger.info("pipeline.reaped_stale", runs=reaped)
+    return reaped
 
 
 async def _spent_today() -> float:
@@ -51,7 +124,9 @@ async def run_pipeline(
     et celui du scheduler : une passe automatique ne doit jamais dépenser sans
     qu'on l'ait décidé.
     """
-    from src.services.analysis.llm_usage import BudgetExceeded
+    # Clore d'abord les runs dont le processus a disparu : sans ça l'écran
+    # empile des « en cours » qui ne courent plus.
+    await reap_stale_runs()
 
     # `only` : exécuter EXACTEMENT les étapes nommées, sans tirer leurs
     # dépendances. Utile quand on sait qu'elles viennent de tourner — demander
@@ -67,13 +142,51 @@ async def run_pipeline(
 
     factory = get_session_factory()
     async with factory() as db:
-        run = PipelineRun(trigger=trigger, scope=scope)
+        run = PipelineRun(trigger=trigger, scope=scope,
+                          heartbeat_at=datetime.now(timezone.utc))
         db.add(run)
         await db.commit()
         await db.refresh(run)
         run_id = run.id
 
     cost_before = await _spent_today() if scope != "free" else 0.0
+
+    beat = asyncio.create_task(_beat(run_id))
+    try:
+        report, failed, budget_hit = await _run_stages(ordered, run_id)
+    finally:
+        beat.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await beat
+
+    cost = max(0.0, (await _spent_today()) - cost_before) if scope != "free" else 0.0
+    overall = ("failed" if failed
+               else "budget_exceeded" if budget_hit
+               else "ok")
+
+    async with factory() as db:
+        run = await db.get(PipelineRun, run_id)
+        if run is not None:
+            run.finished_at = datetime.now(timezone.utc)
+            run.status = overall
+            run.cost_usd = round(cost, 4)
+            await db.commit()
+
+    logger.info("pipeline.done", run_id=run_id, status=overall,
+                stages=len(report), cost_usd=round(cost, 4))
+    return {"run_id": run_id, "status": overall, "scope": scope,
+            "cost_usd": round(cost, 4), "steps": report}
+
+
+async def _run_stages(ordered: list[Stage], run_id: int) -> tuple[list[dict], set[str], bool]:
+    """Déroule les étapes ; renvoie (rapport, étapes en échec, budget atteint).
+
+    Extraite de `run_pipeline` pour que le battement de cœur puisse l'encadrer
+    dans un `try/finally` : quoi qu'il arrive ici, la tâche de fond s'arrête.
+    """
+    from src.services.analysis.llm_usage import BudgetExceeded
+
+    factory = get_session_factory()
     failed: set[str] = set()
     budget_hit = False
     report: list[dict] = []
@@ -116,23 +229,7 @@ async def run_pipeline(
         logger.info("pipeline.stage", stage=stage.name, status=status,
                     duration_s=round(duration, 1))
 
-    cost = max(0.0, (await _spent_today()) - cost_before) if scope != "free" else 0.0
-    overall = ("failed" if failed
-               else "budget_exceeded" if budget_hit
-               else "ok")
-
-    async with factory() as db:
-        run = await db.get(PipelineRun, run_id)
-        if run is not None:
-            run.finished_at = datetime.now(timezone.utc)
-            run.status = overall
-            run.cost_usd = round(cost, 4)
-            await db.commit()
-
-    logger.info("pipeline.done", run_id=run_id, status=overall,
-                stages=len(report), cost_usd=round(cost, 4))
-    return {"run_id": run_id, "status": overall, "scope": scope,
-            "cost_usd": round(cost, 4), "steps": report}
+    return report, failed, budget_hit
 
 
 async def funnel() -> dict:
@@ -146,6 +243,10 @@ async def funnel() -> dict:
     from src.models.contradiction import Contradiction
     from src.models.post import Post
     from src.models.subject import Subject
+
+    # Un run mort ne doit jamais s'afficher « en cours » : c'est précisément
+    # sur cet écran qu'on vient chercher la vérité.
+    await reap_stale_runs()
 
     factory = get_session_factory()
     async with factory() as db:
@@ -196,5 +297,18 @@ async def funnel() -> dict:
             "id": last.id, "status": last.status, "scope": last.scope,
             "started_at": last.started_at, "finished_at": last.finished_at,
             "cost_usd": last.cost_usd,
+            "stages": [
+                {"stage": s.stage, "status": s.status, "detail": s.detail}
+                for s in last.steps
+            ],
+            # Dire ce que le statut implique, plutôt que laisser interpréter.
+            "note": {
+                "running": "une passe est en cours — les compteurs vont bouger",
+                "interrupted": "le processus a disparu (terminal fermé ?) — "
+                               "relancer via POST /pipeline/run, qui tourne détaché",
+                "budget_exceeded": "plafond LLM atteint : les étapes payantes "
+                                   "se sont arrêtées proprement",
+                "failed": "au moins une étape a échoué — voir le détail",
+            }.get(last.status),
         } if last else None,
     }

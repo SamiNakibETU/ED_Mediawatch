@@ -181,3 +181,97 @@ def test_without_only_dependencies_are_pulled(tmp_path, monkeypatch):
         assert [s["stage"] for s in rep["steps"]] == ["collecte", "analyse"]
 
     _run(tmp_path, monkeypatch, "deps.db", st, check, stages=["analyse"])
+
+
+# ── Le run qui n'est plus là ─────────────────────────────────────────────
+#
+# Cas vécu en production : `railway ssh "… pipeline --full"` attache
+# l'exécution au terminal. La collecte X dort en attendant la remise à zéro du
+# quota, la session SSH est coupée faute de trafic, le processus meurt avec
+# elle. Deux runs sont restés « en cours » indéfiniment, et l'écran affirmait
+# qu'un travail avançait alors que rien ne tournait.
+
+def _seed_runs(tmp_path, monkeypatch, db_name, rows, check):
+    """Écrit des runs bruts en base, puis passe le faucheur."""
+    from datetime import datetime, timedelta, timezone
+
+    monkeypatch.setenv("DATABASE_URL", f"sqlite+aiosqlite:///{tmp_path / db_name}")
+    for c in _CACHES:
+        c.cache_clear()
+
+    async def go():
+        await init_db()
+        factory = get_session_factory()
+        now = datetime.now(timezone.utc)
+        async with factory() as db:
+            for age_s, status in rows:
+                db.add(PipelineRun(
+                    status=status, scope="free", trigger="manual",
+                    started_at=now - timedelta(seconds=age_s),
+                    heartbeat_at=now - timedelta(seconds=age_s),
+                ))
+            await db.commit()
+        reaped = await runner.reap_stale_runs()
+        async with factory() as db:
+            after = list((await db.execute(
+                select(PipelineRun).order_by(PipelineRun.id)
+            )).scalars().all())
+        check(reaped, after)
+
+    try:
+        asyncio.run(go())
+    finally:
+        for c in _CACHES:
+            c.cache_clear()
+
+
+def test_dead_run_is_closed_not_left_running(tmp_path, monkeypatch):
+    """Un processus tué ne peut pas battre : son run doit cesser de mentir."""
+    stale = runner.STALE_AFTER_S + 60
+
+    def check(reaped, after):
+        assert reaped == 1
+        assert after[0].status == "interrupted"
+        assert after[0].finished_at is not None   # sinon il reste « en cours »
+
+    _seed_runs(tmp_path, monkeypatch, "reap.db", [(stale, "running")], check)
+
+
+def test_live_run_is_left_alone(tmp_path, monkeypatch):
+    """Une collecte peut dormir un quart d'heure sur le quota X : tant qu'elle
+    bat, elle est vivante. Le faucheur ne doit pas tuer un run qui travaille."""
+    def check(reaped, after):
+        assert reaped == 0
+        assert after[0].status == "running"
+
+    _seed_runs(tmp_path, monkeypatch, "alive.db", [(5, "running")], check)
+
+
+def test_finished_runs_are_untouched(tmp_path, monkeypatch):
+    def check(reaped, after):
+        assert reaped == 0
+        assert [r.status for r in after] == ["ok", "failed"]
+
+    _seed_runs(tmp_path, monkeypatch, "done.db",
+               [(9999, "ok"), (9999, "failed")], check)
+
+
+def test_run_beats_while_it_works(tmp_path, monkeypatch):
+    """Le battement doit exister pendant l'exécution, pas seulement à la fin :
+    c'est lui qui distingue une étape longue d'un processus mort."""
+    seen = []
+
+    async def slow():
+        factory = get_session_factory()
+        async with factory() as db:
+            run = (await db.execute(select(PipelineRun))).scalars().first()
+            seen.append(run.heartbeat_at is not None)
+        return {"n": 1}
+
+    st = [Stage("lente", "Lente", FREE, slow)]
+
+    def check(rep, runs, steps):
+        assert seen == [True]          # daté dès le départ, pas a posteriori
+        assert runs[0].status == "ok"
+
+    _run(tmp_path, monkeypatch, "beat.db", st, check)

@@ -5,6 +5,16 @@
     python -m src.scripts.pipeline judge            # cette étape + ses dépendances
     python -m src.scripts.pipeline --status         # l'entonnoir : où ça bloque
     python -m src.scripts.pipeline embed --only     # cette étape SEULE (sans ses dépendances)
+
+ATTENTION en production. `railway ssh "…"` attache l'exécution au terminal :
+la collecte X dort en attendant la remise à zéro du quota, la session est
+coupée faute de trafic, et le pipeline meurt avec elle. Pour une passe longue,
+passer par la route HTTP — elle tourne dans le processus web, détachée :
+
+    curl -X POST -H "X-API-Token: <jeton>" "https://<app>/pipeline/run?scope=full"
+
+Le SSH reste bon pour ce qui est court : `--status`, ou une étape isolée
+derrière `--only`.
 """
 
 import asyncio
