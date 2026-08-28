@@ -11,8 +11,6 @@
   <script>
     try { const t = localStorage.getItem("theme"); if (t) document.documentElement.dataset.theme = t; } catch {}
   </script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
 </head>
 <body data-page="compteur" data-tagline="Valeurs annoncées, par référent">
   <header id="masthead"></header>
@@ -25,7 +23,7 @@
     <main>
       <h1 id="title">Sélectionne un référent</h1>
       <p class="lede" id="sub">Chaque point est une valeur chiffrée annoncée publiquement, datée et attribuée. L’écart entre les points est ce qui se discute.</p>
-      <div class="chart-frame"><canvas id="chart" height="120"></canvas></div>
+      <div id="chart"></div>
       <p class="section-label" style="margin-top:var(--s6)">Relevé</p>
       <div class="register" id="points"></div>
     </main>

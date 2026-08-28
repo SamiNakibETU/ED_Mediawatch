@@ -92,8 +92,8 @@ function render(d) {
       <span class="tag tag--group" style="--grp-color:${color}">${escapeHtml(f.group_code)}</span>
       ${f.famille ? `<span class="tag">${escapeHtml(f.famille)}</span>` : ""}
       ${f.role ? `<span class="tag">${escapeHtml(f.role)}</span>` : ""}
-      ${[f.departement, f.circo].filter(Boolean).length
-        ? `<span class="tag">${escapeHtml([f.departement, f.circo].filter(Boolean).join(" "))}</span>` : ""}
+      ${mandat(f.departement, f.circo)
+        ? `<span class="tag">${escapeHtml(mandat(f.departement, f.circo))}</span>` : ""}
       ${f.handle ? `<a class="handle" href="https://x.com/${f.handle}" target="_blank" rel="noopener">@${escapeHtml(f.handle)}</a>` : ""}
     </div>
 

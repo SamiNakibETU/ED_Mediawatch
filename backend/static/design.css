@@ -613,10 +613,14 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 }
 .referent:hover { background: var(--surface-sunk); }
 .referent[aria-pressed="true"] { background: var(--surface-sunk); border-left-color: var(--accent); }
-.referent__label { font-size: var(--t-small); font-weight: 500; color: var(--ink); }
+/* Deux blocs, pas deux fragments de phrase : le libellé et le relevé chiffré
+ * coulaient sur la même ligne et se coupaient n'importe où. */
+.referent__label { display: block; font-size: var(--t-small); font-weight: 500; color: var(--ink); }
 .referent__meta {
+  display: block;
   font-family: var(--font-mono); font-size: var(--t-micro);
   font-variant-numeric: tabular-nums; color: var(--muted); margin-top: 2px;
+  line-height: 1.5;
 }
 
 .chart-frame {
@@ -625,6 +629,26 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   border-radius: var(--r-soft);
   padding: var(--s4);
 }
+
+/* Tracé écrit à la main : le graphe est du SVG, stylé ici comme le reste.
+ * `var()` dans un attribut de présentation SVG n'est pas honoré partout —
+ * d'où des classes plutôt que des attributs. Pas de courbe reliant les
+ * points : ce sont des déclarations datées, pas une série mesurée. */
+.plot { display: block; width: 100%; height: auto; }
+.plot__grid { stroke: var(--rule); stroke-width: 1; }
+.plot__tick {
+  font-family: var(--font-mono); font-size: 10px;
+  fill: var(--faint); font-variant-numeric: tabular-nums;
+}
+.plot__dot {
+  stroke: var(--surface); stroke-width: 1.5;
+  transition: r var(--dur-fast) var(--ease);
+}
+.plot__dot:hover { r: 7; }
+.plot__dot--rn { fill: var(--grp-rn); }
+.plot__dot--udr { fill: var(--grp-udr); }
+.plot__dot--figure { fill: var(--grp-figure); }
+.plot__dot--autre { fill: var(--muted); }
 
 /* ── États ───────────────────────────────────────────────────────────── */
 

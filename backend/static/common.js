@@ -19,6 +19,16 @@ const asDate = (iso) => {
   return new Date(/[zZ]|[+-]\d\d:?\d\d$/.test(t) ? t : `${t}Z`);
 };
 
+// Le département est parfois déjà contenu dans le libellé de circonscription
+// (« Alpes-Maritimes - 1re circonscription ») : les concaténer produisait
+// « Alpes-Maritimes Alpes-Maritimes - 1re circonscription ».
+function mandat(departement, circo) {
+  if (circo && departement && circo.toLowerCase().includes(departement.toLowerCase())) {
+    return circo;
+  }
+  return [departement, circo].filter(Boolean).join(" ");
+}
+
 function relTime(iso) {
   if (!iso) return "";
   const d = asDate(iso), s = (Date.now() - d.getTime()) / 1000;

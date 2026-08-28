@@ -65,7 +65,7 @@ function entry(it) {
   const p = it.personality;
   const kind = it.is_retweet ? "retweet" : it.is_reply ? "réponse"
     : it.post_type === "quote" ? "citation" : "";
-  const role = [p.role, [p.departement, p.circo].filter(Boolean).join(" ")].filter(Boolean);
+  const role = [p.role, mandat(p.departement, p.circo)].filter(Boolean);
   const foot = [
     kind ? `<span class="tag">${kind}</span>` : "",
     it.theme ? `<span class="tag tag--theme">${escapeHtml(it.theme)}</span>` : "",
