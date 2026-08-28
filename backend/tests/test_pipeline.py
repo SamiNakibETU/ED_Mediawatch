@@ -60,11 +60,11 @@ def _fake_stages(monkeypatch, stages):
     monkeypatch.setattr(stages_mod, "BY_NAME", {s.name: s for s in stages})
 
 
-def _run(tmp_path, monkeypatch, db_name, stages, check, **kw):
+def _run(tmp_path, monkeypatch, db_name, fake, check, **kw):
     monkeypatch.setenv("DATABASE_URL", f"sqlite+aiosqlite:///{tmp_path / db_name}")
     for c in _CACHES:
         c.cache_clear()
-    _fake_stages(monkeypatch, stages)
+    _fake_stages(monkeypatch, fake)
 
     async def go():
         await init_db()
@@ -157,3 +157,27 @@ def test_every_step_is_recorded(tmp_path, monkeypatch):
         assert steps[0].duration_s >= 0
 
     _run(tmp_path, monkeypatch, "trace.db", st, check)
+
+
+def test_only_runs_named_stages_without_dependencies(tmp_path, monkeypatch):
+    """`--only` : exécuter une étape seule quand ses dépendances viennent de tourner.
+
+    Sans cette option, demander l'extraction relance une heure de collecte
+    cadencée par le quota X — alors qu'elle vient de finir.
+    """
+    st = [_stage("collecte"), _stage("analyse", depends=("collecte",))]
+
+    def check(rep, runs, steps):
+        assert [s["stage"] for s in rep["steps"]] == ["analyse"]
+
+    _run(tmp_path, monkeypatch, "only.db", st, check, stages=["analyse"], only=True)
+
+
+def test_without_only_dependencies_are_pulled(tmp_path, monkeypatch):
+    """Le défaut reste sûr : les dépendances garantissent des données à jour."""
+    st = [_stage("collecte"), _stage("analyse", depends=("collecte",))]
+
+    def check(rep, runs, steps):
+        assert [s["stage"] for s in rep["steps"]] == ["collecte", "analyse"]
+
+    _run(tmp_path, monkeypatch, "deps.db", st, check, stages=["analyse"])

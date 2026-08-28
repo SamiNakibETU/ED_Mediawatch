@@ -65,6 +65,9 @@ async def recent_runs(
 @router.post("/run", dependencies=[Depends(require_token)])
 async def trigger_run(
     background: BackgroundTasks,
+    only: bool = Query(
+        False, description="N'exécuter que les étapes nommées, sans leurs dépendances"
+    ),
     scope: str = Query("free", pattern="^(free|full)$"),
     stage: list[str] | None = Query(None, description="Étapes ciblées (dépendances incluses)"),
 ) -> dict:
@@ -73,5 +76,6 @@ async def trigger_run(
     `scope=free` (défaut) n'exécute aucune étape payante : déclencher le
     pipeline ne doit jamais dépenser par accident.
     """
-    background.add_task(run_pipeline, stages=stage, scope=scope, trigger="manual")
+    background.add_task(run_pipeline, stages=stage, scope=scope,
+                        trigger="manual", only=only)
     return {"queued": True, "scope": scope, "stages": stage or "toutes"}

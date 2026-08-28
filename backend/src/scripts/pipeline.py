@@ -4,6 +4,7 @@
     python -m src.scripts.pipeline --full           # tout, y compris payant
     python -m src.scripts.pipeline judge            # cette étape + ses dépendances
     python -m src.scripts.pipeline --status         # l'entonnoir : où ça bloque
+    python -m src.scripts.pipeline embed --only     # cette étape SEULE (sans ses dépendances)
 """
 
 import asyncio
@@ -22,7 +23,7 @@ async def main() -> None:
         return
     scope = "full" if "--full" in args else "free"
     names = [a for a in args if not a.startswith("--")] or None
-    rep = await run_pipeline(stages=names, scope=scope)
+    rep = await run_pipeline(stages=names, scope=scope, only="--only" in args)
     print(f"\nRun #{rep['run_id']} — {rep['status']} · {rep['scope']} · ${rep['cost_usd']}")
     for s in rep["steps"]:
         mark = {"ok": "  ", "skipped": "· ", "failed": "!!", "budget_exceeded": "$$"}[s["status"]]

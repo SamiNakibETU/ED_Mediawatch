@@ -42,16 +42,26 @@ async def run_pipeline(
     stages: list[str] | None = None,
     scope: str = "free",
     trigger: str = "manual",
+    only: bool = False,
 ) -> dict:
     """Exécute le pipeline et renvoie le rapport.
 
+    `only=True` n'exécute que les étapes nommées, sans leurs dépendances.
     `scope="free"` n'exécute aucune étape payante — c'est le mode par défaut,
     et celui du scheduler : une passe automatique ne doit jamais dépenser sans
     qu'on l'ait décidé.
     """
     from src.services.analysis.llm_usage import BudgetExceeded
 
+    # `only` : exécuter EXACTEMENT les étapes nommées, sans tirer leurs
+    # dépendances. Utile quand on sait qu'elles viennent de tourner — demander
+    # l'extraction relance sinon une heure de collecte cadencée par le quota X.
+    # À manier en connaissance de cause : les dépendances existent pour garantir
+    # qu'une étape travaille sur des données à jour.
     ordered = resolve_order(stages)
+    if only and stages:
+        wanted = set(stages)
+        ordered = [s for s in ordered if s.name in wanted]
     if scope == "free":
         ordered = [s for s in ordered if s.cost == FREE]
 
