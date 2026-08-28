@@ -16,6 +16,11 @@ Trois usages de ces décisions, du moins au plus utile :
    prompt du juge. C'est de l'apprentissage réel, sans réentraînement : cheap,
    immédiat, et surtout AUDITABLE — on peut lire ce que le système a appris.
 
+Amorçage. Cette boucle n'ouvre qu'à partir de cinq décisions, et un observatoire
+qui démarre en a zéro : elle ne pouvait donc jamais partir. La doctrine écrite à
+la main (`doctrine.py`) fournit le plancher — règles éditoriales et cas d'école
+tranchés — et les décisions de la rédaction viennent l'affiner par-dessus.
+
 Choix assumé : on privilégie les exemples ÉCARTÉS. Un juge qui sur-détecte coûte
 la crédibilité du produit ; lui montrer ses faux positifs corrige plus que lui
 montrer ses réussites.
@@ -153,15 +158,24 @@ def render_examples(examples: list[dict]) -> str:
 
 
 async def judge_system_prompt(base: str) -> str:
-    """Consigne du juge, enrichie des décisions humaines s'il y en a assez.
+    """Consigne du juge : doctrine posée, puis décisions de la rédaction.
 
-    En dessous de quelques décisions, on n'apprend rien : deux exemples
-    orientent le modèle sans le corriger, et risquent d'ancrer un biais.
+    L'ordre compte. La DOCTRINE vient toujours — un observatoire qui démarre a
+    zéro décision humaine, donc zéro apprentissage, et personne ne relit cent
+    rapprochements d'un juge qui n'a rien appris. Le système attendait un
+    amorçage qui ne pouvait pas venir ; il part désormais instruit.
+
+    Les DÉCISIONS de la rédaction viennent après, et priment : elles sont plus
+    bas dans la consigne, donc plus proches de la tâche, et elles portent sur ce
+    corpus-ci. La doctrine est un plancher, pas un plafond.
     """
+    from src.services.analysis.doctrine import doctrine_block
+
+    prompt = f"{base}\n{doctrine_block()}"
     stats = await judge_precision()
     if not stats["enough_to_learn"]:
-        return base
+        return prompt
     block = render_examples(await few_shot_examples())
     if block:
         logger.info("learning.prompt_augmented", decided=stats["decided"])
-    return base + block
+    return prompt + block

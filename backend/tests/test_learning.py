@@ -121,14 +121,22 @@ def test_examples_favour_rejections(tmp_path, monkeypatch):
     _run(tmp_path, monkeypatch, "ex.db", decisions, check)
 
 
-def test_prompt_untouched_when_too_few_decisions(tmp_path, monkeypatch):
-    """Deux exemples orientent le modèle sans le corriger : ils ancreraient un
-    biais plutôt que de transmettre une doctrine."""
+def test_few_decisions_teach_nothing_but_doctrine_still_applies(tmp_path, monkeypatch):
+    """Deux exemples humains orientent le modèle sans le corriger : ils
+    ancreraient un biais plutôt que de transmettre une doctrine. Ils sont donc
+    écartés — mais la consigne n'est pas nue pour autant.
+
+    Ce test gardait auparavant le contraire (`prompt == base`), et c'était le
+    défaut : sous cinq décisions le juge partait SANS RIEN, et un observatoire
+    qui démarre a zéro décision. L'amorçage ne pouvait jamais venir."""
     decisions = [("confirmed", None, "llm_judge", 1), ("rejected", "autre", "llm_judge", 2)]
 
     async def check():
         base = "CONSIGNE DE BASE"
-        assert await judge_system_prompt(base) == base
+        prompt = await judge_system_prompt(base)
+        assert prompt.startswith(base)
+        assert "DOCTRINE DE L'OBSERVATOIRE" in prompt   # le plancher est posé
+        assert "DÉCISIONS DÉJÀ PRISES" not in prompt    # deux décisions n'enseignent rien
 
     _run(tmp_path, monkeypatch, "few.db", decisions, check)
 

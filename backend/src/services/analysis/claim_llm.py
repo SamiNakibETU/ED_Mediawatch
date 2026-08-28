@@ -451,7 +451,7 @@ class ClaimLLM:
             )
         return None
 
-    async def judge_contradiction(self, prompt: str):
+    async def judge_contradiction(self, prompt: str, system: str | None = None):
         """A4 — verdict structuré sur une paire de déclarations (juge sémantique).
 
         Le schéma et la consigne vivent dans `contradiction_judge` (import tardif :
@@ -463,9 +463,11 @@ class ClaimLLM:
         )
         from src.services.analysis.learning import judge_system_prompt
 
-        # Consigne enrichie des décisions humaines : le juge s'aligne sur ce que
-        # la rédaction a déjà tranché, au lieu de répéter ses erreurs.
-        system = await judge_system_prompt(_JUDGE_SYSTEM)
+        # Consigne : doctrine posée puis décisions humaines. `system` explicite
+        # n'est utilisé que par l'évaluation, qui doit pouvoir retirer les cas
+        # d'école pour ne pas corriger la copie avec le corrigé posé dessus.
+        if system is None:
+            system = await judge_system_prompt(_JUDGE_SYSTEM)
         prov = self._s.claim_tier2_provider
         if prov == "anthropic" and self._anthropic is not None:
             return await self._tier2_anthropic(

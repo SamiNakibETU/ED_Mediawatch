@@ -1208,38 +1208,20 @@ a:hover > .story__title, a:hover .story__title { color: var(--accent); }
   margin: var(--s2) 0 0;
 }
 
-/* ── Frise miniature ────────────────────────────────────────────────────────
- * Le « visuel » d'un sujet. Pas d'axe, pas d'étiquette : à cette taille ce
- * serait illisible, et la frise complète est à un clic. On garde la seule chose
- * qui se lit d'un coup d'œil — la répartition dans le temps, voix par voix. */
+/* ── Répartition de la parole ──────────────────────────────────────────────
+ * Remplace une frise miniature illisible. Des chiffres et des noms se lisent
+ * d'un coup ; des points sur une ligne de 200 px, non. */
 
-.mini { display: flex; flex-direction: column; gap: 5px; }
-.mini__row { display: grid; grid-template-columns: 7.5rem 1fr; gap: var(--s3); align-items: center; }
-.mini__who {
-  font-size: var(--t-micro); color: var(--muted);
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+.repart {
+  display: flex; flex-wrap: wrap; gap: var(--s1) var(--s4);
+  margin: 0; font-size: var(--t-small); color: var(--muted);
 }
-.mini__track {
-  position: relative; height: 12px;
-  background: linear-gradient(var(--rule), var(--rule)) center / 100% 1px no-repeat;
+.repart__x { white-space: nowrap; }
+.repart__x b {
+  font-family: var(--font-mono); font-weight: 500; color: var(--ink);
+  font-variant-numeric: tabular-nums; margin-right: 2px;
 }
-.mini__dot {
-  position: absolute; top: 50%; width: 6px; height: 6px; border-radius: 50%;
-  transform: translate(-50%, -50%);
-  background: var(--th, var(--accent));
-}
-.mini__scale {
-  display: flex; justify-content: space-between; gap: var(--s3);
-  font-family: var(--font-mono); font-size: var(--t-micro); color: var(--faint);
-  margin-top: var(--s2); padding-left: 8.25rem;
-}
-/* Sous une certaine largeur, deux bornes se touchent : mieux vaut n'en montrer
- * aucune qu'un mot collé à un autre. */
-@media (max-width: 1100px) { .story .mini__scale { display: none; } }
-@media (max-width: 520px) {
-  .mini__row { grid-template-columns: 5.5rem 1fr; }
-  .mini__scale { padding-left: 6.25rem; }
-}
+.repart__x--rest { color: var(--faint); }
 
 /* ── Classement ─────────────────────────────────────────────────────────────
  * Un rang numéroté dit ce qu'un tri implicite ne dit pas : que la liste est

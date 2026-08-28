@@ -6,7 +6,7 @@
 // et seulement là, qu'une confrontation ou un revirement peut exister.
 //
 // Helpers (common.js) : $, fetchJSON, escapeHtml, fmtNum, asDate, relTime,
-// themeLabel, themeVar, kicker, duree, periode, friseMini, ico.
+// themeLabel, themeVar, kicker, duree, periode, repartition, ico.
 
 const lien = (id) => `sujet.html?id=${id}`;
 
@@ -69,7 +69,11 @@ function story(s, big = false) {
       <p style="margin-top:var(--s4)">
         <a class="btn btn--sm" href="${lien(s.id)}">Voir qui a dit quoi ${ico("source")}</a></p>
     </div>
-    <div>${friseMini(s.frise, s.theme, big ? 5 : 3)}</div>
+    <div>
+      <p class="overline">${ico("locuteurs")} Répartition de la parole</p>
+      ${repartition(s.frise, s.n_claims)}
+      <p class="stamp" style="margin-top:var(--s3)">${escapeHtml(periode(s.first_seen, s.last_seen))}</p>
+    </div>
     <div class="story__aside">
       ${l ? `<p class="overline" style="margin-bottom:var(--s2)">${ico("temps")} Dernier propos</p>
         <p class="stamp"><span class="latest__when">${escapeHtml(relTime(l.published_at))}</span>

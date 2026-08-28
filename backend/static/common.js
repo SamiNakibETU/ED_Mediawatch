@@ -210,36 +210,41 @@ function mountMasthead() {
 }
 
 
-// ── Frise miniature ─────────────────────────────────────────────────────────
+// ── Répartition de la parole ────────────────────────────────────────────────
 //
-// Le « visuel » d'un sujet. Une une de presse s'appuie sur des photographies ;
-// un sujet n'en a pas, mais il a une FORME — trois voix qui se répondent sur
-// deux ans ne ressemblent pas à quinze propos tassés sur une semaine, et c'est
-// exactement la différence qu'on vient chercher.
+// Ce qui était ici : une frise miniature, des points sur une ligne, une par
+// locuteur. À 200 px de large, sans axe lisible et sans échelle sur mobile,
+// elle ne se lisait pas — c'était de la décoration qui se faisait passer pour
+// de la donnée. Un graphique qu'on ne peut pas lire vaut moins que rien : il
+// occupe la place ET fait croire qu'on a montré quelque chose.
 //
-// Pas d'axe daté ni de repère cliquable ici : à cette taille ce serait
-// illisible, et la frise complète est à un clic. On garde ce qui se lit d'un
-// coup d'œil, rien de plus.
+// L'information qu'elle portait — qui domine ce sujet — se dit en toutes
+// lettres, et se lit instantanément. La frise complète, elle, garde son sens
+// sur la page du sujet : elle y a un axe daté, des libellés et de la place.
 
-function friseMini(frise, theme, maxLanes = 3) {
-  const lanes = (frise || []).filter((f) => f.dates?.length).slice(0, maxLanes);
+function repartition(frise, total) {
+  const lanes = (frise || []).filter((f) => f.dates?.length);
   if (!lanes.length) return "";
 
-  const all = lanes.flatMap((l) => l.dates.map((d) => asDate(d).getTime()));
-  let t0 = Math.min(...all), t1 = Math.max(...all);
-  if (t0 === t1) { t0 -= 864e5; t1 += 864e5; }
-  const pos = (d) => (((asDate(d).getTime() - t0) / (t1 - t0)) * 100).toFixed(2);
-  const mois = (t) => new Date(t).toLocaleDateString("fr-FR", { month: "short", year: "2-digit" });
+  const compte = lanes.map((l) => ({ who: l.speaker, n: l.dates.length }))
+    .sort((a, b) => b.n - a.n);
+  const dit = compte.reduce((n, x) => n + x.n, 0);
+  const reste = Math.max(0, (total || dit) - dit);
 
-  return `<div class="mini" aria-hidden="true">
-    ${lanes.map((l) => `
-      <div class="mini__row">
-        <span class="mini__who">${escapeHtml(l.speaker)}</span>
-        <span class="mini__track">${l.dates.map((d) =>
-          `<span class="mini__dot" style="left:${pos(d)}%;--th:${themeVar(theme)}"></span>`).join("")}</span>
-      </div>`).join("")}
-    <div class="mini__scale"><span>${mois(t0)}</span><span>${mois(t1)}</span></div>
-  </div>`;
+  // Le nom de famille suffit dans une liste serrée ; le prénom se retrouve sur
+  // la page du sujet, où il y a la place de l'écrire. Mais seulement quand
+  // c'est un nom : couper « non attribué » en « attribué » inversait le sens —
+  // d'où le test sur la majuscule, qui distingue un patronyme d'une mention.
+  const court = (nom) => {
+    const mots = String(nom).trim().split(/\s+/);
+    if (mots.length < 2) return nom;
+    const suite = mots.slice(1).join(" ");
+    return /^[A-ZÀ-Þ]/.test(suite) ? suite : nom;
+  };
+
+  return `<p class="repart">${compte.slice(0, 4).map((x) =>
+      `<span class="repart__x"><b>${x.n}</b> ${escapeHtml(court(x.who))}</span>`).join("")}${
+    reste ? `<span class="repart__x repart__x--rest">+${reste} ailleurs</span>` : ""}</p>`;
 }
 
 // ── Arbre thématique (Thème → Sous-thème) ───────────────────────────────
