@@ -19,12 +19,31 @@ from src.services.collection.x_collector import run_collection
 logger = structlog.get_logger(__name__)
 
 
+async def _analysis_job() -> None:
+    """Passe d'analyse automatique, ÉTAPES GRATUITES uniquement.
+
+    Le corpus doit avancer tout seul (embeddings, sujets, détection) sans jamais
+    dépenser sans décision : les étapes payantes (L0, nommage, juge) se lancent
+    explicitement via POST /pipeline/run?scope=full.
+    """
+    from src.pipeline.runner import run_pipeline
+
+    await run_pipeline(scope="free", trigger="scheduled")
+
+
 async def _archive_press_job() -> None:
     await run_archival(kind="press", limit=get_settings().archive_batch_limit)
 
 
 async def _archive_x_job() -> None:
     await run_archival(kind="x", limit=get_settings().archive_batch_limit)
+
+
+def _offset(*, minutes: int):
+    """Premier tir décalé : ne pas lancer toutes les passes en même temps."""
+    from datetime import datetime, timedelta, timezone
+
+    return datetime.now(timezone.utc) + timedelta(minutes=minutes)
 
 
 def create_scheduler() -> AsyncIOScheduler:
@@ -46,6 +65,19 @@ def create_scheduler() -> AsyncIOScheduler:
         trigger=IntervalTrigger(hours=hours),
         id="press_collection",
         name="Continuous press collection",
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
+    )
+
+    # Analyse : décalée de 40 min après la collecte, pour travailler sur ce qui
+    # vient d'arriver. Étapes GRATUITES seulement — le corpus avance seul
+    # (embeddings, sujets, détection) sans jamais dépenser sans décision.
+    scheduler.add_job(
+        _analysis_job,
+        trigger=IntervalTrigger(hours=hours, start_date=_offset(minutes=40)),
+        id="analysis",
+        name="Passe d'analyse (étapes gratuites)",
         replace_existing=True,
         max_instances=1,
         coalesce=True,

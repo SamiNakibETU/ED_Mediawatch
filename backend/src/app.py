@@ -25,6 +25,7 @@ from src.routers import (
     llm_costs,
     meta,
     personalities,
+    pipeline_status,
     posts,
     referentiel,
 )
@@ -77,6 +78,7 @@ app.include_router(classification.router)
 app.include_router(compteur.router)
 app.include_router(contradictions.router)
 app.include_router(figure.router)
+app.include_router(pipeline_status.router)
 app.include_router(llm_costs.router)
 
 # Front statique servi par le backend (même origine → pas de CORS, une seule URL).
