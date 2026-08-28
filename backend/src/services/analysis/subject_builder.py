@@ -32,11 +32,13 @@ from src.database import get_session_factory
 from src.models.claim import Claim
 from src.models.subject import Subject
 from src.services.analysis.subject_clustering import (
+    ETA_ENTITY_OVERLAP,
     MERGE_COSINE,
     THETA_COSINE,
     cosine,
     entities_of,
-    jaccard,
+    idf_weights,
+    weighted_overlap,
 )
 
 logger = structlog.get_logger(__name__)
@@ -117,6 +119,12 @@ async def build_subjects(*, min_claims: int = 2, limit: int = 8000) -> dict:
     # Clustering incrémental : une orpheline rejoint le meilleur groupe assez
     # proche, ou EN OUVRE UN. Sans cette création, un corpus entièrement
     # antérieur à decl-v2 ne produit aucun sujet — il n'y a aucun germe.
+    # Rareté des entités, calculée UNE FOIS sur tout le corpus : c'est elle qui
+    # permet de rapprocher deux propos ne partageant qu'un terme, pourvu qu'il
+    # soit distinctif (« Fresnaye » vaut mieux que « national »).
+    all_entities = [entities_of(c.canonical or c.verbatim) for c in claims]
+    idf = idf_weights(all_entities)
+
     attached = seeded = 0
     for c in orphans:
         e = entities_of(c.canonical or c.verbatim)
@@ -124,7 +132,7 @@ async def build_subjects(*, min_claims: int = 2, limit: int = 8000) -> dict:
             continue  # ne nomme rien : ne fonde ni ne rejoint un sujet
         best, best_score = None, 0.0
         for s, cen in centroids.items():
-            if jaccard(e, ents[s]) < 0.20:
+            if weighted_overlap(e, ents[s], idf) < ETA_ENTITY_OVERLAP:
                 continue
             sc = cosine(c.embedding, cen)
             if sc > best_score:

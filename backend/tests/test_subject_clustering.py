@@ -172,3 +172,38 @@ def test_named_subjects_keep_their_label_on_rebuild(tmp_path, monkeypatch):
     finally:
         for c in caches:
             c.cache_clear()
+
+
+# ── Rareté des entités ───────────────────────────────────────────────────
+
+def test_rare_shared_entity_beats_jaccard():
+    """Trois propos sur l'arrivée de Virginie de la Fresnaye au RN ne
+    partageaient que « gaulle » sur six entités : Jaccard 0,09, sous le seuil,
+    donc trois sujets pour un seul objet. La rareté corrige ça."""
+    from src.services.analysis.subject_clustering import idf_weights, weighted_overlap
+
+    a = {"famille", "gaulle", "membre", "national", "rassemblement"}
+    b = {"fresnaye", "gaulle", "general", "maire", "national"}
+    banal = {"national", "rassemblement", "impots", "budget"}
+    idf = idf_weights([a, b] + [banal] * 40)
+
+    assert idf["gaulle"] > idf["national"] * 3        # rare vs omniprésent
+    assert weighted_overlap(a, b, idf) > jaccard(a, b)
+
+
+def test_overlap_normalised_by_the_shorter_side():
+    """Un propos court ne doit pas être rejeté parce que l'autre est long."""
+    from src.services.analysis.subject_clustering import idf_weights, weighted_overlap
+
+    court = {"fresnaye", "gaulle"}
+    long_ = {"fresnaye", "gaulle", "maire", "liste", "sarthe", "position", "figure"}
+    idf = idf_weights([court, long_] + [{"impots"}] * 30)
+    assert weighted_overlap(court, long_, idf) == 1.0   # le court est contenu
+
+
+def test_no_shared_entity_scores_zero():
+    from src.services.analysis.subject_clustering import idf_weights, weighted_overlap
+
+    idf = idf_weights([{"a", "b"}, {"c", "d"}])
+    assert weighted_overlap({"a", "b"}, {"c", "d"}, idf) == 0.0
+    assert weighted_overlap(set(), {"a"}, idf) == 0.0

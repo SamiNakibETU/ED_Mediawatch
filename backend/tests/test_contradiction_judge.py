@@ -196,3 +196,47 @@ def test_candidates_ranked_by_drift_potential_not_similarity():
     pairs = _candidate_pairs([redite_1, redite_2, drift_1, drift_2], set())
     first = pairs[0]
     assert first[0].speaker_name == "C" and first[1].speaker_name == "C"
+
+
+def test_subject_blocks_use_a_wider_window():
+    """Dans un sujet, l'objet commun est acquis : exiger une forte similarité
+    sélectionnerait les redites (82 « compatible » sur 100, mesuré)."""
+    a = _dated(1, [1.0, 0.0, 0.0], 1, speaker="A", post_id=1)
+    b = _dated(2, [0.5, 0.87, 0.0], 1, speaker="B", post_id=2)   # cos ≈ 0.5
+
+    # Hors sujet : trop dissemblables pour être rapprochées par la seule similarité.
+    assert _candidate_pairs([a, b], set()) == []
+    # Dans un sujet : légitimement candidates, c'est justement la différence
+    # qui peut porter une contradiction.
+    assert len(_candidate_pairs([a, b], set(), same_subject=True)) == 1
+
+
+def test_only_comparable_types_are_paired():
+    """Une position contredit une position ; une annonce ne contredit rien.
+
+    Mesuré : les meilleures paires candidates étaient « je répondrai le
+    2 septembre » contre « regardez mon entretien » — de la communication, qui
+    monopolisait le budget du juge sans rien pouvoir produire.
+    """
+    a = _dated(1, [1.0, 0.0, 0.0], 1, speaker="A", post_id=1)
+    b = _dated(2, [0.8, 0.6, 0.0], 1, speaker="B", post_id=2)
+    a.claim_type, b.claim_type = "normatif", "predictif"
+    assert _candidate_pairs([a, b], set(), same_subject=True) == []
+
+    b.claim_type = "normatif"
+    assert len(_candidate_pairs([a, b], set(), same_subject=True)) == 1
+
+
+def test_positions_and_numbers_rank_above_softer_types():
+    """Le budget part d'abord là où la contradiction est la plus défendable."""
+    from src.services.analysis.contradiction_judge import _drift_potential
+
+    def pair(t, gap):
+        x = _dated(1, [1.0, 0.0, 0.0], 1, speaker="A", post_id=1)
+        y = _dated(2, [0.8, 0.6, 0.0], gap, speaker="A", post_id=2)
+        x.claim_type = y.claim_type = t
+        return (x, y, 0.8)
+
+    ranked = sorted([pair("predictif", 28), pair("normatif", 28)],
+                    key=_drift_potential, reverse=True)
+    assert ranked[0][0].claim_type == "normatif"

@@ -55,12 +55,40 @@ JUDGE_PROMPT_VERSION = "judge-v1"
 SIM_MIN = 0.78
 SIM_MAX = 0.93
 
+# Fenêtre DANS un sujet. L'appartenance au même sujet garantit déjà l'objet
+# commun : exiger en plus une forte similarité sélectionne les redites — mesuré,
+# 82 « compatible » sur 100 paires. Ce qu'on cherche à l'intérieur d'un sujet,
+# c'est au contraire des propos DIFFÉRENTS sur la même chose. Le plancher ne
+# sert plus qu'à écarter le hors-sujet résiduel du regroupement, le plafond à
+# écarter la même phrase reformulée.
+SIM_MIN_SUBJECT = 0.40
+SIM_MAX_SUBJECT = 0.90
+
 # Écart minimal entre deux propos du MÊME locuteur pour parler de revirement.
 # Mesuré : le juge a qualifié « contradiction » deux déclarations extraites du
 # même post, le même jour — le L0 avait segmenté une phrase unique en deux
 # lectures qui se recouvrent. Se dédire suppose du temps ; en deçà, c'est du
 # bruit d'extraction, pas un changement de position.
 MIN_GAP_DAYS = 7
+
+# Types d'assertions CONFRONTABLES, et seulement entre eux : une position
+# contredit une position, un chiffre contredit un chiffre. Mesuré sur corpus :
+# les meilleures paires candidates étaient des annonces (« je répondrai le
+# 2 septembre », « regardez mon entretien ») — de la communication, jamais une
+# prise de position. Rien ne peut les contredire, et elles monopolisaient le
+# budget du juge.
+CONTRADICTABLE_TYPES = {
+    "normatif",             # ce qu'il FAUT faire — le revirement de position
+    "factuel_quantitatif",  # un chiffre — le désaccord mesurable
+    "factuel_qualitatif",   # un fait affirmé
+    "attributif",           # une responsabilité imputée
+    "predictif",            # ce qui VA arriver
+}
+
+# Priorité au jugement : c'est là que la contradiction est la plus nette et la
+# plus défendable devant un lecteur.
+TYPE_PRIORITY = {"normatif": 3, "factuel_quantitatif": 3,
+                 "attributif": 2, "factuel_qualitatif": 1, "predictif": 1}
 
 
 class ContradictionVerdict(BaseModel):
@@ -117,9 +145,16 @@ def _pair_prompt(a: Claim, b: Claim, referent_label: str) -> str:
 
 
 def _candidate_pairs(
-    claims: list[Claim], seen: set[tuple[int, int]]
+    claims: list[Claim], seen: set[tuple[int, int]], *, same_subject: bool = False
 ) -> list[tuple[Claim, Claim, float]]:
-    """Paires plausibles d'un même bloc : proches sans être des doublons."""
+    """Paires plausibles d'un même bloc.
+
+    `same_subject` : le bloc est un sujet constitué, donc l'objet commun est
+    acquis — la fenêtre s'élargit vers le bas pour laisser passer des propos
+    différents. Sinon (repli locuteur+thème), la similarité doit faire seule le
+    travail de rapprochement et reste exigeante.
+    """
+    lo, hi = (SIM_MIN_SUBJECT, SIM_MAX_SUBJECT) if same_subject else (SIM_MIN, SIM_MAX)
     out: list[tuple[Claim, Claim, float]] = []
     for i in range(len(claims)):
         for j in range(i + 1, len(claims)):
@@ -128,6 +163,10 @@ def _candidate_pairs(
                 continue
             # Un locuteur inconnu des deux côtés ne permet aucune imputation.
             if not (a.speaker_name or a.party) or not (b.speaker_name or b.party):
+                continue
+            # Types confrontables, et identiques : comparer une annonce à une
+            # position, ou un chiffre à un pronostic, ne peut rien produire.
+            if a.claim_type != b.claim_type or a.claim_type not in CONTRADICTABLE_TYPES:
                 continue
             # Même source = même propos : deux segmentations du L0 ne se
             # contredisent pas, elles se recouvrent.
@@ -139,7 +178,7 @@ def _candidate_pairs(
                 if abs((a.published_at - b.published_at).days) < MIN_GAP_DAYS:
                     continue
             sim = cosine(a.embedding, b.embedding)
-            if SIM_MIN <= sim <= SIM_MAX:
+            if lo <= sim <= hi:
                 out.append((a, b, sim))
     # Classement par POTENTIEL DE REVIREMENT, pas par similarité.
     #
@@ -151,8 +190,8 @@ def _candidate_pairs(
     return sorted(out, key=_drift_potential, reverse=True)
 
 
-def _drift_potential(pair: tuple[Claim, Claim, float]) -> tuple[int, float, float]:
-    """Clé de tri : (même locuteur, écart en jours, similarité).
+def _drift_potential(pair: tuple[Claim, Claim, float]) -> tuple[int, int, float, float]:
+    """Clé de tri : (même locuteur, type confrontable, écart, similarité).
 
     Le même locuteur d'abord — se dédire soi-même est le plus accablant et le
     plus défendable. Puis l'écart temporel : deux ans séparent une évolution
@@ -160,10 +199,11 @@ def _drift_potential(pair: tuple[Claim, Claim, float]) -> tuple[int, float, floa
     """
     a, b, sim = pair
     same_speaker = int(bool(a.speaker_name and a.speaker_name == b.speaker_name))
+    priority = TYPE_PRIORITY.get(a.claim_type, 0)
     gap = 0.0
     if a.published_at and b.published_at:
         gap = abs((a.published_at - b.published_at).days)
-    return (same_speaker, gap, sim)
+    return (same_speaker, priority, gap, sim)
 
 
 async def run_semantic_judging(max_pairs: int = 60) -> dict:
@@ -212,8 +252,10 @@ async def run_semantic_judging(max_pairs: int = 60) -> dict:
         blocks.setdefault(key, []).append(c)
 
     candidates: list[tuple[Claim, Claim, float]] = []
-    for block in blocks.values():
-        candidates.extend(_candidate_pairs(block, seen))
+    for key, block in blocks.items():
+        candidates.extend(
+            _candidate_pairs(block, seen, same_subject=key.startswith("subject:"))
+        )
     candidates.sort(key=lambda t: t[2], reverse=True)
     truncated = max(0, len(candidates) - max_pairs)
     candidates = candidates[:max_pairs]

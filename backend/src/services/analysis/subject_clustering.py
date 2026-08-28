@@ -40,8 +40,14 @@ logger = structlog.get_logger(__name__)
 
 # Hyperparamètres. Calibrés sur le corpus ED (embeddings MiniLM local 384d) —
 # à recalibrer si l'on change de modèle d'embeddings.
-THETA_COSINE = 0.72       # rattachement au centroïde d'un sujet existant
-ETA_ENTITY_JACCARD = 0.25 # recouvrement d'entités exigé
+# Rattachement au centroïde d'un sujet. CALIBRÉ sur le corpus (28/08) : parmi
+# les déclarations passant le gate d'entités, le meilleur cosinus plafonne à
+# 0,80 et sa médiane est 0,52 — un seuil à 0,72 n'attrapait que 2 candidats sur
+# 600. Le gate pondéré par la rareté fait déjà le tri sémantique ; le cosinus
+# n'est qu'une confirmation, il n'a pas à être le filtre principal.
+THETA_COSINE = 0.62
+ETA_ENTITY_OVERLAP = 0.20 # recouvrement d'entités pondéré par la rareté (IDF)
+ETA_ENTITY_JACCARD = 0.25 # ancien seuil Jaccard, conservé pour `assign_or_create`
 MIN_ENTITIES = 2          # en dessous, le propos est trop vague pour un sujet
 MERGE_COSINE = 0.88       # fusion de deux sujets devenus quasi identiques
 
@@ -120,6 +126,42 @@ def jaccard(a: set[str], b: set[str]) -> float:
     if not a or not b:
         return 0.0
     return len(a & b) / len(a | b)
+
+
+def idf_weights(entity_sets: Sequence[set[str]]) -> dict[str, float]:
+    """Rareté de chaque entité dans le corpus (IDF).
+
+    Toutes les entités ne se valent pas : « impôts » revient partout et ne
+    distingue rien, « Fresnaye » n'apparaît que dans les propos qui parlent
+    d'elle. Pondérer par la rareté est ce qui permet de rapprocher deux
+    déclarations qui ne partagent qu'un seul terme — pourvu qu'il soit parlant.
+    """
+    n = max(1, len(entity_sets))
+    df: dict[str, int] = {}
+    for s in entity_sets:
+        for e in s:
+            df[e] = df.get(e, 0) + 1
+    return {e: math.log(1 + n / (1 + c)) for e, c in df.items()}
+
+
+def weighted_overlap(a: set[str], b: set[str], idf: dict[str, float]) -> float:
+    """Recouvrement d'entités pondéré par leur rareté, dans [0, 1].
+
+    Remplace Jaccard, qui pénalise mécaniquement les ensembles fournis : trois
+    propos sur l'arrivée de Virginie de la Fresnaye au RN ne partageaient que
+    « gaulle » sur six entités chacun — Jaccard 0,09, sous le seuil, donc trois
+    sujets distincts pour un seul objet. Normalisé par le plus PETIT des deux
+    côtés : un propos court ne doit pas être rejeté parce que l'autre est long.
+    """
+    if not a or not b:
+        return 0.0
+    shared = sum(idf.get(e, 0.0) for e in a & b)
+    if shared == 0.0:
+        return 0.0
+    mass_a = sum(idf.get(e, 0.0) for e in a)
+    mass_b = sum(idf.get(e, 0.0) for e in b)
+    denom = min(mass_a, mass_b)
+    return shared / denom if denom else 0.0
 
 
 @dataclass
