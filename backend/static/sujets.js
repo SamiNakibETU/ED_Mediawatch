@@ -1,138 +1,78 @@
-// Sommaire des sujets : ce dont l'extrême droite parle, et qui dit quoi.
-// Helpers ($, fetchJSON, fmtNum, escapeHtml) : common.js.
+// Le sommaire des sujets.
+//
+// L'ordre n'est pas chronologique et ne doit pas l'être : un observatoire du
+// propos dans la durée qui trierait par date redeviendrait un fil. Les sujets
+// EXPLOITABLES viennent en tête — plusieurs voix, longue étendue — parce que ce
+// sont les seuls où une comparaison a quelque chose à révéler.
+//
+// Helpers (common.js) : $, fetchJSON, escapeHtml, fmtNum, themeLabel, themeVar,
+// kicker, duree.
 
 const SCOPES = [
-  { key: "confrontable", label: "Confrontables", conf: true },
+  { key: "conf", label: "Exploitables", conf: true },
   { key: "all", label: "Tous les sujets", conf: false },
 ];
 
-const state = { conf: true, q: "", items: [] };
-const TYPE_LABEL = {
-  normatif: "position", factuel_quantitatif: "chiffre", factuel_qualitatif: "fait",
-  predictif: "prédiction", attributif: "imputation",
-};
+const state = { conf: true, q: "", theme: null, themes: {} };
 
-const months = (a, b) => {
-  if (!a || !b) return 0;
-  return Math.max(0, Math.round((new Date(b) - new Date(a)) / (1000 * 60 * 60 * 24 * 30)));
-};
-
-const period = (s) => {
-  if (!s.first_seen || !s.last_seen) return "période inconnue";
-  const f = new Date(s.first_seen), l = new Date(s.last_seen);
-  const fmt = (d) => d.toLocaleDateString("fr-FR", { month: "short", year: "numeric" });
-  return f.getTime() === l.getTime() ? fmt(f) : `${fmt(f)} → ${fmt(l)}`;
-};
-
-function card(s) {
-  const m = months(s.first_seen, s.last_seen);
-  // L'étendue est le signal le plus utile : c'est elle qui dit si un revirement
-  // est seulement possible. On l'affiche, on ne la cache pas dans une métrique.
-  const depth = m >= 12 ? "ok" : m >= 3 ? "pending" : "alert";
-  const depthText = m >= 12 ? `${m} mois de recul`
-    : m >= 3 ? `${m} mois — recul court`
-    : "moins de 3 mois — trop court pour un revirement";
-
-  return `<article class="article enter" data-id="${s.id}">
-    <div class="article__head">
-      ${s.theme ? `<span class="tag tag--theme">${escapeHtml(s.theme)}</span>` : ""}
-      <span class="tag">${s.n_speakers} ${s.n_speakers > 1 ? "locuteurs" : "locuteur"}</span>
-      <span class="status status--${depth}">${depthText}</span>
+const tuile = (s) => `
+  <a class="tile" href="sujet.html?id=${s.id}">
+    ${kicker(s.theme)}
+    <h3 class="card-title">${escapeHtml(s.label)}</h3>
+    <div class="tile__foot">
+      <span class="stamp"><b>${s.n_speakers}</b> ${s.n_speakers > 1 ? "locuteurs" : "locuteur"}
+        · <b>${fmtNum(s.n_claims)}</b> propos</span>
       <span class="spacer"></span>
-      <span class="stamp">${period(s)}</span>
+      <span class="stamp">${duree(s.span_days)}</span>
     </div>
-    <h3 class="article__title">${escapeHtml(s.label)}</h3>
-    <div class="entry__foot">
-      <span class="stamp"><b>${fmtNum(s.n_claims)}</b> propos consignés</span>
-      ${s.status === "labelled" ? "" : '<span class="tag" title="Libellé provisoire, issu des mots du corpus">non nommé</span>'}
-      <span class="spacer"></span>
-      <span class="source-link">ouvrir ↗</span>
-    </div>
-  </article>`;
+    ${s.named ? "" : '<p class="stamp" style="margin-top:var(--s2)">libellé provisoire</p>'}
+  </a>`;
+
+function renderScope() {
+  $("#scope").innerHTML = SCOPES.map((s) =>
+    `<button class="filter" data-conf="${s.conf}" aria-pressed="${state.conf === s.conf}">${s.label}</button>`).join("");
+  document.querySelectorAll("#scope .filter").forEach((b) =>
+    (b.onclick = () => { state.conf = b.dataset.conf === "true"; renderScope(); load(); }));
 }
 
-let lastFocus = null;
-
-async function openSubject(id) {
-  const reader = $("#reader");
-  lastFocus = document.activeElement;
-  reader.hidden = false;
-  document.body.style.overflow = "hidden";
-  $("#readerClose").focus();
-  $("#readerTitle").textContent = "";
-  $("#readerSub").textContent = "";
-  $("#readerBody").innerHTML = '<p class="state">Chargement…</p>';
-
-  try {
-    const d = await fetchJSON(`/subjects/${id}`);
-    const s = d.subject;
-    $("#readerMeta").textContent = s.theme || "sans thème";
-    $("#readerTitle").textContent = s.label;
-    $("#readerSub").textContent =
-      `${fmtNum(s.n_claims)} propos · ${s.n_speakers} locuteurs · ${period(s)}`;
-
-    // Groupé par locuteur : sur un sujet, la lecture utile est « qui défend
-    // quoi », et comment chacun évolue.
-    const blocks = Object.entries(d.by_speaker || {})
-      .sort((a, b) => b[1].length - a[1].length)
-      .map(([who, claims]) => `
-        <section style="margin-top:var(--s6)">
-          <p class="section-label">${escapeHtml(who)} · ${claims.length} propos</p>
-          <div class="register">
-            ${claims.map((c) => `
-              <article class="entry" style="grid-template-columns:5rem 1fr;padding:var(--s4) 0">
-                <p class="stamp" style="padding-top:2px">${
-                  c.published_at ? new Date(c.published_at).toLocaleDateString("fr-FR",
-                    { day: "numeric", month: "short", year: "2-digit" }) : "—"}</p>
-                <div>
-                  ${c.qty_value != null
-                    ? `<p class="claim__value">${c.qty_value}${c.qty_unit ? " " + escapeHtml(c.qty_unit) : ""}</p>` : ""}
-                  <p class="prose" style="margin-top:0">${escapeHtml(c.text || "")}</p>
-                  <div class="entry__foot">
-                    <span class="tag">${TYPE_LABEL[c.claim_type] || escapeHtml(c.claim_type || "")}</span>
-                    <span class="spacer"></span>
-                    ${c.source_url
-                      ? `<a class="source-link" href="${c.source_url}" target="_blank" rel="noopener">source ↗</a>`
-                      : '<span class="stamp">source non résolue</span>'}
-                  </div>
-                </div>
-              </article>`).join("")}
-          </div>
-        </section>`).join("");
-
-    $("#readerBody").innerHTML = blocks || '<p class="state">Aucun propos rattaché.</p>';
-  } catch (e) {
-    $("#readerBody").innerHTML =
-      `<p class="state state--error">Le sujet n’a pas pu être chargé (${e.message}).</p>`;
-  }
-}
-
-function closeReader() {
-  $("#reader").hidden = true;
-  document.body.style.overflow = "";
-  lastFocus?.focus();
+function renderThemes() {
+  const rows = Object.entries(state.themes).sort((a, b) => b[1] - a[1]);
+  $("#themes").innerHTML =
+    `<button class="filter" data-theme="" aria-pressed="${!state.theme}">Tous les thèmes</button>` +
+    rows.map(([t, n]) =>
+      `<button class="filter" data-theme="${escapeHtml(t)}" aria-pressed="${state.theme === t}"
+         style="--th:${themeVar(t)}">${escapeHtml(themeLabel(t))}<span class="count">${n}</span></button>`).join("");
+  document.querySelectorAll("#themes .filter").forEach((b) =>
+    (b.onclick = () => { state.theme = b.dataset.theme || null; renderThemes(); load(); }));
 }
 
 async function load() {
   const sentinel = $("#sentinel");
   sentinel.className = "state";
   sentinel.textContent = "Chargement…";
-  const params = new URLSearchParams({ limit: 120 });
-  if (state.conf) params.set("confrontable", "true");
-  if (state.q.trim()) params.set("q", state.q.trim());
+
+  const p = new URLSearchParams({ limit: 120 });
+  if (state.conf) p.set("confrontable", "true");
+  if (state.q.trim()) p.set("q", state.q.trim());
+  if (state.theme) p.set("theme", state.theme);
 
   try {
-    const data = await fetchJSON(`/subjects?${params}`);
-    state.items = data.items || [];
-    $("#list").innerHTML = state.items.length
-      ? `<div class="register">${state.items.map(card).join("")}</div>` : "";
-    $("#stats").innerHTML = `<strong>${fmtNum(data.total ?? state.items.length)}</strong> sujets`;
-    sentinel.innerHTML = state.items.length
-      ? `fin du sommaire · ${fmtNum(state.items.length)} sujets affichés`
+    const data = await fetchJSON(`/subjects?${p}`);
+    const items = data.items || [];
+    if (!Object.keys(state.themes).length) {
+      state.themes = data.themes || {};
+      renderThemes();
+    }
+    $("#list").innerHTML = items.length ? `<div class="tiles">${items.map(tuile).join("")}</div>` : "";
+    $("#bandTitle").textContent = state.conf ? "Sujets exploitables" : "Tous les sujets";
+    $("#count").innerHTML = `<strong>${fmtNum(items.length)}</strong> sujets`;
+    $("#stats").innerHTML = `<strong>${fmtNum(items.length)}</strong> sujets`;
+    sentinel.innerHTML = items.length
+      ? `fin du sommaire · ${fmtNum(items.length)} sujets`
       : `<span class="state__title">Aucun sujet</span><span class="state__hint">${
           state.conf
-            ? "Aucun sujet ne réunit encore plusieurs locuteurs. Affiche tous les sujets, ou vois où en est la chaîne dans l’<a class='source-link' href='atelier.html'>Atelier</a>."
-            : "Le regroupement n’a pas encore produit de sujet. L’<a class='source-link' href='atelier.html'>Atelier</a> dit à quel étage la chaîne s’arrête."
+            ? "Aucun sujet ne réunit encore plusieurs locuteurs sur ce filtre. Affiche tous les sujets, ou vois où en est la chaîne dans <a class='source-link' href='atelier.html'>l’atelier</a>."
+            : "Le regroupement n’a pas encore produit de sujet ici. <a class='source-link' href='atelier.html'>L’atelier</a> dit à quel étage la chaîne s’arrête."
         }</span>`;
   } catch (e) {
     sentinel.className = "state state--error";
@@ -140,28 +80,13 @@ async function load() {
   }
 }
 
-function renderFilters() {
-  $("#scopeFilters").innerHTML = SCOPES.map((s) =>
-    `<button class="filter" data-conf="${s.conf}" aria-pressed="${state.conf === s.conf}">${s.label}</button>`).join("");
-  document.querySelectorAll("#scopeFilters .filter").forEach((b) =>
-    b.onclick = () => { state.conf = b.dataset.conf === "true"; renderFilters(); load(); });
-}
-
-$("#list").addEventListener("click", (e) => {
-  const art = e.target.closest("article[data-id]");
-  if (art) openSubject(art.dataset.id);
-});
-$("#readerClose").onclick = closeReader;
-$("#readerBackdrop").onclick = closeReader;
-document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && !$("#reader").hidden) closeReader();
-});
-
 let timer;
-$("#subjSearch").oninput = (e) => {
+$("#q").oninput = (e) => {
   clearTimeout(timer); state.q = e.target.value;
   timer = setTimeout(load, 250);
 };
 
-renderFilters();
+// Le thème peut arriver par l'URL : la une renvoie ici avec un thème choisi.
+state.theme = new URLSearchParams(location.search).get("theme");
+renderScope();
 load();

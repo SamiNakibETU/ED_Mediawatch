@@ -15,38 +15,26 @@
 <body data-page="sujets" data-tagline="Ce dont ils parlent, et qui dit quoi">
   <header id="masthead"></header>
 
-  <div class="controls">
-    <div class="filters" id="scopeFilters" role="group" aria-label="Portée"></div>
-    <div class="spacer"></div>
-    <label class="sr-only" for="subjSearch">Chercher un sujet</label>
-    <input id="subjSearch" class="field" type="search" placeholder="Chercher un sujet…" style="max-width:22rem" />
-  </div>
+  <div class="wrap" style="padding-top:var(--s6);padding-bottom:var(--s8)">
+    <p class="dek" style="max-width:44rem;margin-top:0">
+      Un sujet est un objet de débat précis — « la hausse des impôts », pas « économie ».
+      Les <strong>exploitables</strong> viennent en tête&nbsp;: plusieurs voix s’y expriment et ils
+      courent sur la durée. C’est là qu’une confrontation ou un revirement peut exister.
+    </p>
 
-  <div class="layout" style="grid-template-columns:1fr">
-    <main>
-      <p class="lede">Un sujet est un objet de débat précis — « la hausse des impôts », pas « économie ».
-        Les sujets <strong>exploitables</strong> viennent en tête : plusieurs voix s’y expriment et ils courent
-        sur la durée. C’est là qu’une confrontation ou un revirement peut exister.</p>
-      <div id="list"></div>
-      <p class="state" id="sentinel"></p>
-    </main>
-  </div>
+    <div class="controls" style="padding-left:0;padding-right:0;margin-top:var(--s6)">
+      <div class="filters" id="scope" role="group" aria-label="Portée"></div>
+      <div class="spacer"></div>
+      <label class="sr-only" for="q">Chercher un sujet</label>
+      <input id="q" class="field" type="search" style="max-width:22rem" placeholder="Chercher un sujet…" />
+    </div>
 
-  <!-- Panneau de lecture d'un sujet : qui dit quoi, dans le temps -->
-  <div class="reader" id="reader" hidden>
-    <div class="reader__scrim" id="readerBackdrop"></div>
-    <aside class="reader__panel" role="dialog" aria-modal="true" aria-labelledby="readerTitle">
-      <div class="reader__bar">
-        <p class="stamp" id="readerMeta"></p>
-        <div class="spacer"></div>
-        <button class="reader__close" id="readerClose" aria-label="Fermer">&times;</button>
-      </div>
-      <article class="reader__body">
-        <h1 id="readerTitle"></h1>
-        <p class="lede" id="readerSub" style="margin-top:var(--s3)"></p>
-        <div id="readerBody"></div>
-      </article>
-    </aside>
+    <div class="filters" id="themes" style="margin-top:var(--s3)"></div>
+
+    <div class="band" style="margin-top:var(--s6)"><h2 id="bandTitle">Sujets</h2>
+      <span class="spacer"></span><p id="count"></p></div>
+    <div id="list"></div>
+    <p class="state" id="sentinel"></p>
   </div>
 
   <script src="common.js"></script>

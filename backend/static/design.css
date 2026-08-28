@@ -297,7 +297,11 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 .filters { display: flex; gap: var(--s1); flex-wrap: wrap; align-items: center; }
 
 /* Filtre = texte + soulignement. Pas de pastille colorée. */
+/* `.filter` s'emploie en <button> comme en <a> : la une renvoie vers un thème
+ * par un lien, et un lien qui ne ressemble pas au filtre d'à côté sème le
+ * doute sur ce qu'il fait. */
 .filter {
+  display: inline-flex; align-items: center; gap: var(--s1);
   font-size: var(--t-small);
   color: var(--muted);
   padding: var(--s1) var(--s2);
@@ -354,6 +358,10 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   .layout { grid-template-columns: 1fr; gap: var(--s5); }
   .rail { display: none; }
 }
+
+/* Rail sans contenu : la lecture reprend toute la largeur. */
+.layout--norail { grid-template-columns: 1fr; }
+.rail[hidden] { display: none; }
 
 /* Un élément de grille a `min-width: auto` : sa piste s'élargit jusqu'à la
  * largeur mini de son contenu, débordant la page sans qu'aucune règle ne le
@@ -669,6 +677,21 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 .plot__dot--figure { fill: var(--grp-figure); }
 .plot__dot--autre { fill: var(--muted); }
 
+/* Révéler la suite : un bouton qui annonce ce qu'il reste, pas un « voir plus »
+ * qui ne dit rien. Une fiche de 1 400 propos rendue d'un bloc faisait 17 000 px
+ * de haut — on ne s'y repère pas, et le navigateur peine. */
+.more {
+  display: block; width: 100%;
+  margin-top: var(--s5); padding: var(--s3);
+  font-family: var(--font-ui); font-size: var(--t-small);
+  color: var(--muted);
+  border: 1px solid var(--rule); border-radius: var(--r-soft);
+  background: var(--surface);
+  transition: color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
+}
+.more:hover { color: var(--ink); border-color: var(--rule-strong); }
+.more b { font-family: var(--font-mono); font-weight: 500; color: var(--ink); }
+
 /* ── États ───────────────────────────────────────────────────────────── */
 
 .state {
@@ -897,3 +920,254 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   display: grid; grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
   gap: var(--s7); align-items: start;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * COUCHE ÉDITORIALE
+ *
+ * Le produit n'est pas un fil de publications : c'est un observatoire du
+ * propos dans la durée — qui a dit quoi, sur quoi, quand, et comment ça a
+ * bougé. Le fil X et la revue de presse sont le FONDS ; le sujet est la
+ * VITRINE. Cette couche donne au sujet la hiérarchie d'un article de presse
+ * (surtitre, titre, chapô) plutôt que celle d'une ligne de tableau.
+ *
+ * Références assumées : ProPublica pour l'autorité du titre sérif et la règle
+ * qui structure ; Fast Company pour le surtitre coloré qui range l'objet avant
+ * qu'on le lise ; Bloomberg pour la densité en grille et l'imbrication des
+ * éléments liés.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* Échelle d'affichage : fluide, pour que le titre reste un titre du
+   * téléphone au grand écran sans point de rupture arbitraire. */
+  --t-hero: clamp(2.125rem, 4.6vw, 3.375rem);
+  --t-lead: clamp(1.5rem, 2.5vw, 2rem);
+  --t-card: 1.3125rem;
+
+  /* Familles thématiques. Ce ne sont pas quinze couleurs — ce serait un
+   * arc-en-ciel illisible — mais six familles de sujets, ce qui est une vraie
+   * information : on voit d'un coup si un locuteur ne parle que de sécurité. */
+  --th-eco:    #1F3A5F;   /* économie, pouvoir d'achat */
+  --th-secu:   #8C3A2B;   /* immigration, sécurité, justice */
+  --th-intl:   #2C5F5B;   /* international */
+  --th-social: #6B5A2B;   /* social, santé, logement, éducation */
+  --th-envt:   #3F6B4F;   /* écologie, énergie, agriculture */
+  --th-inst:   #5B4468;   /* institutions, culture et identité */
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --th-eco: #93AECE; --th-secu: #D08A79; --th-intl: #7FB3AD;
+    --th-social: #C4AE72; --th-envt: #86B394; --th-inst: #B294C4;
+  }
+}
+:root[data-theme="dark"] {
+  --th-eco: #93AECE; --th-secu: #D08A79; --th-intl: #7FB3AD;
+  --th-social: #C4AE72; --th-envt: #86B394; --th-inst: #B294C4;
+}
+
+/* ── Surtitre : ranger l'objet avant de le lire ──────────────────────────── */
+
+.kicker {
+  display: inline-flex; align-items: center; gap: var(--s2);
+  font-family: var(--font-ui);
+  font-size: var(--t-micro);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--th, var(--accent));
+}
+.kicker::before {
+  content: ""; width: 8px; height: 8px; flex: none;
+  background: var(--th, var(--accent));
+}
+.kicker__sep { color: var(--faint); font-weight: 400; letter-spacing: 0.04em; }
+
+/* ── Titres ─────────────────────────────────────────────────────────────── */
+
+.hero-title {
+  font-family: var(--font-display);
+  font-size: var(--t-hero);
+  font-weight: 600;
+  line-height: 1.04;
+  letter-spacing: -0.02em;
+  margin: var(--s3) 0 0;
+  text-wrap: balance;
+}
+.lead-title {
+  font-family: var(--font-display);
+  font-size: var(--t-lead);
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.015em;
+  margin: var(--s2) 0 0;
+  text-wrap: balance;
+}
+.card-title {
+  font-family: var(--font-display);
+  font-size: var(--t-card);
+  font-weight: 500;
+  line-height: 1.18;
+  letter-spacing: -0.01em;
+  margin: var(--s2) 0 0;
+  text-wrap: balance;
+  transition: color var(--dur-fast) var(--ease);
+}
+
+/* Chapô : ce qui est en jeu, en une phrase. */
+.dek {
+  font-family: var(--font-ui);
+  font-size: var(--t-ui);
+  line-height: var(--lh-ui);
+  color: var(--muted);
+  margin: var(--s3) 0 0;
+  max-width: var(--measure-read);
+}
+
+/* ── Grilles éditoriales ────────────────────────────────────────────────── */
+
+.wrap { max-width: 76rem; margin: 0 auto; padding: 0 var(--s4); }
+
+.split {
+  display: grid;
+  grid-template-columns: minmax(0, 2.1fr) minmax(0, 1fr);
+  gap: var(--s7);
+  align-items: start;
+}
+@media (max-width: 900px) { .split { grid-template-columns: 1fr; gap: var(--s6); } }
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+  border-top: 1px solid var(--rule-strong);
+}
+/* Filets internes seulement : la grille se lit comme un tableau, sans cadre
+ * autour de chaque case. Une case ne s'entoure pas, elle se sépare. */
+.tile {
+  display: flex; flex-direction: column;
+  padding: var(--s5) var(--s5) var(--s5) 0;
+  border-bottom: 1px solid var(--rule);
+  text-align: left;
+  min-width: 0;
+}
+.tiles > .tile + .tile { border-left: 1px solid var(--rule); padding-left: var(--s5); }
+@media (max-width: 640px) {
+  .tiles > .tile + .tile { border-left: none; padding-left: 0; }
+}
+.tile:hover .card-title { color: var(--accent); }
+.tile__foot {
+  margin-top: auto; padding-top: var(--s4);
+  display: flex; align-items: baseline; gap: var(--s3); flex-wrap: wrap;
+}
+
+/* Colonne d'appoint : dense, hiérarchisée par le filet. */
+.aside-block { border-top: 2px solid var(--ink); padding-top: var(--s3); }
+.aside-block + .aside-block { margin-top: var(--s7); }
+.aside-list { border-top: 1px solid var(--rule); margin-top: var(--s3); }
+.aside-item {
+  display: block; width: 100%; text-align: left;
+  padding: var(--s3) 0; border-bottom: 1px solid var(--rule);
+}
+.aside-item:hover .aside-item__t { color: var(--accent); }
+.aside-item__t {
+  font-family: var(--font-display); font-size: var(--t-ui);
+  line-height: 1.25; color: var(--ink);
+  transition: color var(--dur-fast) var(--ease);
+}
+.aside-item__m {
+  font-family: var(--font-mono); font-size: var(--t-micro);
+  color: var(--muted); margin-top: var(--s1);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── La frise : qui a dit quoi, quand ───────────────────────────────────────
+ *
+ * C'est LA vue du produit. Une ligne par locuteur, un repère par prise de
+ * position, un axe de temps partagé : la comparaison se fait à l'œil, sans
+ * qu'on ait à la commenter. Les positions d'un même locuteur alignées montrent
+ * sa constance ; l'écart entre deux lignes montre le désaccord. */
+
+.frise { margin-top: var(--s5); }
+
+.frise__head {
+  display: grid; grid-template-columns: 11rem 1fr; gap: var(--s4);
+  align-items: end; padding-bottom: var(--s2);
+  border-bottom: 1px solid var(--rule-strong);
+}
+.frise__scale { position: relative; height: 1.1rem; }
+.frise__tick {
+  position: absolute; bottom: 0; transform: translateX(-50%);
+  font-family: var(--font-mono); font-size: var(--t-micro);
+  color: var(--faint); white-space: nowrap;
+}
+
+.frise__lane {
+  display: grid; grid-template-columns: 11rem 1fr; gap: var(--s4);
+  align-items: center;
+  padding: var(--s3) 0; border-bottom: 1px solid var(--rule);
+}
+.frise__who {
+  font-size: var(--t-small); font-weight: 600; color: var(--ink);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.frise__who span {
+  font-family: var(--font-mono); font-size: var(--t-micro);
+  font-weight: 400; color: var(--faint); margin-left: var(--s2);
+}
+.frise__track {
+  position: relative; height: 1.75rem;
+  background: linear-gradient(var(--rule), var(--rule)) center / 100% 1px no-repeat;
+}
+.frise__dot {
+  position: absolute; top: 50%; transform: translate(-50%, -50%);
+  width: 11px; height: 11px; border-radius: 50%;
+  background: var(--th, var(--accent));
+  border: 2px solid var(--surface);
+  cursor: pointer; padding: 0;
+  transition: width var(--dur-fast) var(--ease), height var(--dur-fast) var(--ease);
+}
+.frise__dot:hover, .frise__dot:focus-visible { width: 17px; height: 17px; }
+.frise__dot[aria-pressed="true"] { width: 17px; height: 17px; border-color: var(--ink); }
+
+@media (max-width: 640px) {
+  .frise__lane { grid-template-columns: 1fr; gap: var(--s2); }
+  .frise__head { display: none; }
+}
+
+/* Extrait appelé par un repère de la frise. */
+.peek {
+  margin-top: var(--s4); padding: var(--s4);
+  border-left: 2px solid var(--th, var(--accent));
+  background: var(--surface);
+}
+.peek[hidden] { display: none; }
+.peek__meta {
+  display: flex; align-items: baseline; gap: var(--s3); flex-wrap: wrap;
+  margin-bottom: var(--s2);
+}
+
+/* ── Position : une prise de parole datée, citée, sourcée ───────────────── */
+
+.position { padding: var(--s4) 0; border-bottom: 1px solid var(--rule); }
+.position__head {
+  display: flex; align-items: baseline; gap: var(--s3); flex-wrap: wrap;
+  margin-bottom: var(--s2);
+}
+.position__q {
+  font-family: var(--font-display);
+  font-size: var(--t-read); line-height: var(--lh-read);
+  color: var(--ink); max-width: var(--measure-read); margin: 0;
+}
+.position--marked { background: var(--accent-soft); }
+
+/* ── Bandeau de section ─────────────────────────────────────────────────── */
+
+.band {
+  display: flex; align-items: baseline; gap: var(--s3); flex-wrap: wrap;
+  border-bottom: 2px solid var(--ink);
+  padding-bottom: var(--s2); margin: var(--s8) 0 0;
+}
+.band h2 {
+  font-family: var(--font-display); font-size: var(--t-title);
+  font-weight: 600; margin: 0; letter-spacing: -0.01em;
+}
+.band p { font-size: var(--t-small); color: var(--muted); margin: 0; }

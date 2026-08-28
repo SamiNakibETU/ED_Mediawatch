@@ -9,7 +9,12 @@ const TYPE_LABEL = {
 const MONTHS = ["janv.", "févr.", "mars", "avril", "mai", "juin",
                 "juil.", "août", "sept.", "oct.", "nov.", "déc."];
 
-const state = { id: null, theme: null, figures: [] };
+// Une fiche peut porter 1 400 propos. Tout rendre d'un bloc donnait 17 000 px
+// de page : on ne s'y repère pas, et le navigateur peine. On en charge une
+// tranche, et on annonce combien il en reste.
+const PAGE = 60;
+
+const state = { id: null, theme: null, figures: [], data: null, loading: false };
 
 const monthLabel = (key) => {
   if (key === "date-inconnue") return "Date inconnue";
@@ -42,13 +47,13 @@ function themeFilters(byTheme) {
     <button class="filter" data-theme="" aria-pressed="${!state.theme}">Tous les thèmes</button>
     ${entries.map(([t, n]) =>
       `<button class="filter" data-theme="${escapeHtml(t)}" aria-pressed="${state.theme === t}">
-        ${escapeHtml(t)}<span class="count">${n}</span></button>`).join("")}
+        ${escapeHtml(themeLabel(t))}<span class="count">${n}</span></button>`).join("")}
   </div>`;
 }
 
 function claimRow(c) {
   const date = c.published_at
-    ? new Date(c.published_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })
+    ? asDate(c.published_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })
     : "—";
   const value = c.qty_value != null ? `${c.qty_value}${c.qty_unit ? " " + c.qty_unit : ""}` : "";
   return `<article class="entry" style="grid-template-columns:4.5rem 1fr;padding:var(--s4) 0">
@@ -58,7 +63,7 @@ function claimRow(c) {
       <p class="prose" style="margin-top:0">${escapeHtml(c.canonical || c.verbatim)}</p>
       <div class="entry__foot">
         <span class="tag">${TYPE_LABEL[c.claim_type] || escapeHtml(c.claim_type)}</span>
-        ${c.theme ? `<span class="tag tag--theme">${escapeHtml(c.theme)}</span>` : ""}
+        ${c.theme ? `<span class="tag tag--theme">${escapeHtml(themeLabel(c.theme))}</span>` : ""}
         <span class="tag">${c.platform === "x" ? "X" : "presse"}</span>
         <span class="spacer"></span>
         ${c.source_url ? `<a class="source-link" href="${c.source_url}" target="_blank" rel="noopener">source ↗</a>`
@@ -68,14 +73,84 @@ function claimRow(c) {
   </article>`;
 }
 
+// Fusion de deux pages de chronologie : une page peut commencer au milieu d'un
+// mois, et deux blocs « août 2026 » l'un sous l'autre donneraient l'impression
+// d'un trou dans le relevé.
+function mergeTimeline(into, incoming) {
+  const byMonth = new Map(into.map((m) => [m.month, m]));
+  for (const m of incoming) {
+    const cur = byMonth.get(m.month);
+    if (cur) cur.claims.push(...m.claims);
+    else { byMonth.set(m.month, m); into.push(m); }
+  }
+  into.sort((a, b) => (a.month < b.month ? 1 : -1));
+  return into;
+}
+
+function timelineHtml(d) {
+  const blocks = d.timeline.map((m) => `
+    <h2 style="font-size:var(--t-title);margin:var(--s6) 0 var(--s2)">${monthLabel(m.month)}</h2>
+    <div class="register">${m.claims.map(claimRow).join("")}</div>`);
+
+  const shown = d.timeline.reduce((n, m) => n + m.claims.length, 0);
+  const left = Math.max(0, (d.timeline_total || shown) - shown);
+  // Le bouton dit combien il reste : « voir plus » n'apprend rien sur ce
+  // qu'on s'apprête à charger.
+  return blocks.join("") + (left
+    ? `<button class="more" id="more">Afficher les <b>${fmtNum(left)}</b> propos plus anciens</button>`
+    : "");
+}
+
+function renderTimeline() {
+  const host = $("#timeline");
+  if (!host || !state.data) return;
+  host.innerHTML = state.data.timeline.length
+    ? timelineHtml(state.data)
+    : `<p class="state"><span class="state__title">Aucun propos consigné</span>
+       <span class="state__hint">Rien n’a encore été extrait pour cette figure. La collecte a
+       peut-être échoué (compte renommé, homonyme) — voir la santé des collecteurs.</span></p>`;
+  const more = $("#more");
+  if (more) more.onclick = loadMore;
+}
+
+async function loadMore() {
+  if (state.loading || !state.data) return;
+  state.loading = true;
+  const btn = $("#more");
+  const shown = state.data.timeline.reduce((n, m) => n + m.claims.length, 0);
+  if (btn) btn.textContent = "Chargement…";
+  try {
+    const next = await fetchJSON(`/figures/${state.id}${query(shown)}`);
+    mergeTimeline(state.data.timeline, next.timeline);
+    state.data.timeline_total = next.timeline_total;
+    renderTimeline();
+    $("#more")?.scrollIntoView({ block: "center" });
+  } catch (e) {
+    if (btn) btn.textContent = `Chargement impossible (${e.message})`;
+  } finally {
+    state.loading = false;
+  }
+}
+
+// De quoi parle-t-elle, en une phrase ? Trois thèmes suffisent : au-delà on
+// recopie un tableau, on ne résume plus rien.
+function dominantThemes(byTheme) {
+  const top = Object.entries(byTheme || {})
+    .sort((a, b) => b[1] - a[1]).slice(0, 3).map(([t]) => themeLabel(t));
+  if (top.length < 2) return "";
+  const last = top.pop();
+  return `Parle surtout ${escapeHtml(de(top[0]))}${
+    top.length > 1 ? ", " + escapeHtml(de(top[1])) : ""} et ${escapeHtml(de(last))}.`;
+}
+
 function render(d) {
   const f = d.figure, s = d.stats;
   const color = `var(${GROUP_VAR[f.group_code] || "--muted"})`;
   const span = s.first_seen && s.last_seen
-    ? `${new Date(s.first_seen).toLocaleDateString("fr-FR")} → ${new Date(s.last_seen).toLocaleDateString("fr-FR")}`
+    ? `${asDate(s.first_seen).toLocaleDateString("fr-FR")} → ${asDate(s.last_seen).toLocaleDateString("fr-FR")}`
     : "période inconnue";
   const months = Math.max(1, Math.round(
-    (new Date(s.last_seen) - new Date(s.first_seen)) / (1000 * 60 * 60 * 24 * 30)));
+    (asDate(s.last_seen) - asDate(s.first_seen)) / (1000 * 60 * 60 * 24 * 30)));
 
   // Une profondeur courte doit être DITE : sans elle, l'absence de revirement
   // n'est pas un résultat, c'est une limite du corpus.
@@ -90,7 +165,8 @@ function render(d) {
     <h1>${escapeHtml(f.full_name)}</h1>
     <div class="entry__foot" style="margin-top:var(--s2)">
       <span class="tag tag--group" style="--grp-color:${color}">${escapeHtml(f.group_code)}</span>
-      ${f.famille ? `<span class="tag">${escapeHtml(f.famille)}</span>` : ""}
+      ${f.famille && f.famille.toLowerCase() !== (f.group_code || "").toLowerCase()
+        ? `<span class="tag">${escapeHtml(f.famille)}</span>` : ""}
       ${f.role ? `<span class="tag">${escapeHtml(f.role)}</span>` : ""}
       ${mandat(f.departement, f.circo)
         ? `<span class="tag">${escapeHtml(mandat(f.departement, f.circo))}</span>` : ""}
@@ -99,6 +175,7 @@ function render(d) {
 
     <p class="lede" style="margin-top:var(--s4)">
       <strong>${fmtNum(s.n_claims)}</strong> propos consignés · <strong>${fmtNum(s.n_posts)}</strong> publications collectées · ${span}
+      ${dominantThemes(s.by_theme) ? `<br />${dominantThemes(s.by_theme)}` : ""}
     </p>
     ${depth}
 
@@ -129,26 +206,27 @@ function render(d) {
     <section style="margin-top:var(--s6)">
       <p class="section-label">Chronologie des propos</p>
       ${themeFilters(s.by_theme)}
-      ${d.timeline.length
-        ? d.timeline.map((m) => `
-            <h2 style="font-size:var(--t-title);margin:var(--s6) 0 var(--s2)">${monthLabel(m.month)}</h2>
-            <div class="register">${m.claims.map(claimRow).join("")}</div>`).join("")
-        : `<p class="state"><span class="state__title">Aucun propos consigné</span>
-           <span class="state__hint">Rien n’a encore été extrait pour cette figure. La collecte a peut-être échoué
-           (compte renommé, homonyme) — voir la santé des collecteurs.</span></p>`}
+      <div id="timeline"></div>
     </section>`;
 
+  renderTimeline();
   $("#detail").querySelectorAll("[data-theme]").forEach((b) =>
     b.onclick = () => { state.theme = b.dataset.theme || null; load(state.id); });
+}
+
+function query(offset) {
+  const q = new URLSearchParams({ limit: PAGE, offset });
+  if (state.theme) q.set("theme", state.theme);
+  return `?${q}`;
 }
 
 async function load(id) {
   state.id = id;
   renderList();
   $("#detail").innerHTML = '<p class="state">Chargement…</p>';
-  const q = state.theme ? `?theme=${encodeURIComponent(state.theme)}` : "";
   try {
-    render(await fetchJSON(`/figures/${id}${q}`));
+    state.data = await fetchJSON(`/figures/${id}${query(0)}`);
+    render(state.data);
   } catch (e) {
     $("#detail").innerHTML = `<p class="state state--error">Fiche indisponible (${e.message}).</p>`;
   }

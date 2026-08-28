@@ -29,6 +29,56 @@ function mandat(departement, circo) {
   return [departement, circo].filter(Boolean).join(" ");
 }
 
+// Les thèmes du niveau L0 sont stockés en identifiants sans accent
+// (`culture_identite`). Affichés bruts, ils donnent au relevé l'air d'un export
+// de base — et « politique » y côtoie « pouvoir_achat » sans qu'on sache lequel
+// est un mot et lequel est un code.
+const THEMES = {
+  immigration: "immigration", securite: "sécurité", economie: "économie",
+  pouvoir_achat: "pouvoir d’achat", energie: "énergie",
+  international: "international", logement: "logement", social: "social",
+  sante: "santé", institutions: "institutions", ecologie: "écologie",
+  education: "éducation", agriculture: "agriculture",
+  culture_identite: "culture et identité", justice: "justice",
+  politique: "politique", autre: "autre",
+};
+const themeLabel = (t) => THEMES[t] || String(t || "").replace(/_/g, " ");
+
+// Six familles, pas quinze couleurs. Un arc-en-ciel de quinze teintes ne se
+// mémorise pas et ne dit rien ; six familles disent quelque chose de vrai —
+// on voit au premier coup d'œil qu'un locuteur ne parle que de sécurité.
+const THEME_FAMILY = {
+  economie: "eco", pouvoir_achat: "eco",
+  immigration: "secu", securite: "secu", justice: "secu",
+  international: "intl",
+  social: "social", sante: "social", logement: "social", education: "social",
+  ecologie: "envt", energie: "envt", agriculture: "envt",
+  institutions: "inst", culture_identite: "inst", politique: "inst",
+};
+const themeVar = (t) => `var(--th-${THEME_FAMILY[t] || "eco"})`;
+
+// Surtitre : la famille colorée, puis le libellé du thème.
+const kicker = (theme, extra = "") =>
+  `<p class="kicker" style="--th:${themeVar(theme)}">${escapeHtml(themeLabel(theme) || "sans thème")}${
+    extra ? `<span class="kicker__sep">${extra}</span>` : ""}</p>`;
+
+// Durée en clair. « 638 j » demande un calcul mental ; « 21 mois » se lit.
+function duree(days) {
+  const d = Math.max(0, Math.round(days || 0));
+  if (d < 45) return `${d} jour${d > 1 ? "s" : ""}`;
+  const m = Math.round(d / 30.4);
+  return m < 24 ? `${m} mois` : `${(d / 365).toFixed(1).replace(".", ",")} ans`;
+}
+
+const periode = (a, b) => {
+  if (!a || !b) return "période inconnue";
+  const f = (x) => asDate(x).toLocaleDateString("fr-FR", { month: "short", year: "numeric" });
+  return f(a) === f(b) ? f(a) : `${f(a)} – ${f(b)}`;
+};
+
+// « de économie » ne se dit pas. Élision devant voyelle et h muet.
+const de = (mot) => (/^[aeiouyéèêàâîïôûù]|^h/i.test(mot) ? `d’${mot}` : `de ${mot}`);
+
 function relTime(iso) {
   if (!iso) return "";
   const d = asDate(iso), s = (Date.now() - d.getTime()) / 1000;
@@ -58,12 +108,16 @@ function infiniteScroll(sentinelEl, loadMore) {
 // ── Masthead ────────────────────────────────────────────────────────────
 // Une publication a un titre composé, pas un logo dans un carré dégradé.
 
+// L'ordre dit ce qu'est le produit. Le sujet vient d'abord : on arrive avec un
+// objet en tête (« les retraites »), pas avec l'envie de lire un compte. Le fil
+// X et la presse sont le FONDS — la matière première, rangée sous « Archive »,
+// consultable mais pas la vitrine.
 const PAGES = [
+  ["index.html", "accueil", "L’observatoire"],
   ["sujets.html", "sujets", "Sujets"],
-  ["index.html", "feed", "Réseaux sociaux"],
-  ["figure.html", "figures", "Figures"],
-  ["presse.html", "presse", "Presse"],
-  ["compteur.html", "compteur", "Le Compteur"],
+  ["figure.html", "figures", "Locuteurs"],
+  ["compteur.html", "compteur", "Chiffres"],
+  ["archive.html", "archive", "Archive"],
   ["contradictions.html", "validation", "Validation"],
   ["atelier.html", "atelier", "Atelier"],
 ];
@@ -98,6 +152,14 @@ function mountMasthead() {
 
 // ── Arbre thématique (Thème → Sous-thème) ───────────────────────────────
 
+// Une colonne qui n'affiche que « Aucun thème classé » occupe un sixième de
+// l'écran pour ne rien dire. Tant que la classification n'a rien produit, le
+// rail s'efface et la lecture prend toute la largeur.
+function dropRail(container) {
+  container.closest(".rail")?.setAttribute("hidden", "");
+  document.querySelector(".layout")?.classList.add("layout--norail");
+}
+
 async function themeTree(container, { source, onSelect }) {
   const countOf = (n) => (source === "articles" ? n.articles : n.posts) || 0;
   let themes = [];
@@ -105,11 +167,11 @@ async function themeTree(container, { source, onSelect }) {
     const data = await fetchJSON("/themes/tree");
     themes = (data.themes || []).filter((t) => countOf(t) > 0).sort((a, b) => countOf(b) - countOf(a));
   } catch {
-    container.innerHTML = '<p class="state state--error">Arbre thématique indisponible.</p>';
+    dropRail(container);
     return;
   }
   if (!themes.length) {
-    container.innerHTML = '<p class="state">Aucun thème classé.</p>';
+    dropRail(container);
     return;
   }
 

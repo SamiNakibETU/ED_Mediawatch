@@ -76,6 +76,7 @@ async def figure_detail(
     figure_id: int,
     theme: str | None = Query(None, description="Restreindre la chronologie à un thème"),
     limit: int = Query(150, ge=1, le=500),
+    offset: int = Query(0, ge=0, description="Pagination de la chronologie"),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     p = await db.get(Personality, figure_id)
@@ -104,9 +105,18 @@ async def figure_detail(
     stmt = select(Claim).where(author)
     if theme:
         stmt = stmt.where(Claim.theme == theme)
+
+    # Combien la chronologie compte RÉELLEMENT, filtre thématique appliqué.
+    # Sans ce total, la fiche annonçait « 1 445 propos consignés » et n'en
+    # servait jamais que 150 : le reste n'était pas seulement absent, il était
+    # inatteignable, et rien à l'écran ne le disait.
+    n_timeline = await db.scalar(
+        select(func.count()).select_from(stmt.subquery())
+    ) or 0
     claims = list(
-        (await db.execute(stmt.order_by(Claim.published_at.desc().nullslast()).limit(limit)))
-        .scalars().all()
+        (await db.execute(
+            stmt.order_by(Claim.published_at.desc().nullslast()).limit(limit).offset(offset)
+        )).scalars().all()
     )
     urls = await resolve_claim_urls(db, claims)
 
@@ -170,6 +180,9 @@ async def figure_detail(
             {"month": m, "claims": months[m]}
             for m in sorted(months, reverse=True)
         ],
+        "timeline_total": n_timeline,
+        "timeline_offset": offset,
+        "timeline_count": len(claims),
         "contradictions": edges,
         "dossier": {
             "summary": dossier.summary,

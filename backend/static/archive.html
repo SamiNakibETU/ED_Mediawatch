@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Presse — ED Mediawatch</title>
+  <title>Archive — ED Mediawatch</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" />
@@ -12,27 +12,36 @@
     try { const t = localStorage.getItem("theme"); if (t) document.documentElement.dataset.theme = t; } catch {}
   </script>
 </head>
-<body data-page="presse" data-tagline="Revue de presse">
+<body data-page="archive" data-tagline="Le fonds : tout ce qui a été dit, conservé">
   <header id="masthead"></header>
 
-  <div class="controls">
-    <div class="filters" id="natureFilters" role="group" aria-label="Nature de l’article"></div>
-    <div class="spacer"></div>
-    <div class="filters" id="leaningFilters" role="group" aria-label="Orientation du média"></div>
+  <div class="wrap" style="padding-top:var(--s6);padding-bottom:var(--s8)">
+    <p class="dek" style="max-width:44rem;margin-top:0">
+      La matière première de l’observatoire&nbsp;: tout ce que publient les comptes suivis, et
+      tous les articles où une figure parle ou se trouve citée. Rien n’est trié à l’entrée —
+      c’est le fonds complet qui rend une comparaison honnête. Les analyses se lisent
+      <a class="source-link" href="sujets.html">côté sujets</a>.
+    </p>
+
+    <div class="band" style="margin-top:var(--s6)">
+      <div class="filters" id="sourceTabs" role="group" aria-label="Source"></div>
+      <span class="spacer"></span>
+      <p id="count"></p>
+    </div>
+
+    <div class="controls" style="padding-left:0;padding-right:0;margin-top:var(--s4)">
+      <div class="filters" id="f1" role="group"></div>
+      <div class="filters" id="f2" role="group"></div>
+      <div class="spacer"></div>
+      <label class="sr-only" for="q">Filtrer</label>
+      <input id="q" class="field" type="search" style="max-width:20rem" placeholder="Filtrer…" />
+    </div>
+
+    <div class="register" id="list"></div>
+    <p class="state" id="sentinel"></p>
   </div>
 
-  <div class="layout">
-    <aside class="rail">
-      <p class="rail__title">Thèmes</p>
-      <nav class="tree" id="themeTree" aria-label="Filtrer par thème"></nav>
-    </aside>
-    <main>
-      <div class="register" id="list"></div>
-      <p class="state" id="sentinel"></p>
-    </main>
-  </div>
-
-  <!-- Lecteur : panneau latéral, ouvert au clic sur un article -->
+  <!-- Lecteur : panneau latéral, ouvert au clic sur un article de presse -->
   <div class="reader" id="reader" hidden>
     <div class="reader__scrim" id="readerBackdrop"></div>
     <aside class="reader__panel" role="dialog" aria-modal="true" aria-labelledby="readerTitle">
@@ -52,6 +61,6 @@
   </div>
 
   <script src="common.js"></script>
-  <script src="presse.js"></script>
+  <script src="archive.js"></script>
 </body>
 </html>
