@@ -50,12 +50,22 @@ async def _collect_press() -> dict:
 
 async def _enrich_truncated() -> dict:
     from src.services.collection.x_enrich import enrich_truncated_posts
-    return await enrich_truncated_posts(limit=300)
+
+    # Passe devant L0 : un texte coupé à 280 produit des déclarations fausses
+    # par omission. Mieux vaut en réparer large que d'en segmenter de travers.
+    return await enrich_truncated_posts(limit=600)
 
 
 async def _extract_l0() -> dict:
     from src.services.analysis.declaration_extractor import run_declaration_extraction
-    return await run_declaration_extraction(limit_posts=400, limit_articles=200)
+
+    # Taille de fenêtre : bornée par le MUR-HORLOGE, pas par la prudence
+    # budgétaire — le plafond LLM s'en charge déjà et s'arrête proprement.
+    # Les appels sont sérialisés (~2-3 s pièce), donc ~1500 posts tiennent en
+    # une heure environ, largement dans l'intervalle de 4 h entre deux passes,
+    # pour un coût de l'ordre de 0,40 $. À 400, l'arriéré de 26 000 posts aurait
+    # demandé onze jours ; ici trois.
+    return await run_declaration_extraction(limit_posts=1500, limit_articles=400)
 
 
 async def _embed() -> dict:
