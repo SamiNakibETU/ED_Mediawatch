@@ -239,7 +239,7 @@ async function load(reset = false) {
            <span class="state__hint">Aucune entrée ne correspond à ce filtre. Élargis la sélection,
            ou vois où en est la collecte dans <a class="source-link" href="atelier.html">l’atelier</a>.</span>`)
       : "";
-    $("#count").innerHTML = `<strong>${fmtNum(state.total)}</strong> ${noun()}`;
+    $("#count").innerHTML = `<span class="statbar__n">${fmtNum(state.total)}</span> ${noun()}`;
     $("#stats").innerHTML = `<strong>${fmtNum(state.total)}</strong> ${noun()}`;
   } catch (e) {
     sentinel.className = "state state--error";

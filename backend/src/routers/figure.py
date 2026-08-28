@@ -23,6 +23,7 @@ from src.models.claim import Claim
 from src.models.contradiction import Contradiction, TYPE_LABELS
 from src.models.dossier import Dossier
 from src.models.personality import Personality
+from src.models.subject import Subject
 from src.models.post import Post
 from src.services.analysis.claim_sources import resolve_claim_urls
 
@@ -102,6 +103,32 @@ async def figure_detail(
         select(func.min(Claim.published_at), func.max(Claim.published_at)).where(author)
     )).one()
 
+    # Ce que la figure défend, SUJET PAR SUJET — la lecture utile d'une fiche.
+    # Une chronologie brute répond à « qu'a-t-elle dit le 12 mars » ; personne
+    # n'arrive avec cette question. On arrive avec « que dit-elle des retraites,
+    # et depuis quand » — et, si d'autres en parlent aussi, « qui dit le
+    # contraire ». D'où le renvoi vers le sujet, où la confrontation se voit.
+    rows = (await db.execute(
+        select(Subject, func.count(Claim.id),
+               func.min(Claim.published_at), func.max(Claim.published_at))
+        .join(Claim, Claim.subject_id == Subject.id)
+        .where(author, Subject.status != "incoherent")
+        .group_by(Subject.id)
+        .order_by(func.count(Claim.id).desc())
+    )).all()
+    by_subject = [
+        {
+            "id": sub.id, "label": sub.label, "theme": sub.theme,
+            "n": n, "first_seen": lo, "last_seen": hi,
+            "span_days": (hi - lo).days if (lo and hi) else 0,
+            "n_speakers": sub.n_speakers or 1,
+            # Un sujet à une seule voix n'a rien à confronter : le dire évite de
+            # laisser croire qu'un silence adverse est un accord.
+            "confrontable": (sub.n_speakers or 1) >= 2,
+        }
+        for sub, n, lo, hi in rows
+    ]
+
     stmt = select(Claim).where(author)
     if theme:
         stmt = stmt.where(Claim.theme == theme)
@@ -180,6 +207,7 @@ async def figure_detail(
             {"month": m, "claims": months[m]}
             for m in sorted(months, reverse=True)
         ],
+        "by_subject": by_subject,
         "timeline_total": n_timeline,
         "timeline_offset": offset,
         "timeline_count": len(claims),

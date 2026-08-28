@@ -94,7 +94,17 @@ async def _build_subjects() -> dict:
 
 async def _label_subjects() -> dict:
     from src.services.analysis.subject_labeller import label_subjects
-    return await label_subjects(limit=40, min_speakers=2)
+
+    # 40 sujets par passe pour 900 en attente : quatre jours de rattrapage, et
+    # entre-temps le sommaire affiche des sacs de mots triés par ordre
+    # alphabétique (« davantage deputes designe gagner ») là où il faut un objet
+    # de débat. À ~0,0002 $ le sujet, la prudence ne protégeait de rien : 400
+    # sujets coûtent 8 centimes et tiennent dans le cycle de 4 h.
+    #
+    # `min_speakers=1` : un sujet à une seule voix n'est pas confrontable, mais
+    # il s'affiche quand même sur la fiche du locuteur — et un libellé illisible
+    # y est aussi gênant qu'ailleurs.
+    return await label_subjects(limit=400, min_speakers=1)
 
 
 async def _detect() -> dict:

@@ -26,35 +26,29 @@ function renderNow(items) {
 }
 
 // ── Le fonds, en chiffres ───────────────────────────────────────────────────
-// Un observatoire qui ne dit pas l'étendue de son corpus demande qu'on le
-// croie sur parole. « Propos attribués » plutôt que « propos extraits » : un
-// propos sans locuteur ne se compare pas, il ne compte donc pas vraiment.
+//
+// Un observatoire qui ne dit pas l'étendue de son corpus demande qu'on le croie
+// sur parole. Mais quatre grosses cartes pour quatre nombres donnent le même
+// poids à des choses qui n'en ont pas : une ligne dense suffit, et se lit d'un
+// seul regard.
+//
+// « Propos attribués » plutôt que « propos extraits » : un propos sans locuteur
+// ne se compare pas — il ne compte donc pas vraiment.
 
 function renderFonds(f, nSubjects, nPending) {
   const n = (i) => f?.steps?.[i]?.n ?? 0;
-  const attribues = (f?.steps?.[1]?.detail || "").match(/^(\d+)/);
-  $("#fonds").innerHTML = `<div class="bento">
-    <div class="cell">
-      <p class="cell__label">${ico("archive")} Publications conservées</p>
-      <p class="metric">${fmtNum(n(0))}</p>
-      <p class="cell__sub">en ligne et dans la presse</p>
-    </div>
-    <div class="cell">
-      <p class="cell__label">${ico("locuteurs")} Propos attribués</p>
-      <p class="metric metric--accent">${fmtNum(attribues ? +attribues[1] : 0)}</p>
-      <p class="cell__sub">sur ${fmtNum(n(1))} extraits — les autres n’ont pas de locuteur certain</p>
-    </div>
-    <div class="cell">
-      <p class="cell__label">${ico("sujets")} Sujets exploitables</p>
-      <p class="metric">${fmtNum(nSubjects)}</p>
-      <p class="cell__sub">plusieurs voix, sur la durée</p>
-    </div>
-    <a class="cell" href="contradictions.html">
-      <p class="cell__label">${ico("validation")} Rapprochements à relire</p>
-      <p class="metric ${nPending ? "metric--alert" : ""}">${fmtNum(nPending)}</p>
-      <p class="cell__sub">rien ne se publie sans relecture humaine</p>
-      <p class="cell__foot"><span class="source-link">ouvrir la file ↗</span></p>
-    </a>
+  const m = (f?.steps?.[1]?.detail || "").match(/^(\d+)/);
+  const attribues = m ? +m[1] : 0;
+
+  $("#fonds").innerHTML = `<div class="statbar">
+    <span class="statbar__item"><span class="statbar__n">${fmtNum(n(0))}</span>
+      publications conservées</span>
+    <span class="statbar__item"><span class="statbar__n statbar__n--accent">${fmtNum(attribues)}</span>
+      propos attribués <span class="statbar__of">/ ${fmtNum(n(1))} extraits</span></span>
+    <span class="statbar__item"><span class="statbar__n">${fmtNum(nSubjects)}</span>
+      sujets exploitables</span>
+    <a class="statbar__item" href="contradictions.html">
+      <span class="statbar__n">${fmtNum(nPending)}</span> à relire ${ico("source")}</a>
   </div>`;
 }
 
@@ -77,7 +71,7 @@ function story(s, big = false) {
     </div>
     <div>${friseMini(s.frise, s.theme, big ? 5 : 3)}</div>
     <div class="story__aside">
-      ${l ? `<p class="cell__label" style="margin-bottom:var(--s2)">${ico("temps")} Dernier propos</p>
+      ${l ? `<p class="overline" style="margin-bottom:var(--s2)">${ico("temps")} Dernier propos</p>
         <p class="stamp"><span class="latest__when">${escapeHtml(relTime(l.published_at))}</span>
           · ${escapeHtml(l.speaker || "locuteur non établi")}</p>
         <p class="latest__q">« ${escapeHtml((l.text || "").slice(0, 190))} »</p>`

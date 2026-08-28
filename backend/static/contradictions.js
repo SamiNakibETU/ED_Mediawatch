@@ -48,6 +48,35 @@ async function renderFilters() {
     b.onclick = () => { state.type = b.dataset.t ? +b.dataset.t : null; renderFilters(); load(); });
 }
 
+
+// Le bandeau de tête : ce qui reste, ce qui a été tranché, dans quel sens.
+// Sans lui, la file ressemble à une boîte de réception sans fond — on ne sait
+// pas si on avance.
+async function renderBar() {
+  const host = $("#stats-bar");
+  if (!host) return;
+  try {
+    const [p, c, r] = await Promise.all([
+      fetchJSON("/contradictions?status=pending&limit=1"),
+      fetchJSON("/contradictions?status=confirmed&limit=1"),
+      fetchJSON("/contradictions?status=rejected&limit=1"),
+    ]);
+    const decided = (c.total || 0) + (r.total || 0);
+    const prec = decided ? Math.round(((c.total || 0) / decided) * 100) : null;
+    host.innerHTML = `<div class="statbar">
+      <span class="statbar__item"><span class="statbar__n statbar__n--accent">${fmtNum(p.total)}</span>
+        en attente</span>
+      <span class="statbar__item"><span class="statbar__n">${fmtNum(c.total)}</span> confirmés</span>
+      <span class="statbar__item"><span class="statbar__n">${fmtNum(r.total)}</span> écartés</span>
+      <span class="statbar__item">${prec == null
+        ? "précision inconnue — trop peu de décisions"
+        : `<span class="statbar__n">${prec}\u202f%</span> de propositions retenues`}</span>
+    </div>`;
+  } catch {
+    host.hidden = true;
+  }
+}
+
 async function load() {
   const q = new URLSearchParams({ status: "pending", limit: 100 });
   if (state.type) q.set("type", state.type);
@@ -124,3 +153,4 @@ async function validate(id, decision, el, btn) {
 
 renderFilters();
 load();
+renderBar();

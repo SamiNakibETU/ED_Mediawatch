@@ -20,115 +20,99 @@
 /* ── Tokens ──────────────────────────────────────────────────────────── */
 
 :root {
-  /* Papier chaud. Les gris sont biaisés vers l'accent : choisis, pas hérités. */
-  --paper:        #F7F5F0;
-  --surface:      #FFFDF9;
-  --surface-sunk: #F1EEE7;
-  --ink:          #1A1917;
-  --ink-soft:     #3D3A34;
-  --muted:        #6E6A61;
-  --faint:        #94908A;
-  --rule:         #DFDACE;
-  --rule-strong:  #C4BDAD;
+  /* Charte Terra Nova, relevée sur tnova.fr : carmin #A41B30 en surtitre et
+   * signature, prune #53414A pour les aplats, encre #333, papier blanc.
+   * Ce produit paraît sous ce nom ; il ne peut pas avoir sa propre couleur. */
+  --paper:        #FFFFFF;
+  --surface:      #FFFFFF;
+  --surface-sunk: #F7F7F7;
+  --ink:          #1A1A1A;
+  --ink-soft:     #333333;
+  --muted:        #53414A;   /* prune Terra Nova */
+  --faint:        #8A8189;
+  --rule:         #E2DFE1;
+  --rule-strong:  #C3BDC1;
 
-  /* Accent unique : encre de tampon. */
-  --accent:       #1F3A5F;
-  --accent-soft:  #E7EBF2;
-  --accent-line:  #B9C4D6;
+  /* Accent unique : le carmin. Employé pour ce qui EST de l'accent — surtitre,
+   * lien actif, appel à l'action — jamais pour décorer une surface. */
+  --accent:       #A41B30;
+  --accent-hot:   #F14668;
+  --accent-soft:  #FBF0F2;
+  --accent-line:  #E7CDD3;
 
   /* Sémantique — statut, pas décoration. */
-  --ok:      #3F6B4F;
+  --ok:      #2F6B45;
   --pending: #8A6A1F;
-  --alert:   #9B3B2F;
+  --alert:   #A41B30;
 
   /* Encodage des familles politiques (toujours doublé d'un libellé). */
-  --grp-rn:     #3A5470;
+  --grp-rn:     #53414A;
   --grp-udr:    #8A6A1F;
   --grp-figure: #6B4A63;
 
   /* Échelle typographique — quarte (1.333), pas de valeur hors échelle. */
-  --t-micro:   0.6875rem;  /* 11px — étiquettes mono */
-  --t-small:   0.8125rem;  /* 13px — méta */
-  --t-ui:      0.9375rem;  /* 15px — interface */
-  --t-read:    1.0625rem;  /* 17px — corps de lecture */
+  --t-micro:   0.6875rem;
+  --t-small:   0.8125rem;
+  --t-ui:      0.9375rem;
+  --t-read:    1.0625rem;
   --t-title:   1.25rem;
   --t-head:    1.75rem;
   --t-display: 2.5rem;
 
   --lh-tight: 1.15;
   --lh-ui:    1.45;
-  --lh-read:  1.65;
+  --lh-read:  1.6;
 
-  /* Espace — base 4px, jamais de valeur arbitraire. */
   --s1: 0.25rem; --s2: 0.5rem;  --s3: 0.75rem; --s4: 1rem;
   --s5: 1.5rem;  --s6: 2rem;    --s7: 3rem;    --s8: 4rem;
 
-  --measure-read: 40rem;   /* ~66 caractères */
+  --measure-read: 38rem;
   --measure-ui:   46rem;
 
-  /* Rayon : hiérarchie, pas uniformité bulle. */
   --r-sharp: 2px;
-  --r-soft:  4px;
+  --r-soft:  3px;
 
   --dur-fast: 120ms;
   --dur-base: 200ms;
   --ease: cubic-bezier(0.2, 0, 0.13, 1);
 
-  --font-display: "Newsreader", Georgia, "Times New Roman", serif;
-  --font-ui: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  /* Les polices de la maison : Source Serif / Source Sans. Le monospace reste
+   * pour les données — un chiffre qui bouge de colonne en colonne est illisible,
+   * et Terra Nova n'a pas de chasse fixe. */
+  --font-display: "Source Serif 4", "Source Serif Pro", Georgia, serif;
+  --font-ui: "Source Sans 3", "Source Sans Pro", system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
 
   color-scheme: light;
 }
 
+/* Le sombre reste disponible — une salle de rédaction ne travaille pas toujours
+ * en plein jour — mais ce n'est plus le défaut : la charte est sur blanc. */
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --paper:        #0A0A0A;
-    --surface:      #121212;
-    --surface-sunk: #000000;
-    --ink:          #F2F0EA;
-    --ink-soft:     #C9C6BF;
-    --muted:        #8C8C86;
-    --faint:        #666666;
-    --rule:         #1F1F1D;
-    --rule-strong:  #34342F;
-
-    --accent:       #9FB6D6;
-    --accent-soft:  #14202E;
-    --accent-line:  #33455E;
-
-    --ok:      #43A047;
-    --pending: #FBBF24;
-    --alert:   #E53935;
-
-    --grp-rn:     #8AA3C0;
-    --grp-udr:    #C9A253;
-    --grp-figure: #B08CA6;
-
-    color-scheme: dark;
-  }
+  :root[data-theme="dark"] { color-scheme: dark; }
 }
 
 :root[data-theme="dark"] {
-  --paper:        #0A0A0A;
-  --surface:      #121212;
-  --surface-sunk: #000000;
-  --ink:          #F2F0EA;
-  --ink-soft:     #C9C6BF;
-  --muted:        #8C8C86;
-  --faint:        #666666;
-  --rule:         #1F1F1D;
-  --rule-strong:  #34342F;
+  --paper:        #17141A;
+  --surface:      #1E1A21;
+  --surface-sunk: #110F14;
+  --ink:          #F4F1F3;
+  --ink-soft:     #D6CFD4;
+  --muted:        #A2969E;
+  --faint:        #756B72;
+  --rule:         #2E2833;
+  --rule-strong:  #453C4A;
 
-  --accent:       #9FB6D6;
-  --accent-soft:  #14202E;
-  --accent-line:  #33455E;
+  --accent:       #F14668;
+  --accent-hot:   #FF6B87;
+  --accent-soft:  #2A1620;
+  --accent-line:  #5A2F3C;
 
-  --ok:      #43A047;
-  --pending: #FBBF24;
-  --alert:   #E53935;
+  --ok:      #6FA985;
+  --pending: #C9A253;
+  --alert:   #F14668;
 
-  --grp-rn:     #8AA3C0;
+  --grp-rn:     #A2969E;
   --grp-udr:    #C9A253;
   --grp-figure: #B08CA6;
 
@@ -925,26 +909,20 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   --t-lead: clamp(1.5rem, 2.5vw, 2rem);
   --t-card: 1.3125rem;
 
-  /* Familles thématiques. Ce ne sont pas quinze couleurs — ce serait un
-   * arc-en-ciel illisible — mais six familles de sujets, ce qui est une vraie
-   * information : on voit d'un coup si un locuteur ne parle que de sécurité. */
-  --th-eco:    #1F3A5F;   /* économie, pouvoir d'achat */
-  --th-secu:   #8C3A2B;   /* immigration, sécurité, justice */
-  --th-intl:   #2C5F5B;   /* international */
-  --th-social: #6B5A2B;   /* social, santé, logement, éducation */
-  --th-envt:   #3F6B4F;   /* écologie, énergie, agriculture */
-  --th-inst:   #5B4468;   /* institutions, culture et identité */
+  /* Familles thématiques : déclinées de la charte, pas d'un nuancier arbitraire.
+   * Six familles et non quinze couleurs — un arc-en-ciel ne se mémorise pas ;
+   * six familles disent qu'un locuteur ne parle que de sécurité. */
+  --th-eco:    #53414A;   /* économie, pouvoir d'achat */
+  --th-secu:   #A41B30;   /* immigration, sécurité, justice */
+  --th-intl:   #2F5D6B;   /* international */
+  --th-social: #8A6A1F;   /* social, santé, logement, éducation */
+  --th-envt:   #2F6B45;   /* écologie, énergie, agriculture */
+  --th-inst:   #6B4A63;   /* institutions, culture et identité */
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --th-eco: #93AECE; --th-secu: #D08A79; --th-intl: #7FB3AD;
-    --th-social: #C4AE72; --th-envt: #86B394; --th-inst: #B294C4;
-  }
-}
 :root[data-theme="dark"] {
-  --th-eco: #93AECE; --th-secu: #D08A79; --th-intl: #7FB3AD;
-  --th-social: #C4AE72; --th-envt: #86B394; --th-inst: #B294C4;
+  --th-eco: #B7A6AF; --th-secu: #F14668; --th-intl: #7FB3C4;
+  --th-social: #C9A253; --th-envt: #7FB394; --th-inst: #B294C4;
 }
 
 /* ── Surtitre : ranger l'objet avant de le lire ──────────────────────────── */
@@ -1042,7 +1020,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 }
 
 /* Colonne d'appoint : dense, hiérarchisée par le filet. */
-.aside-block { border-top: 2px solid var(--ink); padding-top: var(--s3); }
+.aside-block { border-top: 2px solid var(--accent); padding-top: var(--s3); }
 .aside-block + .aside-block { margin-top: var(--s7); }
 .aside-list { border-top: 1px solid var(--rule); margin-top: var(--s3); }
 .aside-item {
@@ -1145,7 +1123,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 
 .band {
   display: flex; align-items: baseline; gap: var(--s3); flex-wrap: wrap;
-  border-bottom: 2px solid var(--ink);
+  border-bottom: 2px solid var(--accent);
   padding-bottom: var(--s2); margin: var(--s8) 0 0;
 }
 .band h2 {
@@ -1251,10 +1229,13 @@ a:hover > .story__title, a:hover .story__title { color: var(--accent); }
   background: var(--th, var(--accent));
 }
 .mini__scale {
-  display: flex; justify-content: space-between;
+  display: flex; justify-content: space-between; gap: var(--s3);
   font-family: var(--font-mono); font-size: var(--t-micro); color: var(--faint);
   margin-top: var(--s2); padding-left: 8.25rem;
 }
+/* Sous une certaine largeur, deux bornes se touchent : mieux vaut n'en montrer
+ * aucune qu'un mot collé à un autre. */
+@media (max-width: 1100px) { .story .mini__scale { display: none; } }
 @media (max-width: 520px) {
   .mini__row { grid-template-columns: 5.5rem 1fr; }
   .mini__scale { padding-left: 6.25rem; }
@@ -1302,63 +1283,59 @@ a:hover > .story__title, a:hover .story__title { color: var(--accent); }
  * cohabiter les deux au lieu de choisir.
  * ═══════════════════════════════════════════════════════════════════════════ */
 
-/* ── Grille bento ──────────────────────────────────────────────────────── */
+/* ── Bandeau de chiffres ───────────────────────────────────────────────────
+ *
+ * Ce qui était ici : quatre cartes identiques, un gros chiffre au centre de
+ * chacune. C'est la mise en page par défaut de tout tableau de bord généré, et
+ * ça se voit — quatre boîtes de même poids donnent la même importance à des
+ * choses qui n'en ont pas, et occupent un écran pour quatre nombres.
+ *
+ * Une salle de marché fait l'inverse : une ligne dense, des chiffres petits et
+ * tabulaires collés à leur libellé, des filets pour séparer. On lit les quatre
+ * d'un seul regard au lieu d'en balayer quatre. */
 
-.bento {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
-  gap: 1px;
-  background: var(--rule);          /* l'écart, donc la bordure */
-  border: 1px solid var(--rule);
+.statbar {
+  display: flex; flex-wrap: wrap;
+  border-top: 2px solid var(--accent);
+  border-bottom: 1px solid var(--rule);
 }
-.cell {
-  background: var(--surface);
-  padding: var(--s4) var(--s5) var(--s5);
-  display: flex; flex-direction: column;
-  gap: var(--s2);
-  min-width: 0;
+.statbar__item {
+  display: flex; align-items: baseline; gap: var(--s2);
+  padding: var(--s3) var(--s5) var(--s3) 0;
+  margin-right: var(--s5);
+  border-right: 1px solid var(--rule);
+  font-size: var(--t-small);
+  color: var(--muted);
+  white-space: nowrap;
 }
-a.cell { transition: background var(--dur-fast) var(--ease); }
-a.cell:hover { background: var(--surface-sunk); }
+.statbar__item:last-child { border-right: none; margin-right: 0; padding-right: 0; }
+.statbar__n {
+  font-family: var(--font-mono);
+  font-size: var(--t-title);
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  color: var(--ink);
+  letter-spacing: -0.02em;
+}
+.statbar__n--accent { color: var(--accent); }
+.statbar__of { font-family: var(--font-mono); font-size: var(--t-micro); color: var(--faint); }
+a.statbar__item { transition: color var(--dur-fast) var(--ease); }
+a.statbar__item:hover { color: var(--ink); }
+a.statbar__item:hover .statbar__n { color: var(--accent); }
+@media (max-width: 560px) {
+  .statbar__item { border-right: none; margin-right: 0; padding-right: 0; flex-basis: 100%; }
+}
 
-.cell--span2 { grid-column: span 2; }
-@media (max-width: 640px) { .cell--span2 { grid-column: span 1; } }
-
-/* Étiquette de cellule : le métier, en petit, au-dessus du chiffre. */
-.cell__label {
+/* Micro-étiquette : le métier d'un bloc, au-dessus de son contenu. */
+.overline {
   font-family: var(--font-mono);
   font-size: var(--t-micro);
   letter-spacing: 0.09em;
   text-transform: uppercase;
   color: var(--faint);
   display: flex; align-items: center; gap: var(--s2);
-  margin: 0 0 var(--s1);
+  margin: 0 0 var(--s2);
 }
-
-/* Le chiffre. Grand et LÉGER : à cette taille, une graisse normale devient un
- * bloc noir qui écrase tout le reste de la cellule. */
-.metric {
-  font-family: var(--font-mono);
-  font-size: clamp(2rem, 4vw, 2.75rem);
-  font-weight: 300;
-  line-height: 1;
-  letter-spacing: -0.02em;
-  font-variant-numeric: tabular-nums;
-  color: var(--ink);
-}
-/* Un mot n'est pas un chiffre : « en cours » en chasse fixe tabulaire, à la
- * taille d'un compteur, se lit comme une sortie de terminal. */
-.metric--word {
-  font-family: var(--font-display);
-  font-size: var(--t-head);
-  font-weight: 600;
-  letter-spacing: -0.01em;
-}
-.metric--accent { color: var(--accent); }
-.metric--ok { color: var(--ok); }
-.metric--alert { color: var(--alert); }
-.cell__sub { font-size: var(--t-small); color: var(--muted); margin: 0; }
-.cell__foot { margin-top: auto; padding-top: var(--s4); }
 
 /* ── Indicateurs d'état ────────────────────────────────────────────────── */
 

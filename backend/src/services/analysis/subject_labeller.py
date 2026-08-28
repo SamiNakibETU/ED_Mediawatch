@@ -28,7 +28,7 @@ from src.services.analysis.llm_usage import BudgetExceeded
 
 logger = structlog.get_logger(__name__)
 
-LABEL_PROMPT_VERSION = "subject-label-v1"
+LABEL_PROMPT_VERSION = "subject-label-v2"  # v2 : une personne n'est pas un objet de débat
 
 
 class SubjectLabel(BaseModel):
@@ -50,10 +50,20 @@ _SYSTEM = (
     "Tu nommes des groupes de déclarations politiques. On te donne plusieurs "
     "propos rassemblés automatiquement ; tu produis le nom de l'OBJET dont ils "
     "parlent tous.\n"
-    "Règles : 1) un groupe nominal court, comme un titre de rubrique ; "
-    "2) l'objet, jamais le locuteur ni sa position ; 3) si les propos ne "
-    "partagent pas d'objet commun, coherent=false et ne force pas un nom.\n"
-    "Le même objet doit toujours recevoir le même nom."
+    "Règles :\n"
+    "1. Un groupe nominal court, comme un titre de rubrique : « la hausse des "
+    "impôts », « l'aide militaire à l'Ukraine ».\n"
+    "2. L'objet, jamais le locuteur ni sa position.\n"
+    "3. Un NOM DE PERSONNE n'est pas un objet de débat. « Jordan Bardella » ne "
+    "dit pas de quoi on parle ; nomme ce qui se dit DE lui — « la candidature "
+    "de Jordan Bardella », « le bilan de Jordan Bardella au Parlement "
+    "européen ». Même chose pour un parti ou une institution : « le RN » n'est "
+    "pas un sujet, « la dédiabolisation du RN » en est un.\n"
+    "4. Le même objet reçoit toujours le même nom, à la lettre près : c'est ce "
+    "qui permet de rapprocher deux propos tenus à deux ans d'écart.\n"
+    "5. Si les propos ne partagent pas d'objet commun, coherent=false et ne "
+    "force pas un nom. Un groupe mal formé signalé vaut mieux qu'un titre "
+    "inventé qui masque le défaut."
 )
 
 
@@ -83,18 +93,25 @@ async def label_subjects(*, limit: int = 60, min_speakers: int = 1) -> dict:
             claims = list(
                 (
                     await db.execute(
-                        select(Claim.canonical, Claim.verbatim)
+                        select(Claim.canonical, Claim.verbatim, Claim.stance_target)
                         .where(Claim.subject_id == s.id)
-                        .limit(8)
+                        .limit(12)
                     )
                 ).all()
             )
         if not claims:
             continue
-        extraits = "\n".join(f"- {(c or v or '')[:180]}" for c, v in claims)
+        extraits = "\n".join(f"- {(c or v or '')[:180]}" for c, v, _ in claims)
+        # Les objets déclarés à l'extraction, quand ils existent : le modèle a
+        # déjà nommé l'objet propos par propos, autant s'en servir plutôt que de
+        # le lui faire redécouvrir depuis les extraits.
+        cibles = sorted({t.strip() for _, _, t in claims if t and t.strip()})[:8]
         prompt = (
-            f"Déclarations regroupées :\n{extraits}\n\n"
-            "Tâche : nomme l'objet commun à ces propos."
+            f"Déclarations regroupées :\n{extraits}\n"
+            + (f"\nObjets déclarés à l'extraction : {', '.join(cibles)}\n" if cibles else "")
+            + (f"\nEntités récurrentes : {', '.join((s.entities or [])[:10])}\n"
+               if s.entities else "")
+            + "\nTâche : nomme l'objet commun à ces propos."
         )
         try:
             res = await llm.label_subject(prompt, _SYSTEM)

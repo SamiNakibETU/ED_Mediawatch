@@ -150,6 +150,22 @@ async function loadList() {
   });
   el.querySelector(".referent").setAttribute("aria-pressed", "true");
   $("#stats").innerHTML = `<strong>${compteurs.length}</strong> référents`;
+
+  // Le bandeau de tête : combien d'objets suivis, combien de valeurs, et le
+  // plus grand désaccord observé — c'est lui qui dit si la page a quelque chose
+  // à montrer aujourd'hui.
+  const valeurs = compteurs.reduce((n, c) => n + (c.n_claims || 0), 0);
+  const pire = compteurs.reduce((a, c) => (c.spread > (a?.spread ?? -1) ? c : a), null);
+  $("#stats-bar").innerHTML = `<div class="statbar">
+    <span class="statbar__item"><span class="statbar__n">${fmtNum(compteurs.length)}</span>
+      objets suivis</span>
+    <span class="statbar__item"><span class="statbar__n">${fmtNum(valeurs)}</span>
+      valeurs annoncées</span>
+    ${pire && pire.spread > 0 ? `<span class="statbar__item">
+      <span class="statbar__n statbar__n--accent">${num(pire.spread)}</span>
+      d’écart maximal <span class="statbar__of">${escapeHtml(pire.label)}</span></span>`
+      : `<span class="statbar__item">aucun écart relevé pour l’instant</span>`}
+  </div>`;
   loadCompteur(compteurs[0].referent_key);
 }
 

@@ -62,37 +62,26 @@ function renderFunnel(data) {
 // rapport pour répondre par oui ou non.
 
 function renderPouls(run, costs, fresh) {
-  const [tone, word] = run ? (STATUS_WORD[run.status] || ["pending", run.status]) : ["alert", "aucune"];
+  const [tone, word] = run ? (STATUS_WORD[run.status] || ["pending", run.status])
+                           : ["alert", "aucune"];
   const dayPct = costs?.daily_budget_usd
     ? Math.min(100, (costs.day_usd / costs.daily_budget_usd) * 100) : 0;
   const ages = [fresh?.x?.age_hours, fresh?.press?.age_hours].filter((v) => typeof v === "number");
   const age = ages.length ? Math.min(...ages) : null;
 
-  $("#pouls").innerHTML = `<div class="bento">
-    <div class="cell">
-      <p class="cell__label">${ico("atelier")} Dernière passe</p>
-      <p class="metric metric--word ${tone === "ok" ? "metric--ok" : tone === "alert" ? "metric--alert" : ""}">${word}</p>
-      <p class="cell__sub">${run ? `n° ${run.id} · ${escapeHtml(relTime(run.started_at))}`
-                                : "le scheduler en lance une toutes les 4 h"}</p>
-    </div>
-    <div class="cell">
-      <p class="cell__label">${ico("chiffres")} Dépense du jour</p>
-      <p class="metric ${dayPct >= 80 ? "metric--alert" : ""}">${usd(costs?.day_usd)}</p>
-      <p class="cell__sub">plafond ${usd(costs?.daily_budget_usd)} — au-delà, les étapes
-        payantes s’arrêtent seules</p>
-    </div>
-    <div class="cell">
-      <p class="cell__label">${ico("chiffres")} Dépense du mois</p>
-      <p class="metric">${usd(costs?.month_usd)}</p>
-      <p class="cell__sub">plafond ${usd(costs?.monthly_budget_usd)}</p>
-    </div>
-    <div class="cell">
-      <p class="cell__label">${ico("temps")} Dernière collecte</p>
-      <p class="metric ${age == null || age > 24 ? "metric--alert" : "metric--ok"}">${
-        age == null ? "—" : age < 48 ? `${Math.round(age)} h` : `${Math.round(age / 24)} j`}</p>
-      <p class="cell__sub">une collecte muette est plus dangereuse qu’une collecte absente&nbsp;:
-        elle ne se signale pas</p>
-    </div>
+  $("#pouls").innerHTML = `<div class="statbar">
+    <span class="statbar__item">
+      <span class="status status--${tone}">${word}</span>
+      ${run ? `dernière passe · ${escapeHtml(relTime(run.started_at))}` : "aucune passe encore"}</span>
+    <span class="statbar__item">
+      <span class="statbar__n ${dayPct >= 80 ? "statbar__n--accent" : ""}">${usd(costs?.day_usd)}</span>
+      aujourd’hui <span class="statbar__of">/ ${usd(costs?.daily_budget_usd)}</span></span>
+    <span class="statbar__item">
+      <span class="statbar__n">${usd(costs?.month_usd)}</span>
+      ce mois <span class="statbar__of">/ ${usd(costs?.monthly_budget_usd)}</span></span>
+    <span class="statbar__item">
+      <span class="statbar__n">${age == null ? "—" : age < 48 ? `${Math.round(age)} h` : `${Math.round(age / 24)} j`}</span>
+      depuis la dernière collecte</span>
   </div>`;
 }
 

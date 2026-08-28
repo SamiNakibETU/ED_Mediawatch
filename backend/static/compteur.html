@@ -6,10 +6,10 @@
   <title>Le Compteur — ED Mediawatch</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..600&family=Source+Sans+3:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" />
   <link rel="stylesheet" href="design.css" />
   <script>
-    try { document.documentElement.dataset.theme = localStorage.getItem("theme") || "dark"; } catch { document.documentElement.dataset.theme = "dark"; }
+    try { const t = localStorage.getItem("theme"); if (t) document.documentElement.dataset.theme = t; } catch {}
   </script>
 </head>
 <body data-page="compteur" data-tagline="Valeurs annoncées, par référent">
@@ -21,6 +21,11 @@
       <div class="referents" id="list"></div>
     </aside>
     <main>
+      <p class="dek" style="max-width:46rem;margin-top:0">
+        Les valeurs chiffrées annoncées publiquement sur un même objet, datées et attribuées.
+        L’intérêt n’est pas la valeur mais l’<strong>écart</strong>&nbsp;: deux montants
+        différents pour la même chose, ce sont deux affirmations dont une au moins est fausse.</p>
+      <div id="stats-bar" style="margin:var(--s5) 0 var(--s6)"></div>
       <h1 id="title">Sélectionne un référent</h1>
       <p class="lede" id="sub">Chaque point est une valeur chiffrée annoncée publiquement, datée et attribuée. L’écart entre les points est ce qui se discute.</p>
       <div id="chart"></div>
