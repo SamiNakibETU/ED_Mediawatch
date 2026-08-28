@@ -15,9 +15,10 @@ substrat à partir de rien). Idempotent (dedup par source+verbatim).
 from __future__ import annotations
 
 import re
+from datetime import datetime, timezone
 
 import structlog
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config import get_settings
@@ -109,6 +110,42 @@ async def _store(
 _SRC_CACHE: dict[str, str] = {}
 
 
+async def _backfill_done_marks(db: AsyncSession) -> None:
+    """Rattrape les sources segmentées avant l'existence de `l0_done_at`.
+
+    Sans ça, la première passe après le déploiement re-paierait la segmentation
+    de tout ce qui a déjà été traité. Idempotent : sans effet ensuite.
+    """
+    for model, fk in ((Post, Claim.post_id), (Article, Claim.article_id)):
+        seen = select(fk).where(
+            Claim.extraction_method == "llm_segment", fk.isnot(None)
+        ).distinct()
+        await db.execute(
+            update(model)
+            .where(model.id.in_(seen), model.l0_done_at.is_(None))
+            .values(l0_done_at=datetime.now(timezone.utc))
+        )
+    await db.commit()
+
+
+async def _mark_done(model, ids: list[int]) -> None:
+    """Marque des sources comme vues par L0 — succès comme silence.
+
+    Écrit par lots au fil de l'eau plutôt qu'à la fin : si le processus meurt en
+    cours de route, ce qui a déjà été payé reste payé une seule fois.
+    """
+    if not ids:
+        return
+    factory = get_session_factory()
+    async with factory() as db:
+        await db.execute(
+            update(model).where(model.id.in_(ids))
+            .values(l0_done_at=datetime.now(timezone.utc))
+        )
+        await db.commit()
+    ids.clear()
+
+
 async def run_declaration_extraction(
     limit_posts: int = 500, limit_articles: int = 300
 ) -> dict:
@@ -134,26 +171,22 @@ async def run_declaration_extraction(
                 )
             )).scalars().all())
 
-    # Coût : on ne re-segmente JAMAIS une source déjà traitée (1 requête en amont).
     async with factory() as db:
-        done_posts = set((await db.execute(
-            select(Claim.post_id).where(
-                Claim.extraction_method == "llm_segment", Claim.post_id.isnot(None)
-            )
-        )).scalars().all())
-        done_arts = set((await db.execute(
-            select(Claim.article_id).where(
-                Claim.extraction_method == "llm_segment", Claim.article_id.isnot(None)
-            )
-        )).scalars().all())
+        await _backfill_done_marks(db)
+
+        # Le filtre « pas encore vu » est DANS la requête, avant le LIMIT.
+        # Le faire après, en Python, faisait redescendre les mêmes posts récents
+        # à chaque passe : une fois ce lot traité plus rien n'avançait, et les
+        # 26 000 posts d'archive n'étaient jamais atteints.
         posts_q = (
             select(Post, Personality)
             .join(Personality, Post.personality_id == Personality.id)
             .where(
+                Post.l0_done_at.is_(None),
                 Post.is_retweet.is_(False),
-                # Jamais de LLM sur un texte tronqué (syndication coupe à 280) :
-                # on attend `enrich_x`, sinon déclarations fausses par omission
-                # ET dépense à refaire.
+                # Jamais de LLM sur un texte tronqué (la syndication coupe à 280) :
+                # on attend `enrich_truncated`, sinon déclarations fausses par
+                # omission ET dépense à refaire.
                 Post.text_truncated.isnot(True),
             )
         )
@@ -165,82 +198,126 @@ async def run_declaration_extraction(
             )
         ).all()
 
-    for post, p in posts:
-        # Garde-fous coût (gratuits) AVANT l'appel LLM : déjà fait / bruit.
-        if post.id in done_posts or not worth_segmenting(post.content):
-            skipped += 1
-            continue
-        src_ref = f"post{post.id}"
-        _SRC_CACHE[src_ref] = post.content or ""
-        try:
-            result = await llm.segment_declarations(text=post.content, speaker=p.full_name)
-        except BudgetExceeded as exc:
-            logger.warning("declarations.budget_exceeded", detail=str(exc))
-            budget_hit = True
-            break
-        posts_done += 1
-        if not result or not result.has_declaration:
-            continue
-        async with factory() as db:
-            for decl in result.declarations:
-                if await _store(
-                    db, decl=decl, src_ref=src_ref, platform="x", post_id=post.id,
-                    article_id=None, personality_id=p.id, speaker_name=p.full_name,
-                    party=(p.famille or p.group_code), published_at=post.published_at,
-                    model=model,
-                ):
-                    n_new += 1
-            await db.commit()
+    done_posts: list[int] = []
+    try:
+        for post, p in posts:
+            # Garde-fou coût (gratuit) AVANT l'appel LLM : texte sans contenu.
+            # Marqué vu quand même — le verdict est déterministe, le repasser au
+            # crible à chaque passe ne changerait rien et bloquerait la fenêtre.
+            if not worth_segmenting(post.content):
+                skipped += 1
+                done_posts.append(post.id)
+                continue
+            src_ref = f"post{post.id}"
+            _SRC_CACHE[src_ref] = post.content or ""
+            try:
+                result = await llm.segment_declarations(
+                    text=post.content, speaker=p.full_name
+                )
+            except BudgetExceeded as exc:
+                # Non traité : surtout ne pas le marquer, il doit repasser.
+                logger.warning("declarations.budget_exceeded", detail=str(exc))
+                budget_hit = True
+                break
+            posts_done += 1
+            done_posts.append(post.id)
+            if result and result.has_declaration:
+                async with factory() as db:
+                    for decl in result.declarations:
+                        if await _store(
+                            db, decl=decl, src_ref=src_ref, platform="x", post_id=post.id,
+                            article_id=None, personality_id=p.id, speaker_name=p.full_name,
+                            party=(p.famille or p.group_code),
+                            published_at=post.published_at, model=model,
+                        ):
+                            n_new += 1
+                    await db.commit()
+            if len(done_posts) >= 50:
+                await _mark_done(Post, done_posts)
+    finally:
+        await _mark_done(Post, done_posts)
 
+    # ── Presse ────────────────────────────────────────────────────────────
+    # Le filtre pilote porte sur `matched_personalities` (JSON) : pas de prédicat
+    # portable entre SQLite et Postgres. On lit donc les seules colonnes
+    # d'aiguillage sur le reliquat — deux champs, c'est peu — puis on ne charge
+    # que les articles retenus. Le pilote étant temporaire, un article hors
+    # périmètre n'est PAS marqué : il redeviendra éligible quand il s'élargira.
     async with factory() as db:
-        arts = (
-            await db.execute(
-                select(Article).order_by(Article.published_at.desc().nullslast())
-                .limit(limit_articles)
-            )
-        ).scalars().all()
+        candidates = (await db.execute(
+            select(Article.id, Article.matched_personalities)
+            .where(Article.l0_done_at.is_(None))
+            .order_by(Article.published_at.desc().nullslast())
+        )).all()
+        keep = [
+            aid for aid, mp in candidates
+            if not pilot or (set(mp or []) & pilot_names)
+        ][:limit_articles]
+        skipped += len(candidates) - len(keep)
+        arts = (await db.execute(
+            select(Article).where(Article.id.in_(keep))
+            .order_by(Article.published_at.desc().nullslast())
+        )).scalars().all() if keep else []
 
-    for art in arts:
-        if budget_hit:
-            break
-        text = f"{art.title}. {art.content}"
-        if art.id in done_arts or not worth_segmenting(text):
-            skipped += 1
-            continue
-        mp = art.matched_personalities or []
-        if pilot and not (set(mp) & pilot_names):
-            skipped += 1
-            continue
-        src_ref = f"art{art.id}"
-        _SRC_CACHE[src_ref] = text
-        # JAMAIS de locuteur présumé pour un article : un papier qui mentionne
-        # une figure contient aussi la voix du journaliste et des tiers cités.
-        # Attribuer tout le contenu à `mp[0]` fabriquait des imputations fausses
-        # (propos de Marylise Léon prêtés à Marine Le Pen, puis « contradictions »
-        # bâties dessus). Une imputation erronée est la faute la plus grave d'un
-        # observatoire : sans attribution certaine, on n'attribue pas.
-        speaker = None
-        try:
-            result = await llm.segment_declarations(text=text, speaker=speaker)
-        except BudgetExceeded as exc:
-            logger.warning("declarations.budget_exceeded", detail=str(exc))
-            budget_hit = True
-            break
-        arts_done += 1
-        if not result or not result.has_declaration:
-            continue
-        async with factory() as db:
-            for decl in result.declarations:
-                if await _store(
-                    db, decl=decl, src_ref=src_ref, platform="press", post_id=None,
-                    article_id=art.id, personality_id=None, speaker_name=speaker,
-                    party=None, published_at=art.published_at, model=model,
-                ):
-                    n_new += 1
-            await db.commit()
+    done_arts: list[int] = []
+    try:
+        for art in arts:
+            if budget_hit:
+                break
+            text = f"{art.title}. {art.content}"
+            if not worth_segmenting(text):
+                skipped += 1
+                done_arts.append(art.id)
+                continue
+            src_ref = f"art{art.id}"
+            _SRC_CACHE[src_ref] = text
+            # JAMAIS de locuteur présumé pour un article : un papier qui mentionne
+            # une figure contient aussi la voix du journaliste et des tiers cités.
+            # Attribuer tout le contenu à `mp[0]` fabriquait des imputations fausses
+            # (propos de Marylise Léon prêtés à Marine Le Pen, puis
+            # « contradictions » bâties dessus). Une imputation erronée est la
+            # faute la plus grave d'un observatoire : sans attribution certaine,
+            # on n'attribue pas.
+            speaker = None
+            try:
+                result = await llm.segment_declarations(text=text, speaker=speaker)
+            except BudgetExceeded as exc:
+                logger.warning("declarations.budget_exceeded", detail=str(exc))
+                budget_hit = True
+                break
+            arts_done += 1
+            done_arts.append(art.id)
+            if result and result.has_declaration:
+                async with factory() as db:
+                    for decl in result.declarations:
+                        if await _store(
+                            db, decl=decl, src_ref=src_ref, platform="press", post_id=None,
+                            article_id=art.id, personality_id=None, speaker_name=speaker,
+                            party=None, published_at=art.published_at, model=model,
+                        ):
+                            n_new += 1
+                    await db.commit()
+            if len(done_arts) >= 50:
+                await _mark_done(Article, done_arts)
+    finally:
+        await _mark_done(Article, done_arts)
+
+    # Ce qui reste : la seule façon de savoir s'il faut relancer, plutôt que de
+    # relancer à l'aveugle jusqu'à ce que le compteur cesse de bouger.
+    async with factory() as db:
+        rest_posts = await db.scalar(
+            select(func.count()).select_from(Post).where(
+                Post.l0_done_at.is_(None), Post.is_retweet.is_(False),
+                Post.text_truncated.isnot(True),
+            )
+        ) or 0
+        rest_arts = await db.scalar(
+            select(func.count()).select_from(Article).where(Article.l0_done_at.is_(None))
+        ) or 0
 
     stats = {"declarations_new": n_new, "posts_processed": posts_done,
              "articles_processed": arts_done, "skipped_no_llm": skipped,
+             "remaining_posts": rest_posts, "remaining_articles": rest_arts,
              "budget_exceeded": budget_hit, "pilot": sorted(pilot) or None,
              "prompt_version": DECLARATION_PROMPT_VERSION}
     logger.info("declarations.extracted", **stats)

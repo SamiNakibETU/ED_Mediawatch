@@ -30,7 +30,6 @@ from src.routers import (
     referentiel,
     subjects,
 )
-from src.services.collection.x_collector import run_collection
 from src.services.scheduler import create_scheduler
 
 logger = structlog.get_logger(__name__)
@@ -42,16 +41,14 @@ async def lifespan(app: FastAPI):
     await init_db()
     logger.info("db.ready", url=settings.database_url.split("://")[0])
 
+    # Le cadencement suffit : la première passe part 2 minutes après le
+    # démarrage. Il y avait ici un `await run_collection()` conditionnel qui
+    # bloquait le `lifespan` — l'API ne répondait pas tant que la collecte
+    # n'était pas finie, soit potentiellement une heure d'attente de quota X,
+    # de quoi faire échouer la sonde de santé au déploiement.
     scheduler = create_scheduler()
     scheduler.start()
     app.state.scheduler = scheduler
-
-    if settings.collect_on_startup:
-        logger.info("startup.collect")
-        try:
-            await run_collection()
-        except Exception as exc:  # noqa: BLE001
-            logger.warning("startup.collect_failed", error=str(exc)[:200])
 
     yield
 

@@ -75,6 +75,14 @@ class Post(Base, TimestampMixin):
     # coupés) : vrai si le texte stocké est probablement incomplet → à enrichir
     # par identifiant (fxtwitter). Remis à False une fois le texte intégral posé.
     text_truncated: Mapped[bool | None] = mapped_column(default=False)
+    # Segmentation L0 déjà tentée sur ce post — y compris quand elle n'a rien
+    # donné. Marquer la SOURCE, pas seulement ses produits : sans ça un post
+    # stérile repart au LLM à chaque passe (on paie deux fois le même silence),
+    # et le LIMIT de la requête reste bloqué sur les mêmes posts récents,
+    # laissant l'historique jamais traité.
+    l0_done_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), index=True
+    )
     # Langue détectée (défaut fonctionnel 'fr').
     lang: Mapped[str | None] = mapped_column(String(8))
     # Hash du texte normalisé → détecter reposts/éditions au-delà du guid d'URL.

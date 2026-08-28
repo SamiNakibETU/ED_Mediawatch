@@ -77,6 +77,10 @@ class Article(Base, TimestampMixin):
     snapshot_path: Mapped[str | None] = mapped_column(String(400))  # HTML local
     snapshot_url: Mapped[str | None] = mapped_column(String(700))   # Wayback/ArchiveBox
     archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Voir `Post.l0_done_at` : marque la source comme vue par la segmentation.
+    l0_done_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), index=True
+    )
 
     # Analytical phase (shared with Post)
     theme: Mapped[str | None] = mapped_column(String(60))

@@ -50,6 +50,10 @@ class Settings(BaseSettings):
 
     # Scheduler
     collection_interval_hours: int = 4
+    # Obsolète : la première passe du scheduler part 2 minutes après le
+    # démarrage. Le faire dans le `lifespan` bloquait l'API pendant toute la
+    # collecte. Conservé pour ne pas casser un déploiement qui définit encore
+    # la variable ; sans effet.
     collect_on_startup: bool = False
     # Vue de fraîcheur : une source/passe est « périmée » si rien depuis N heures.
     # Une collecte qui échoue en silence est pire qu'une absente (cf. spec §12.1).
@@ -131,6 +135,13 @@ class Settings(BaseSettings):
     # (table llm_usage_events) — voir services/analysis/llm_usage.py.
     llm_daily_budget_usd: float = 5.0
     llm_monthly_budget_usd: float = 60.0
+
+    # Périmètre de la passe automatique : « full » (défaut) fait avancer le
+    # corpus tout seul, extraction L0 et juge compris. Ce n'est tenable que
+    # parce qu'un plafond est armé : sans plafond, la passe retombe à « free »
+    # d'elle-même — un système autonome ne doit pas pouvoir dépenser sans borne.
+    # Mettre « free » pour n'automatiser que le gratuit.
+    pipeline_auto_scope: str = "full"
 
     # Pilote L0 : CSV de handles X (sans @). Non vide → l'extraction de
     # déclarations ne traite que ces personnalités (posts) et les articles où
