@@ -131,8 +131,8 @@ async function load() {
       ? `fin du sommaire · ${fmtNum(state.items.length)} sujets affichés`
       : `<span class="state__title">Aucun sujet</span><span class="state__hint">${
           state.conf
-            ? "Aucun sujet ne réunit encore plusieurs locuteurs. Lance le regroupement, ou affiche tous les sujets."
-            : "Le regroupement n’a pas encore tourné — voir l’entonnoir du pipeline."
+            ? "Aucun sujet ne réunit encore plusieurs locuteurs. Affiche tous les sujets, ou vois où en est la chaîne dans l’<a class='source-link' href='atelier.html'>Atelier</a>."
+            : "Le regroupement n’a pas encore produit de sujet. L’<a class='source-link' href='atelier.html'>Atelier</a> dit à quel étage la chaîne s’arrête."
         }</span>`;
   } catch (e) {
     sentinel.className = "state state--error";

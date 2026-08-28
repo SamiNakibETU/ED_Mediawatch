@@ -9,9 +9,19 @@ const escapeHtml = (s) =>
 
 const fmtNum = (n) => (n ?? 0).toLocaleString("fr-FR");
 
+// SQLite rend les horodatages sans fuseau, Postgres avec. `new Date("…T09:56:53")`
+// les lit alors comme de l'heure LOCALE : deux heures d'écart affichées en
+// production française, sur les seuls écrans où l'heure compte.
+// Le séparateur espace de Postgres (« 2026-08-28 13:18:31+00:00 ») est hors
+// norme ECMAScript : V8 l'accepte, d'autres moteurs rendent Invalid Date.
+const asDate = (iso) => {
+  const t = String(iso).replace(" ", "T");
+  return new Date(/[zZ]|[+-]\d\d:?\d\d$/.test(t) ? t : `${t}Z`);
+};
+
 function relTime(iso) {
   if (!iso) return "";
-  const d = new Date(iso), s = (Date.now() - d.getTime()) / 1000;
+  const d = asDate(iso), s = (Date.now() - d.getTime()) / 1000;
   if (s < 60) return "à l'instant";
   if (s < 3600) return `il y a ${Math.max(1, Math.floor(s / 60))} min`;
   if (s < 86400) return `il y a ${Math.floor(s / 3600)} h`;
@@ -20,7 +30,7 @@ function relTime(iso) {
 }
 
 const exactDate = (iso) =>
-  iso ? new Date(iso).toLocaleString("fr-FR", {
+  iso ? asDate(iso).toLocaleString("fr-FR", {
     day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit",
   }) : "";
 
@@ -45,6 +55,7 @@ const PAGES = [
   ["presse.html", "presse", "Presse"],
   ["compteur.html", "compteur", "Le Compteur"],
   ["contradictions.html", "validation", "Validation"],
+  ["atelier.html", "atelier", "Atelier"],
 ];
 
 function mountMasthead() {
@@ -58,11 +69,11 @@ function mountMasthead() {
   host.innerHTML = `<div class="masthead__inner">
     <a class="wordmark" href="index.html">ED <span>Mediawatch</span></a>
     <p class="masthead__tagline">${escapeHtml(document.body.dataset.tagline || "")}</p>
-    <nav class="nav" aria-label="Sections">${nav}</nav>
     <div class="spacer"></div>
     <p class="masthead__meta" id="stats"></p>
     <button class="theme-toggle" id="themeToggle" aria-label="Basculer le thème"></button>
-  </div>`;
+  </div>
+  <div class="masthead__nav"><nav class="nav" aria-label="Sections">${nav}</nav></div>`;
 
   const toggle = $("#themeToggle");
   const label = () => { toggle.textContent = document.documentElement.dataset.theme === "dark" ? "clair" : "sombre"; };

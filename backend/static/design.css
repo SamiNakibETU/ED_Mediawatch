@@ -220,8 +220,24 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   white-space: nowrap;
 }
 
+/* La navigation prend sa propre ligne, sous le titre. Sur une seule ligne, à
+ * sept sections, « Réseaux sociaux » et « Le Compteur » se coupaient en deux —
+ * une nav qui se casse en morceaux ne se lit plus comme une nav. C'est aussi la
+ * structure d'un vrai bandeau de journal : titre, puis rubriques. */
+.masthead__nav {
+  border-top: 1px solid var(--rule);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.masthead__nav::-webkit-scrollbar { display: none; }
+.masthead__nav .nav {
+  max-width: 72rem; margin: 0 auto;
+  padding: var(--s2) var(--s4);
+}
+
 /* Navigation : onglets soulignés, pas pastilles colorées. */
 .nav { display: flex; gap: var(--s4); align-items: baseline; }
+.nav a, .nav span { white-space: nowrap; }
 .nav a, .nav span {
   font-size: var(--t-small);
   color: var(--muted);
@@ -682,3 +698,152 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 }
 .claim-list li .stamp,
 .claim-list li .source-link { font-family: var(--font-mono); }
+
+/* ── Atelier : l'état du système, sans passer par un terminal ────────────
+ *
+ * Une seule question à traiter : « où est-ce que ça s'arrête, et pourquoi ».
+ * Pas de barres proportionnelles sur l'entonnoir — les étages ne comptent pas
+ * la même unité (des publications, puis des déclarations, puis des sujets), et
+ * un pourcentage d'un étage à l'autre serait faux. On affiche donc le chiffre,
+ * et on désigne l'étage qui bloque. La seule jauge de la page porte sur le
+ * budget, où le rapport à un plafond est réel.
+ */
+
+.funnel { border-top: 1px solid var(--rule); }
+
+.funnel__step {
+  display: grid;
+  grid-template-columns: 1.75rem 1fr auto;
+  gap: var(--s4);
+  align-items: baseline;
+  padding: var(--s4) 0;
+  border-bottom: 1px solid var(--rule);
+}
+@media (max-width: 560px) {
+  .funnel__step { grid-template-columns: 1.75rem 1fr; }
+  .funnel__n { grid-column: 2; text-align: left; }
+}
+
+.funnel__ord {
+  font-family: var(--font-mono); font-size: var(--t-micro);
+  font-variant-numeric: tabular-nums; color: var(--faint);
+}
+.funnel__label {
+  font-family: var(--font-display); font-size: var(--t-title);
+  font-weight: 500; line-height: var(--lh-tight); color: var(--ink);
+}
+.funnel__detail { font-size: var(--t-small); color: var(--muted); margin-top: var(--s1); }
+.funnel__n {
+  font-family: var(--font-mono); font-size: var(--t-head);
+  font-variant-numeric: tabular-nums; color: var(--ink); line-height: 1;
+}
+
+/* L'étage qui bloque est le seul fait actionnable de la page : il porte un
+ * filet d'encre à gauche. Ceux qui suivent sont en attente, pas en panne —
+ * les griser dit qu'il n'y a rien à y chercher pour l'instant. */
+.funnel__step--blocked { border-left: 2px solid var(--alert); padding-left: var(--s3); }
+.funnel__step--blocked .funnel__ord { color: var(--alert); }
+.funnel__step--waiting { opacity: 0.5; }
+
+/* Une réserve n'est pas un arrêt. Le rouge est réservé à l'étage qui bloque
+ * réellement ; ailleurs, un millier de tweets tronqués se signale sans crier. */
+.funnel__why {
+  margin-top: var(--s2);
+  font-size: var(--t-small);
+  color: var(--pending);
+  max-width: var(--measure-ui);
+}
+.funnel__step--blocked .funnel__why { color: var(--alert); }
+
+/* `.verdict` est déjà pris plus haut par les cartes de la file de validation
+ * (bordure + fond) : réutiliser le nom faisait hériter leur cadre. */
+.chain-verdict {
+  font-family: var(--font-display);
+  font-size: var(--t-head);
+  line-height: var(--lh-tight);
+  color: var(--ink);
+  margin: 0 0 var(--s5);
+  max-width: var(--measure-ui);
+}
+.chain-verdict em { font-style: normal; color: var(--alert); }
+.funnel__todo {
+  margin-top: var(--s1);
+  font-size: var(--t-small);
+  color: var(--muted);
+  max-width: var(--measure-ui);
+}
+
+/* ── Relevés : couple libellé / valeur, alignés à la ligne ────────────── */
+
+.kv { border-top: 1px solid var(--rule); }
+.kv__row {
+  display: flex; align-items: baseline; gap: var(--s3);
+  padding: var(--s3) 0; border-bottom: 1px solid var(--rule);
+  font-size: var(--t-small);
+}
+/* Un libellé court coupé en deux (« Collecte » / « X ») se lit comme deux
+ * champs au lieu d'un. */
+.kv__k { color: var(--muted); white-space: nowrap; }
+.kv__v {
+  margin-left: auto; font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums; color: var(--ink);
+  /* Une valeur coupée en deux (« 1.45 » puis « $ », « il y a » puis « 47 h »)
+   * cesse d'être lisible comme une valeur. */
+  white-space: nowrap;
+}
+.kv__note { flex-basis: 100%; color: var(--muted); font-size: var(--t-micro); }
+.kv__produces { color: var(--muted); font-family: var(--font-mono); font-size: var(--t-micro); }
+
+/* Jauge de budget : ici seulement, le rapport à un plafond est réel. */
+.gauge { margin: var(--s2) 0 0; }
+.gauge__track { height: 2px; background: var(--rule); }
+.gauge__fill { height: 2px; background: var(--accent); transition: width var(--dur-base) var(--ease); }
+.gauge__fill--alert { background: var(--alert); }
+
+/* ── Journal des passes ──────────────────────────────────────────────── */
+
+.runs { width: 100%; border-collapse: collapse; font-size: var(--t-small); }
+.runs th {
+  font-family: var(--font-mono); font-size: var(--t-micro);
+  letter-spacing: 0.09em; text-transform: uppercase; color: var(--faint);
+  text-align: left; font-weight: 400;
+  padding: 0 var(--s3) var(--s2) 0; border-bottom: 1px solid var(--rule);
+}
+.runs td {
+  padding: var(--s3) var(--s3) var(--s3) 0;
+  border-bottom: 1px solid var(--rule);
+  vertical-align: baseline;
+}
+.runs td.num {
+  font-family: var(--font-mono); font-variant-numeric: tabular-nums;
+  text-align: right; color: var(--muted);
+}
+.runs tbody tr:hover { background: var(--surface-sunk); }
+
+/* Une passe = une suite d'étapes. Les rendre en pastilles d'une lettre les
+ * réduirait à un décor ; on garde les noms, séparés par des filets. */
+.steps { display: flex; flex-wrap: wrap; gap: var(--s1) var(--s2); }
+.step-chip {
+  font-family: var(--font-mono); font-size: var(--t-micro);
+  color: var(--muted); border-bottom: 1px solid var(--rule); padding-bottom: 1px;
+}
+.step-chip--ok { color: var(--ok); border-color: color-mix(in oklab, var(--ok) 35%, var(--rule)); }
+.step-chip--failed { color: var(--alert); border-color: color-mix(in oklab, var(--alert) 45%, var(--rule)); }
+.step-chip--budget_exceeded { color: var(--pending); border-color: color-mix(in oklab, var(--pending) 45%, var(--rule)); }
+.step-chip--skipped { color: var(--faint); }
+
+/* Marqueur de rafraîchissement : discret, mais on doit voir que c'est vivant. */
+.live {
+  display: inline-flex; align-items: center; gap: var(--s2);
+  font-family: var(--font-mono); font-size: var(--t-micro); color: var(--faint);
+}
+.live__dot { width: 5px; height: 5px; border-radius: 50%; background: var(--ok); }
+@media (prefers-reduced-motion: no-preference) {
+  .live__dot { animation: pulse 2.4s var(--ease) infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+}
+
+.cols {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  gap: var(--s7); align-items: start;
+}

@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Atelier — ED Mediawatch</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" />
+  <link rel="stylesheet" href="design.css" />
+  <script>
+    try { const t = localStorage.getItem("theme"); if (t) document.documentElement.dataset.theme = t; } catch {}
+  </script>
+</head>
+<body data-page="atelier" data-tagline="Ce que la machine fait, et où elle en est">
+  <header id="masthead"></header>
+
+  <div class="layout" style="grid-template-columns:1fr">
+    <main>
+      <p class="lede">Un observatoire qui ne montre pas son travail demande qu’on le croie sur parole.
+        Cette page dit ce qui a été collecté, ce qui en a été tiré, à quel étage la chaîne s’arrête
+        et pourquoi. Elle se rafraîchit seule&nbsp;: rien à lancer.</p>
+
+      <!-- L'entonnoir : la réponse à « pourquoi il n'y a rien à l'écran ». -->
+      <div class="controls" style="padding-left:0;padding-right:0">
+        <p class="section-label" style="margin:0">Entonnoir</p>
+        <div class="spacer"></div>
+        <p class="live" id="live" hidden><span class="live__dot"></span><span id="liveText"></span></p>
+      </div>
+      <p class="chain-verdict" id="verdict"></p>
+      <div id="funnel"><p class="state">Chargement…</p></div>
+
+      <section style="margin-top:var(--s8)">
+        <p class="section-label">Dernière passe</p>
+        <div id="lastRun"></div>
+      </section>
+
+      <div class="cols" style="margin-top:var(--s8)">
+        <section>
+          <p class="section-label">Dépense</p>
+          <div id="spend"></div>
+        </section>
+        <section>
+          <p class="section-label">Fraîcheur des sources</p>
+          <div id="fresh"></div>
+        </section>
+      </div>
+
+      <section style="margin-top:var(--s8)">
+        <p class="section-label">Journal des passes</p>
+        <div id="runs"></div>
+      </section>
+
+      <section style="margin-top:var(--s8)">
+        <p class="section-label">La chaîne</p>
+        <p class="lede" style="margin-bottom:var(--s4)">L’ordre n’est pas dans la tête de quelqu’un&nbsp;:
+          chaque étape déclare ce dont elle dépend, et le graphe décide. Une étape qui échoue
+          n’arrête que ce qui en dépend.</p>
+        <div id="graph"></div>
+      </section>
+    </main>
+  </div>
+
+  <script src="common.js"></script>
+  <script src="atelier.js"></script>
+</body>
+</html>
