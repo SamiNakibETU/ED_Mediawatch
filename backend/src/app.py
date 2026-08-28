@@ -28,6 +28,7 @@ from src.routers import (
     pipeline_status,
     posts,
     referentiel,
+    subjects,
 )
 from src.services.collection.x_collector import run_collection
 from src.services.scheduler import create_scheduler
@@ -77,6 +78,7 @@ app.include_router(referentiel.router)
 app.include_router(classification.router)
 app.include_router(compteur.router)
 app.include_router(contradictions.router)
+app.include_router(subjects.router)
 app.include_router(figure.router)
 app.include_router(pipeline_status.router)
 app.include_router(llm_costs.router)

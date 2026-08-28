@@ -63,6 +63,15 @@ async def _embed() -> dict:
     return await embed_claims(limit=5000)
 
 
+async def _vector_index() -> dict:
+    from src.services.analysis.vector_index import get_index
+
+    index = get_index()
+    ready = await index.ensure_ready()
+    synced = await index.sync() if ready.get("ready") else {"synced": 0}
+    return {**ready, **synced}
+
+
 async def _enrich_claims() -> dict:
     from src.services.analysis.enrich import enrich_claims
     return await enrich_claims(limit=5000)
@@ -108,6 +117,8 @@ STAGES: tuple[Stage, ...] = (
           produces="déclarations"),
     Stage("embed", "Embeddings des déclarations", FREE, _embed,
           depends_on=("extract_l0",), produces="vecteurs"),
+    Stage("vector_index", "Index vectoriel", FREE, _vector_index,
+          depends_on=("embed",), produces="voisins interrogeables"),
     Stage("enrich_claims", "Thème et référent", FREE, _enrich_claims,
           depends_on=("embed",), produces="rattachements"),
     Stage("build_subjects", "Regroupement en sujets", FREE, _build_subjects,

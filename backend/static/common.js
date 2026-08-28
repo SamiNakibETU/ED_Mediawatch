@@ -39,6 +39,7 @@ function infiniteScroll(sentinelEl, loadMore) {
 // Une publication a un titre composé, pas un logo dans un carré dégradé.
 
 const PAGES = [
+  ["sujets.html", "sujets", "Sujets"],
   ["index.html", "feed", "Réseaux sociaux"],
   ["figure.html", "figures", "Figures"],
   ["presse.html", "presse", "Presse"],

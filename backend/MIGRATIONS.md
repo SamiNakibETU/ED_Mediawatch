@@ -55,3 +55,10 @@ intégral via fxtwitter, déclarations L0 du texte coupé invalidées).
 ## 2026-08-26 — profil X sur `personalities`
 `x_user_id`, `followers_count`, `statuses_count`, `x_protected`,
 `profile_refreshed_at` : additifs, remplis à chaque passe de syndication.
+
+## 2026-08-28 — pgvector (production uniquement)
+`vector_index.ensure_ready()` crée l'extension, la colonne `claims.embedding_vec`
+et l'index HNSW — tout est ADDITIF et idempotent, donc conforme à la doctrine
+« pas d'Alembic tant que c'est additif ». La colonne JSON `embedding` reste la
+source de vérité ; le vecteur en est une projection, resynchronisable.
+Exécuté par l'étape de pipeline `vector_index`. Sans effet sur SQLite.

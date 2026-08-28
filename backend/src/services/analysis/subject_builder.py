@@ -186,7 +186,12 @@ async def build_subjects(*, min_claims: int = 2, limit: int = 8000) -> dict:
                 created += 1
             else:
                 updated += 1
-            subj.label = label[:300]
+            # Un libellé posé par le LLM ou curé à la main ne se réécrit PAS :
+            # la reconstruction détruisait le nommage à chaque passe, et le
+            # sommaire retombait sur des sacs d'entités. Seuls les sujets encore
+            # « auto » reçoivent le libellé calculé.
+            if subj.status == "auto" or not subj.label:
+                subj.label = label[:300]
             subj.theme = themes.most_common(1)[0][0] if themes else None
             subj.centroid = _mean([c.embedding for c in cs])
             subj.entities = sorted(

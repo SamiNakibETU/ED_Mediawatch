@@ -7,6 +7,8 @@ impôts »). Avec, le même corpus a livré un revirement chiffré de Marine Le 
 sur la contribution française à l'UE (six milliards vs sept, à quatre mois).
 """
 
+from sqlalchemy import select
+
 from src.services.analysis.subject_builder import slugify
 from src.services.analysis.subject_clustering import (
     ClaimProbe,
@@ -111,3 +113,62 @@ def test_jaccard_symmetry_and_bounds():
     assert jaccard(set(), {"a"}) == 0.0
     assert jaccard({"a", "b"}, {"a", "b"}) == 1.0
     assert jaccard({"a", "b"}, {"b", "c"}) == jaccard({"b", "c"}, {"a", "b"})
+
+
+# ── Idempotence du nommage ───────────────────────────────────────────────
+
+def test_named_subjects_keep_their_label_on_rebuild(tmp_path, monkeypatch):
+    """Reconstruire ne doit pas détruire le nommage.
+
+    Vécu : `build_subjects` réécrivait `label` depuis les entités à chaque
+    passe, effaçant le nom donné par le LLM (« la hausse des impôts » redevenait
+    « augmenter expression fiscale impots »). Le travail de nommage — payant —
+    était perdu à la passe suivante.
+    """
+    import asyncio
+
+    from src.config import get_settings
+    from src.database import get_engine, get_session_factory, init_db
+    from src.models.claim import Claim
+    from src.models.subject import Subject
+    from src.services.analysis.subject_builder import build_subjects
+
+    caches = (get_settings, get_engine, get_session_factory)
+    monkeypatch.setenv("DATABASE_URL", f"sqlite+aiosqlite:///{tmp_path / 'lab.db'}")
+    for c in caches:
+        c.cache_clear()
+
+    async def run():
+        await init_db()
+        factory = get_session_factory()
+        async with factory() as db:
+            for i in range(3):
+                db.add(Claim(
+                    platform="x", verbatim=f"La contribution européenne augmente de {i} milliards.",
+                    canonical=f"La contribution européenne augmente de {i} milliards.",
+                    claim_type="factuel_quantitatif", theme="economie",
+                    embedding=[1.0, 0.05 * i, 0.0], speaker_name=f"Locuteur {i}",
+                    dedup_key=f"k{i}",
+                ))
+            await db.commit()
+
+        await build_subjects(min_claims=2)
+        async with factory() as db:
+            subj = (await db.execute(select(Subject))).scalars().first()
+            assert subj is not None
+            subj.label = "la contribution française à l'UE"
+            subj.status = "labelled"          # nommé par le LLM
+            await db.commit()
+            sid = subj.id
+
+        await build_subjects(min_claims=2)    # deuxième passe
+        async with factory() as db:
+            again = await db.get(Subject, sid)
+            assert again.label == "la contribution française à l'UE"
+            assert again.status == "labelled"
+
+    try:
+        asyncio.run(run())
+    finally:
+        for c in caches:
+            c.cache_clear()

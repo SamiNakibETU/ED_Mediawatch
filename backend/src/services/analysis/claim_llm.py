@@ -425,16 +425,20 @@ class ClaimLLM:
             ContradictionVerdict,
             _JUDGE_SYSTEM,
         )
+        from src.services.analysis.learning import judge_system_prompt
 
+        # Consigne enrichie des décisions humaines : le juge s'aligne sur ce que
+        # la rédaction a déjà tranché, au lieu de répéter ses erreurs.
+        system = await judge_system_prompt(_JUDGE_SYSTEM)
         prov = self._s.claim_tier2_provider
         if prov == "anthropic" and self._anthropic is not None:
             return await self._tier2_anthropic(
-                prompt, schema=ContradictionVerdict, system=_JUDGE_SYSTEM,
+                prompt, schema=ContradictionVerdict, system=system,
                 max_tokens=800, task="judge",
             )
         if prov in self._openai:
             return await self._tier2_openai(
-                prov, prompt, schema=ContradictionVerdict, system=_JUDGE_SYSTEM,
+                prov, prompt, schema=ContradictionVerdict, system=system,
                 max_tokens=1000, task="judge",
             )
         return None

@@ -82,15 +82,44 @@ async def validate(
     cid: int,
     decision: str = Query(..., description="confirm | reject"),
     validator: str | None = Query(None),
+    reason: str | None = Query(
+        None, description="Motif de rejet (cf. GET /contradictions/rejection-reasons)"
+    ),
+    note: str | None = Query(None, description="Précision libre du relecteur"),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     if decision not in ("confirm", "reject"):
         raise HTTPException(400, "decision must be 'confirm' or 'reject'")
+    if reason and reason not in REJECTION_REASONS:
+        raise HTTPException(
+            400, f"motif inconnu : {reason} (attendus : {sorted(REJECTION_REASONS)})"
+        )
     c = await db.get(Contradiction, cid)
     if c is None:
         raise HTTPException(404, "contradiction introuvable")
     c.status = "confirmed" if decision == "confirm" else "rejected"
     c.validator = validator
     c.validated_at = datetime.now(timezone.utc)
+    # Le motif n'a de sens que sur un rejet : c'est lui qui dit ce qu'il faut
+    # corriger, et il alimente les exemples donnés au juge.
+    if decision == "reject":
+        c.rejection_reason = reason
+    c.validator_note = note
     await db.commit()
-    return {"id": cid, "status": c.status}
+    return {"id": cid, "status": c.status, "reason": c.rejection_reason}
+
+
+@router.get("/contradictions/rejection-reasons", response_model=dict)
+async def rejection_reasons() -> dict:
+    """Motifs de rejet et ce que chacun désigne comme cause."""
+    return {"reasons": [{"key": k, "means": v} for k, v in REJECTION_REASONS.items()]}
+
+
+@router.get("/learning/stats", response_model=dict)
+async def learning_stats() -> dict:
+    """Ce que le système a appris des décisions humaines."""
+    from src.services.analysis.learning import few_shot_examples, judge_precision
+
+    stats = await judge_precision()
+    return {**stats, "examples_in_prompt": await few_shot_examples()
+            if stats["enough_to_learn"] else []}

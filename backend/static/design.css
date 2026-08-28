@@ -645,3 +645,40 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   padding: 0; margin: -1px; overflow: hidden;
   clip: rect(0 0 0 0); white-space: nowrap; border: 0;
 }
+
+/* ── Sujet déplié : une colonne par locuteur ─────────────────────────────
+ * La lecture utile sur un objet de débat est « qui défend quoi » : mettre les
+ * voix côte à côte rend la confrontation visible sans la commenter. */
+
+.subject-detail[hidden] { display: none; }
+.subject-detail {
+  margin-top: var(--s5);
+  padding-top: var(--s4);
+  border-top: 1px solid var(--rule);
+}
+
+.speakers {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+  gap: var(--s5);
+  align-items: start;
+}
+
+.speaker-col .speaker { margin-bottom: var(--s2); }
+.speaker-col .count {
+  font-family: var(--font-mono); font-size: var(--t-micro);
+  font-variant-numeric: tabular-nums; color: var(--faint); font-weight: 400;
+}
+
+.claim-list { list-style: none; margin: 0; padding: 0; }
+.claim-list li {
+  display: flex; flex-direction: column; gap: var(--s1);
+  padding: var(--s3) 0;
+  border-top: 1px solid var(--rule);
+  font-family: var(--font-display);
+  font-size: var(--t-small);
+  line-height: var(--lh-read);
+  color: var(--ink-soft);
+}
+.claim-list li .stamp,
+.claim-list li .source-link { font-family: var(--font-mono); }

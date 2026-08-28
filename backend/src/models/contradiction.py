@@ -30,6 +30,22 @@ TYPE_LABELS = {
 }
 
 
+# Motifs de rejet — fermés pour être agrégeables, et choisis pour désigner
+# chacun une CAUSE différente, donc un correctif différent :
+REJECTION_REASONS = {
+    "objets_differents": "Les deux propos ne portent pas sur le même objet "
+                         "→ le regroupement en sujets est trop lâche.",
+    "pas_contradictoire": "Même objet, mais les positions se concilient "
+                          "→ le juge sur-détecte.",
+    "evolution_assumee": "Changement de position revendiqué, pas une "
+                         "contradiction cachée.",
+    "attribution_fausse": "Le propos n'est pas de cette personne "
+                          "→ défaut d'attribution en amont.",
+    "hors_perimetre": "Vrai mais sans intérêt éditorial.",
+    "autre": "Voir la note du relecteur.",
+}
+
+
 class Contradiction(Base):
     __tablename__ = "contradictions"
 
@@ -58,6 +74,11 @@ class Contradiction(Base):
     # Validation humaine
     status: Mapped[str] = mapped_column(String(12), default="pending", index=True)
     validator: Mapped[str | None] = mapped_column(String(120))
+    # POURQUOI l'humain a écarté. Sans motif, une décision n'apprend rien : on
+    # sait qu'on s'est trompé, pas en quoi. Taxonomie fermée (cf. REJECTION_REASONS)
+    # pour que les motifs soient agrégeables, plus une note libre.
+    rejection_reason: Mapped[str | None] = mapped_column(String(32), index=True)
+    validator_note: Mapped[str | None] = mapped_column(Text)
     detected_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utcnow
     )
