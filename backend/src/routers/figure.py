@@ -25,6 +25,7 @@ from src.models.dossier import Dossier
 from src.models.personality import Personality
 from src.models.subject import Subject
 from src.models.post import Post
+from src.services.analysis.amplification import who_they_amplify
 from src.services.analysis.claim_sources import resolve_claim_urls
 
 router = APIRouter(prefix="/figures", tags=["figures"])
@@ -208,6 +209,9 @@ async def figure_detail(
             for m in sorted(months, reverse=True)
         ],
         "by_subject": by_subject,
+        # Qui la figure relaie. Un retweet nu vaut adhésion, un relais commenté
+        # est ambigu — la distinction est portée jusqu'à l'écran.
+        "amplifies": await who_they_amplify(figure_id, limit=15),
         "timeline_total": n_timeline,
         "timeline_offset": offset,
         "timeline_count": len(claims),

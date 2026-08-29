@@ -1,4 +1,4 @@
-"""Rattrape la cible des retweets déjà collectés.
+"""Rattrape la cible des relais déjà collectés — retweets et citations.
 
 Le parseur de syndication lisait `retweeted_status` pour en prendre le texte,
 mais jetait son auteur : 1 438 retweets sur 1 455 n'avaient aucune cible en
@@ -9,6 +9,12 @@ Le parseur est corrigé, mais l'historique ne se répare pas tout seul : la
 déduplication par `guid` empêche une nouvelle collecte de réécrire les lignes
 existantes. Ce script redemande chaque retweet à fxtwitter par son identifiant,
 qui rend le tweet sous son auteur d'ORIGINE — c'est de là que vient la cible.
+
+Les citations souffrent du même mal pour une autre raison : l'ancien parseur
+Nitter posait `post_type = "quote"` d'après le HTML sans toujours retrouver
+l'auteur cité. Nitter est mort, ses données restent — 826 citations sur 1 037
+étaient sans cible. fxtwitter expose `quote.author`, le même passage les
+récupère.
 
     python -m src.scripts.repair_rt_targets              # dit ce qu'il ferait
     python -m src.scripts.repair_rt_targets --apply      # le fait
@@ -34,6 +40,10 @@ from src.utils import status_id
 
 logger = structlog.get_logger(__name__)
 
+# Retweets ET citations : les deux portent une cible, et les deux en
+# manquaient — pour deux raisons différentes.
+RELAYS = ("retweet", "quote")
+
 
 def _arg(name: str, default: int) -> int:
     if name in sys.argv:
@@ -55,12 +65,12 @@ async def main() -> None:
     async with factory() as db:
         todo = list((await db.execute(
             select(Post.id, Post.url)
-            .where(Post.post_type == "retweet", Post.quoted_handle.is_(None))
+            .where(Post.post_type.in_(RELAYS), Post.quoted_handle.is_(None))
             .order_by(Post.published_at.desc().nullslast())
             .limit(limit)
         )).all())
         total = len(list((await db.execute(
-            select(Post.id).where(Post.post_type == "retweet", Post.quoted_handle.is_(None))
+            select(Post.id).where(Post.post_type.in_(RELAYS), Post.quoted_handle.is_(None))
         )).all()))
 
     print(f"\nRetweets sans cible : {total}")

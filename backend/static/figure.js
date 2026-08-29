@@ -90,6 +90,43 @@ function renderSubjects() {
     (b.onclick = () => { state.onlyConf = b.dataset.conf === "1"; renderSubjects(); }));
 }
 
+// ── Qui elle relaie ─────────────────────────────────────────────────────────
+//
+// Trois actes de parole, trois sens. Un retweet nu vaut adhésion — la
+// méta-analyse des travaux sur Twitter est nette là-dessus, et c'est sur cette
+// base qu'on détecte des communautés politiquement homogènes. Un relais
+// commenté sert des signaux VARIÉS : il peut approuver comme dénoncer, et le
+// sens se lit dans le commentaire, qui existe par ailleurs comme déclaration.
+//
+// D'où l'affichage séparé : « 15 relayés » et « 15 commentés » ne disent pas la
+// même chose, et les additionner effacerait le signal.
+
+function renderAmplifies(rows) {
+  const host = $("#amplifies");
+  if (!host) return;
+  if (!rows?.length) {
+    host.innerHTML = `<p class="state">Aucun relais consigné. La collecte ne
+      retrouve pas toujours le compte relayé — compte fermé, publication
+      supprimée.</p>`;
+    return;
+  }
+  host.innerHTML = `<div class="ranked">${rows.map((r) => `
+    <a class="ranked__item" href="https://x.com/${encodeURIComponent(r.handle)}"
+       target="_blank" rel="noopener">
+      <span class="ranked__n">${r.n}</span>
+      <span>
+        <span class="ranked__t">@${escapeHtml(r.handle)}</span>
+        <span class="ranked__m">${
+          r.n_retweets ? `${r.n_retweets} relayé${r.n_retweets > 1 ? "s" : ""}` : ""}${
+          r.n_retweets && r.n_quotes ? " · " : ""}${
+          r.n_quotes ? `${r.n_quotes} commenté${r.n_quotes > 1 ? "s" : ""}` : ""}
+          · ${escapeHtml(periode(r.first_seen, r.last_seen))}</span>
+      </span>
+    </a>`).join("")}</div>
+    <p class="stamp" style="margin-top:var(--s3)">Relayer sans commentaire vaut
+      adhésion ; commenter peut aussi bien approuver que dénoncer.</p>`;
+}
+
 // ── Chronologie (second plan) ───────────────────────────────────────────────
 
 function claimRow(c) {
@@ -224,11 +261,17 @@ function render(d) {
           ${e.rationale ? `<span class="kv__note">${escapeHtml(e.rationale)}</span>` : ""}
         </div>`).join("")}</div>` : ""}
 
+    <div class="band"><h2>Qui ${escapeHtml(f.full_name)} relaie</h2>
+      <span class="spacer"></span>
+      <p>Retweets et citations, comptés séparément.</p></div>
+    <div id="amplifies"></div>
+
     <div class="band"><h2>Chronologie</h2><span class="spacer"></span>
       <p>Le relevé brut, daté et sourcé.</p></div>
     <div id="timeline"></div>`;
 
   renderSubjects();
+  renderAmplifies(d.amplifies);
   renderTimeline();
 }
 

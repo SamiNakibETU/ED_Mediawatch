@@ -1,4 +1,5 @@
 from src.models.affiliation import SpeakerAffiliation
+from src.models.amplification import Amplification  # noqa: F401
 from src.models.article import Article
 from src.models.base import Base
 from src.models.claim import Claim

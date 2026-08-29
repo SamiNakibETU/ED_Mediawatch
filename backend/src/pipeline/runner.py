@@ -276,22 +276,33 @@ async def funnel() -> dict:
             Post.text_truncated.isnot(True),
         ) + await count(Article, Article.l0_done_at.is_(None))
 
+        # Codage thématique : un propos non codé sort des agrégations par
+        # topique, donc de la mesure d'attention et de la revue.
+        from src.services.analysis.cap import CAP_VERSION
+        coded = await count(Claim, Claim.cap_version.startswith(CAP_VERSION))
+        on_topic = await count(
+            Claim, Claim.cap_version.startswith(CAP_VERSION), Claim.cap_major.isnot(None))
+
         last = (await db.execute(
             select(PipelineRun).order_by(PipelineRun.started_at.desc()).limit(1)
         )).scalar_one_or_none()
 
+    # Chaque étage porte une CLÉ stable. Le front lisait l'entonnoir par
+    # position : insérer un étage décalait tout et affichait un chiffre pour un
+    # autre, sans erreur ni signal.
+    #
     # `blocked` dit ce qui manque ; `todo` dit ce qui va s'en occuper. Depuis que
     # la passe complète tourne toute seule, la réponse est presque toujours « la
     # prochaine passe » — et c'est précisément ce qu'il faut afficher plutôt que
     # de laisser croire qu'une intervention est attendue.
     steps = [
-        {"step": "Publications collectées", "n": posts + articles,
+        {"key": "collecte", "step": "Publications collectées", "n": posts + articles,
          "detail": f"{posts} posts X · {articles} articles",
          "blocked": f"{truncated} tweets encore tronqués" if truncated else None,
          "todo": ("la réparation en reprend 600 par passe ; L0 les laisse de côté "
                   "d'ici là, segmenter un texte coupé à 280 produit des "
                   "déclarations fausses par omission") if truncated else None},
-        {"step": "Déclarations extraites", "n": claims,
+        {"key": "extraction", "step": "Déclarations extraites", "n": claims,
          "detail": (f"{attributed} attribuées à un locuteur"
                     + (f" · {to_segment} sources restent à segmenter" if to_segment
                        else " · tout le corpus est segmenté")),
@@ -300,21 +311,29 @@ async def funnel() -> dict:
                           if claims - attributed else None),
          "todo": (f"la passe complète en traite ~1900 par cycle de 4 h"
                   if to_segment else None)},
-        {"step": "Déclarations vectorisées", "n": embedded,
+        {"key": "codage", "step": "Propos situés dans la grille", "n": coded,
+         "detail": (f"{on_topic} rattachés à un domaine d'action publique"
+                    + (f" · {coded - on_topic} hors politique publique"
+                       if coded - on_topic else "")),
+         "blocked": (f"{claims - coded} propos pas encore codés"
+                     if claims - coded else None),
+         "todo": ("le codage tourne à chaque passe, au tier 1"
+                  if claims - coded else None)},
+        {"key": "vectorisation", "step": "Déclarations vectorisées", "n": embedded,
          "detail": f"{claims - embedded} sans vecteur" if claims else "",
          "blocked": "embeddings manquants — sujets impossibles"
                     if claims and embedded < claims else None,
          "todo": "étape gratuite : la prochaine passe les vectorise"
                  if claims and embedded < claims else None},
-        {"step": "Sujets constitués", "n": subjects,
+        {"key": "sujets", "step": "Sujets constitués", "n": subjects,
          "detail": f"{labelled} nommés · {confrontable} à ≥2 locuteurs",
          "blocked": "aucun sujet — rien à confronter" if not subjects else None,
          "todo": "le regroupement a besoin de déclarations vectorisées"
                  if not subjects else None},
-        {"step": "Déclarations rattachées à un sujet", "n": in_subject,
+        {"key": "rattachement", "step": "Déclarations rattachées à un sujet", "n": in_subject,
          "detail": f"{embedded - in_subject} isolées" if embedded else "",
          "blocked": None, "todo": None},
-        {"step": "Rapprochements à relire", "n": pending,
+        {"key": "relecture", "step": "Rapprochements à relire", "n": pending,
          "detail": f"{confirmed} confirmés par un humain",
          "blocked": "aucun sujet confrontable" if not confrontable else None,
          "todo": ("un sujet ne devient confrontable qu'à partir de deux "

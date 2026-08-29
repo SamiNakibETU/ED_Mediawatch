@@ -56,6 +56,14 @@ async def _enrich_truncated() -> dict:
     return await enrich_truncated_posts(limit=600)
 
 
+async def _amplifications() -> dict:
+    from src.services.analysis.amplification import build_amplifications
+
+    # Aucun appel de modèle : la typologie est en base et la cible vient de la
+    # collecte. Il ne reste qu'à en tirer les conséquences.
+    return await build_amplifications(limit=5000)
+
+
 async def _extract_l0() -> dict:
     from src.services.analysis.declaration_extractor import run_declaration_extraction
 
@@ -141,6 +149,8 @@ STAGES: tuple[Stage, ...] = (
           produces="posts complétés"),
     # L0 après l'enrichissement : segmenter un texte coupé à 280 produit des
     # déclarations fausses par omission, et la dépense est à refaire.
+    Stage("amplifications", "Graphe d'amplification", FREE, _amplifications,
+          depends_on=("collect_x",), produces="arêtes"),
     Stage("extract_l0", "Extraction des déclarations (L0)", PAID, _extract_l0,
           depends_on=("enrich_truncated", "collect_press"),
           produces="déclarations"),

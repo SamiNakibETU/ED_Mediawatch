@@ -36,15 +36,18 @@ function renderNow(items) {
 // ne se compare pas — il ne compte donc pas vraiment.
 
 function renderFonds(f, nSubjects, nPending) {
-  const n = (i) => f?.steps?.[i]?.n ?? 0;
-  const m = (f?.steps?.[1]?.detail || "").match(/^(\d+)/);
+  // Par CLÉ, jamais par position : l'entonnoir gagne des étages, et un index
+  // figé afficherait le chiffre d'à côté sans que rien ne le signale.
+  const etage = (cle) => (f?.steps || []).find((s) => s.key === cle) || {};
+  const n = (cle) => etage(cle).n ?? 0;
+  const m = (etage("extraction").detail || "").match(/^(\d+)/);
   const attribues = m ? +m[1] : 0;
 
   $("#fonds").innerHTML = `<div class="statbar">
-    <span class="statbar__item"><span class="statbar__n">${fmtNum(n(0))}</span>
+    <span class="statbar__item"><span class="statbar__n">${fmtNum(n("collecte"))}</span>
       publications conservées</span>
     <span class="statbar__item"><span class="statbar__n statbar__n--accent">${fmtNum(attribues)}</span>
-      propos attribués <span class="statbar__of">/ ${fmtNum(n(1))} extraits</span></span>
+      propos attribués <span class="statbar__of">/ ${fmtNum(n("extraction"))} extraits</span></span>
     <span class="statbar__item"><span class="statbar__n">${fmtNum(nSubjects)}</span>
       sujets exploitables</span>
     <a class="statbar__item" href="contradictions.html">
