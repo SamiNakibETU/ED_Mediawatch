@@ -52,6 +52,13 @@ class Claim(Base, TimestampMixin):
     # Rattachement thématique + référent (clé de comparaison / blocking)
     theme: Mapped[str | None] = mapped_column(String(40))
     subtheme: Mapped[str | None] = mapped_column(String(60))
+    # Grille CAP (Comparative Agendas Project) — voir services/analysis/cap.py.
+    # Remplace la grille maison, qui avait dérivé à 24 valeurs et n'était
+    # comparable à rien. `theme` reste le temps de la bascule : l'entonnoir et
+    # trois pages le lisent encore.
+    cap_major: Mapped[int | None] = mapped_column(Integer, index=True)
+    cap_subtopic: Mapped[int | None] = mapped_column(Integer)
+    cap_version: Mapped[str | None] = mapped_column(String(24))
     referent_key: Mapped[str | None] = mapped_column(
         ForeignKey("referents.key", ondelete="SET NULL"), index=True
     )

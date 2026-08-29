@@ -25,6 +25,11 @@ from src.services.analysis.llm_usage import get_llm_budget
 
 logger = structlog.get_logger(__name__)
 
+# Température du codage thématique : verrouillée, parce qu'un codeur se
+# définit par (modèle, consigne, échantillonnage) — sans ça un taux d'accord
+# n'est pas reproductible.
+from src.services.analysis.cap import CAP_TEMPERATURE
+
 
 def _usage_tokens(resp) -> tuple[int, int]:
     """Tokens réels (input, output) d'une réponse OpenAI-compatible ou Anthropic."""
@@ -287,6 +292,76 @@ class ClaimLLM:
         except Exception as exc:  # noqa: BLE001
             logger.debug("claim_llm.tier1_fail", error=str(exc)[:120])
             return True  # en cas d'échec, ne pas bloquer
+
+    async def _ask_tier1(self, system: str, user: str, task: str) -> str:
+        """Une question courte au modèle bon marché. Rend la réponse brute."""
+        prov = self._s.claim_tier1_provider
+        client = self._openai.get(prov) if prov != "anthropic" else None
+        if client is None:
+            return ""
+        await get_llm_budget().check_or_raise()
+        resp = await client.chat.completions.create(
+            model=self._s.claim_tier1_model,
+            max_tokens=256,
+            temperature=CAP_TEMPERATURE,
+            messages=[{"role": "system", "content": system},
+                      {"role": "user", "content": user}],
+        )
+        tin, tout = _usage_tokens(resp)
+        await get_llm_budget().record(
+            provider=prov, model=self._s.claim_tier1_model, task=task,
+            input_tokens=tin, output_tokens=tout,
+        )
+        return (resp.choices[0].message.content or "").strip()
+
+    async def code_cap(self, text: str) -> int | None:
+        """Range une déclaration dans la grille CAP, en DEUX questions.
+
+        Q1 — cette déclaration porte-t-elle sur un objet d'action publique ?
+        Q2 — si oui, lequel des 21 topiques ?
+
+        Pourquoi ne pas poser une seule question. La littérature le mesure : un
+        prompt holistique qui demande à la fois « de quoi s'agit-il » et « dans
+        quelle catégorie » s'effondre (Fleiss κ = 0,175 sur un corpus politique
+        comparable), et c'est la décomposition qui rend l'annotation fiable. Le
+        mécanisme s'observait ici même — une question unique laissait le ton
+        décider : « untel est un détraqué » était refusé au codage parce que
+        violent, alors que la question portait sur l'existence d'un objet.
+
+        Séparer les deux coûte un appel de plus au tier 1, soit environ 20 % —
+        et Q1 est courte, elle ne porte pas la grille. Le prix d'une mesure
+        fiable, sur une tâche dont tout le reste dépend.
+
+        Rend None quand aucun topique ne s'applique : c'est une DÉCISION, pas un
+        échec. Une part notable de ce corpus est de l'attaque et du
+        positionnement, sans objet d'action publique.
+        """
+        from src.services.analysis.cap import (
+            CODING_RULE, Q1_SYSTEM, grid_for_prompt, is_valid,
+        )
+
+        if not text or not text.strip():
+            return None
+        extrait = text.strip()[:600]
+
+        try:
+            q1 = await self._ask_tier1(
+                Q1_SYSTEM, f"Déclaration : {extrait!r}\n\nRéponse :", "cap_q1")
+            if "oui" not in q1.lower():
+                return None
+
+            q2 = await self._ask_tier1(
+                "Tu ranges une déclaration politique dans une grille thématique.\n\n"
+                + grid_for_prompt() + "\n\n" + CODING_RULE,
+                f"Déclaration : {extrait!r}\n\nCode :", "cap_q2")
+            # Le premier entier rencontré, VALIDÉ contre la grille : un code
+            # hors grille est une hallucination, pas un topique inédit.
+            digits = "".join(c if c.isdigit() else " " for c in q2).split()
+            code = int(digits[0]) if digits else None
+            return code if is_valid(code) else None
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("claim_llm.cap_fail", error=str(exc)[:120])
+            return None
 
     async def _tier2_anthropic(
         self, prompt: str, *, schema=RefinedClaim, system: str = _SYSTEM,

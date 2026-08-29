@@ -22,6 +22,23 @@ async def pipeline_funnel() -> dict:
     return await funnel()
 
 
+@router.get("/themes")
+async def cap_distribution() -> dict:
+    """Répartition de l'attention par topique CAP.
+
+    La mesure que la grille maison ne permettait pas : une part d'attention
+    comparable à celle du gouvernement, du Parlement ou de la presse, qui codent
+    avec la même grille depuis 1993.
+    """
+    from src.services.analysis.cap import CAP_VERSION, RELIABILITY
+    from src.services.analysis.cap_coder import distribution
+
+    # La fiabilité voyage AVEC la mesure. Servir la répartition sans elle
+    # inviterait à la publier comme un fait établi.
+    return {"version": CAP_VERSION, "reliability": RELIABILITY,
+            "topics": await distribution()}
+
+
 @router.get("/stages")
 async def list_stages() -> dict:
     """Le graphe, tel qu'il est réellement exécuté."""

@@ -253,16 +253,65 @@ function renderGraph(stages) {
     </div>`).join("")}</div>`;
 }
 
+
+// ── Répartition thématique ──────────────────────────────────────────────────
+//
+// Une barre par topique, proportionnelle à la part d'attention. Ici la
+// proportion a un sens — c'est bien une part d'un tout, sur une même grille —
+// contrairement à l'entonnoir, dont les étages ne comptent pas la même unité.
+//
+// La part « hors politique publique » est affichée comme les autres. C'est un
+// résultat : une bonne moitié du discours suivi est de l'attaque et du
+// positionnement, pas de la proposition. La masquer donnerait une répartition
+// flatteuse et fausse.
+
+function renderThemes(d) {
+  const rows = d?.topics || [];
+  const host = $("#themes");
+  if (!rows.length) {
+    host.innerHTML = `<p class="state">Aucune déclaration codée pour l’instant.
+      L’étape « codage thématique » tourne à chaque passe.</p>`;
+    return;
+  }
+  const max = Math.max(...rows.map((r) => r.part), 1);
+  // La réserve de fiabilité vient AVANT les chiffres, pas en note de bas de
+  // page. Une répartition thématique dont l'alpha n'atteint pas le seuil se lit
+  // comme un fait si rien ne dit le contraire — et c'est le genre de chiffre
+  // qu'un journaliste reprend.
+  const f = d.reliability;
+  const alerte = f && f.alpha < 0.67
+    ? `<p class="rationale" style="border-top:none;padding-top:0;color:var(--pending)">
+         <strong>Mesure indicative.</strong> Accord codeur humain / modèle :
+         α = ${String(f.alpha).replace(".", ",")} sur ${f.n_units} déclarations
+         (${f.n_coders} annotateur). Le seuil de fiabilité de l'analyse de contenu
+         est 0,67 — cette répartition oriente, elle ne se publie pas comme une mesure.</p>`
+    : "";
+
+  host.innerHTML = alerte + `<div class="kv">${rows.map((r) => `
+    <div class="kv__row" style="flex-wrap:wrap">
+      <span class="kv__k" style="${r.code == null ? "color:var(--faint)" : "color:var(--ink)"}">
+        ${escapeHtml(r.label)}</span>
+      <span class="kv__v">${r.part} % <span class="statbar__of">${fmtNum(r.n)}</span></span>
+      <div class="gauge" style="flex-basis:100%">
+        <div class="gauge__track"><div class="gauge__fill${r.code == null ? " gauge__fill--alert" : ""}"
+          style="width:${((r.part / max) * 100).toFixed(1)}%"></div></div>
+      </div>
+    </div>`).join("")}</div>
+    <p class="stamp" style="margin-top:var(--s3)">Grille ${escapeHtml(d.version || "")}
+      · Comparative Agendas Project</p>`;
+}
+
 // ── Chargement ──────────────────────────────────────────────────────────
 
 async function load() {
   try {
-    const [f, runs, costs, fresh, graph] = await Promise.all([
+    const [f, runs, costs, fresh, graph, themes] = await Promise.all([
       fetchJSON("/pipeline/funnel"),
       fetchJSON("/pipeline/runs?limit=8"),
       fetchJSON("/llm/costs").catch(() => null),
       fetchJSON("/health/freshness").catch(() => null),
       fetchJSON("/pipeline/stages").catch(() => null),
+      fetchJSON("/pipeline/themes").catch(() => null),
     ]);
 
     $("#stats").textContent = renderFunnel(f);
@@ -272,6 +321,7 @@ async function load() {
     if (costs) renderSpend(costs);
     if (fresh) renderFresh(fresh);
     if (graph) renderGraph(graph.stages || []);
+    renderThemes(themes);
 
     const live = $("#live");
     live.hidden = false;

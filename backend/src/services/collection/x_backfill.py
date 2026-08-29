@@ -186,6 +186,13 @@ def _fx_to_post(data: dict, handle: str) -> dict | None:
         out["quoted_handle"] = q_author
         out["quoted_url"] = quote.get("url")
         out["quoted_content"] = (quote.get("text") or "")[:2000] or None
+    elif is_retweet:
+        # fxtwitter rend le tweet sous son auteur d'ORIGINE quand c'est un
+        # retweet — c'est d'ailleurs comme ça qu'on le détecte deux lignes plus
+        # haut. Cet auteur est la cible de l'amplification ; le jeter revenait à
+        # savoir qu'il y avait relais sans savoir de qui.
+        out["quoted_handle"] = author
+        out["quoted_url"] = url
     return out
 
 

@@ -68,6 +68,15 @@ async def _extract_l0() -> dict:
     return await run_declaration_extraction(limit_posts=1500, limit_articles=400)
 
 
+async def _cap_coding() -> dict:
+    from src.services.analysis.cap_coder import code_claims
+
+    # Tier 1 : une classification à 21 issues, pas une analyse. ~0,12 $ pour
+    # 1 500 déclarations, et le pont déterministe en absorbe la plus grande part
+    # sans appeler personne.
+    return await code_claims(limit=1500)
+
+
 async def _embed() -> dict:
     from src.services.analysis.claim_embeddings import embed_claims
     return await embed_claims(limit=5000)
@@ -135,6 +144,10 @@ STAGES: tuple[Stage, ...] = (
     Stage("extract_l0", "Extraction des déclarations (L0)", PAID, _extract_l0,
           depends_on=("enrich_truncated", "collect_press"),
           produces="déclarations"),
+    # Le codage thématique vient juste après l'extraction : les sujets, les
+    # fiches et la revue s'agrègent tous par topique.
+    Stage("cap_coding", "Codage thématique (grille CAP)", PAID, _cap_coding,
+          depends_on=("extract_l0",), produces="topiques"),
     Stage("embed", "Embeddings des déclarations", FREE, _embed,
           depends_on=("extract_l0",), produces="vecteurs"),
     Stage("vector_index", "Index vectoriel", FREE, _vector_index,

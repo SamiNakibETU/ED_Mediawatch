@@ -150,14 +150,28 @@ def _tweet_dict(tweet: dict, handle: str) -> dict | None:
         "quoted_url": None,
         "quoted_content": None,
     }
-    if quoted is not None:
-        q_user = (quoted.get("user") or {}).get("screen_name")
-        q_id = quoted.get("id_str")
-        out["quoted_handle"] = q_user
-        out["quoted_url"] = f"https://x.com/{q_user}/status/{q_id}" if q_user and q_id else None
-        out["quoted_content"] = _expand_urls(
-            quoted.get("full_text") or quoted.get("text") or "", quoted.get("entities")
-        )[:2000] or None
+    # Le post PORTÉ, citation comme retweet. `retweeted_status` était déjà lu
+    # pour en prendre le texte, mais son auteur était jeté : 1 438 retweets sur
+    # 1 455 n'avaient aucune cible en base, et un retweet sans cible n'est pas un
+    # signal d'amplification — c'est une ligne morte.
+    #
+    # Même paire de champs pour les deux : `post_type` dit déjà lequel c'est, et
+    # deux paires de colonnes quasi identiques se désynchronisent toujours.
+    carried = quoted if quoted is not None else rt
+    if carried is not None:
+        c_user = (carried.get("user") or {}).get("screen_name")
+        c_id = carried.get("id_str")
+        out["quoted_handle"] = c_user
+        out["quoted_url"] = f"https://x.com/{c_user}/status/{c_id}" if c_user and c_id else None
+        # Pour un retweet, `content` porte déjà ce texte : ne pas le dupliquer.
+        # ATTENTION : ce sont alors les mots de QUELQU'UN D'AUTRE. C'est pour ça
+        # que l'extraction L0 exclut `is_retweet` — ne jamais relâcher ce filtre
+        # sans traiter le cas, sous peine de prêter à une figure les propos
+        # qu'elle relaie.
+        if quoted is not None:
+            out["quoted_content"] = _expand_urls(
+                quoted.get("full_text") or quoted.get("text") or "", quoted.get("entities")
+            )[:2000] or None
     return out
 
 
