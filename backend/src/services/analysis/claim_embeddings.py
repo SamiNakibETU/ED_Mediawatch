@@ -72,12 +72,24 @@ async def embed_claims(limit: int = 2000) -> dict:
         if not pairs:
             return {"embedded": 0, "note": "rien à embedder"}
         vectors = await embedder.embed([t for _, t in pairs])
+        # Compter ce qui a ete ECRIT, pas ce qu'on avait l'intention d'ecrire :
+        # un backend qui rend une liste vide (cle refusee, repli indisponible)
+        # aurait fait annoncer deux mille embeddings pour zero vecteur, et
+        # l'atelier aurait affiche une chaine en bonne sante sur une base vide.
+        ecrits = 0
         for (c, _), v in zip(pairs, vectors):
             obj = await db.get(Claim, c.id)
             if obj:
                 obj.embedding = v
+                ecrits += 1
         await db.commit()
-    return {"embedded": len(pairs), "dim": dim, "recalcules": len(perimes)}
+
+    out = {"embedded": ecrits, "dim": dim, "recalcules": len(perimes)}
+    if not ecrits:
+        out["skipped"] = ("le backend d'embedding n'a rendu aucun vecteur "
+                          "— cle refusee et repli local absent")
+        logger.warning("embeddings.no_vectors", attendus=len(pairs))
+    return out
 
 
 def _greedy_groups(items: list[tuple[int, list[float]]], threshold: float) -> list[list[int]]:

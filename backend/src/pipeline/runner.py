@@ -232,6 +232,18 @@ async def _run_stages(ordered: list[Stage], run_id: int) -> tuple[list[dict], se
     return report, failed, budget_hit
 
 
+def _embedder_ok() -> bool:
+    """Y a-t-il de quoi vectoriser ? La question n'a pas de reponse evidente :
+    une cle peut etre presente et refusee, et le repli local n'est installe
+    qu'en developpement."""
+    from src.services.analysis.embeddings import get_embedder
+
+    try:
+        return get_embedder().available()
+    except Exception:  # noqa: BLE001
+        return False
+
+
 async def funnel() -> dict:
     """L'entonnoir : combien d'items à chaque étage, et où ça s'arrête.
 
@@ -319,12 +331,17 @@ async def funnel() -> dict:
                      if claims - coded else None),
          "todo": ("le codage tourne à chaque passe, au tier 1"
                   if claims - coded else None)},
+        # « La prochaine passe les vectorise » n'est vrai que s'il existe un
+        # backend pour le faire. Sans clé valide ni repli, la promesse se
+        # répétait indéfiniment sur une chaîne qui n'avançait plus.
         {"key": "vectorisation", "step": "Déclarations vectorisées", "n": embedded,
          "detail": f"{claims - embedded} sans vecteur" if claims else "",
-         "blocked": "embeddings manquants — sujets impossibles"
-                    if claims and embedded < claims else None,
-         "todo": "étape gratuite : la prochaine passe les vectorise"
-                 if claims and embedded < claims else None},
+         "blocked": (("embeddings manquants — sujets impossibles" if _embedder_ok()
+                      else "aucun backend d'embedding : clé refusée ou absente")
+                     if claims and embedded < claims else None),
+         "todo": (("étape gratuite : la prochaine passe les vectorise" if _embedder_ok()
+                   else "renseigner une clé d'embedding valide — rien ne repartira sans")
+                  if claims and embedded < claims else None)},
         {"key": "sujets", "step": "Sujets constitués", "n": subjects,
          "detail": f"{labelled} nommés · {confrontable} à ≥2 locuteurs",
          "blocked": "aucun sujet — rien à confronter" if not subjects else None,
