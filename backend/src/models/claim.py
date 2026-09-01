@@ -58,7 +58,11 @@ class Claim(Base, TimestampMixin):
     # trois pages le lisent encore.
     cap_major: Mapped[int | None] = mapped_column(Integer, index=True)
     cap_subtopic: Mapped[int | None] = mapped_column(Integer)
-    cap_version: Mapped[str | None] = mapped_column(String(24))
+    # La signature complete du codeur, pas le seul numero de grille :
+    # « cap-major-2019/2q-v1/<modele>@t0.0 ». Les noms de modeles sont longs,
+    # et une colonne trop courte ne se voit pas en SQLite — elle casse en
+    # Postgres, a chaque passe.
+    cap_version: Mapped[str | None] = mapped_column(String(120))
     referent_key: Mapped[str | None] = mapped_column(
         ForeignKey("referents.key", ondelete="SET NULL"), index=True
     )

@@ -105,16 +105,60 @@ def _autoadd_missing_columns(sync_conn) -> None:  # noqa: ANN001
                 )
 
 
+def _widen_narrowed_strings(sync_conn) -> None:  # noqa: ANN001
+    """Élargit les colonnes texte devenues trop courtes pour le modèle.
+
+    SQLite n'applique pas la longueur d'un VARCHAR : une valeur trop longue y
+    passe sans bruit. Postgres la refuse. C'est exactement ce qui est arrivé à
+    `cap_version` — la signature du codeur est passée de 14 à 56 caractères
+    quand elle s'est mise à porter le modèle, et le codage CAP a échoué à
+    chaque passe en production pendant que la suite de tests restait verte.
+
+    Élargir n'est pas retyper : Postgres allonge un `varchar` sans réécrire la
+    table et sans perdre une valeur. Le rétrécissement, lui, reste interdit —
+    il tronquerait des données existantes, et c'est la règle que la discipline
+    additive protège.
+    """
+    from sqlalchemy import String, inspect
+
+    if sync_conn.dialect.name == "sqlite":
+        return  # rien à élargir : la longueur n'y est pas contraignante
+
+    inspector = inspect(sync_conn)
+    existing_tables = set(inspector.get_table_names())
+    for table in Base.metadata.sorted_tables:
+        if table.name not in existing_tables:
+            continue
+        actual = {c["name"]: c["type"] for c in inspector.get_columns(table.name)}
+        for col in table.columns:
+            want = getattr(col.type, "length", None)
+            have = getattr(actual.get(col.name), "length", None)
+            if not isinstance(col.type, String) or not want or not have or have >= want:
+                continue
+            stmt = (f'ALTER TABLE "{table.name}" '
+                    f'ALTER COLUMN "{col.name}" TYPE VARCHAR({want})')
+            try:
+                with sync_conn.begin_nested():
+                    sync_conn.exec_driver_sql(stmt)
+                logger.info("schema.column_widened", table=table.name,
+                            column=col.name, was=have, now=want)
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("schema.column_widen_failed", table=table.name,
+                               column=col.name, error=str(exc)[:160])
+
+
 async def init_db() -> None:
     """Create missing tables, then additively add missing columns.
 
     No Alembic: additive, idempotent migrations applied at boot on both SQLite
-    (local) and PostgreSQL (prod). See `_autoadd_missing_columns`.
+    (local) and PostgreSQL (prod). See `_autoadd_missing_columns` and
+    `_widen_narrowed_strings`.
     """
     engine = get_engine()
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
         await conn.run_sync(_autoadd_missing_columns)
+        await conn.run_sync(_widen_narrowed_strings)
 
 
 async def get_db() -> AsyncIterator[AsyncSession]:
