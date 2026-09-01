@@ -41,6 +41,15 @@ async def lifespan(app: FastAPI):
     await init_db()
     logger.info("db.ready", url=settings.database_url.split("://")[0])
 
+    # Les affiliations datées, si personne ne les a encore posées. Sans elles,
+    # le parti d'un propos ne peut pas être résolu à sa date, et la comparaison
+    # par parti dans la durée retombe sur le parti du jour — l'erreur même que
+    # ces données existent pour écarter. La garde est dans `ensure_seeded` :
+    # elle ne sème que sur une table vide, jamais par-dessus l'existant.
+    from src.scripts.seed_affiliations import ensure_seeded
+
+    logger.info("affiliations.ready", **await ensure_seeded())
+
     # Le cadencement suffit : la première passe part 2 minutes après le
     # démarrage. Il y avait ici un `await run_collection()` conditionnel qui
     # bloquait le `lifespan` — l'API ne répondait pas tant que la collecte

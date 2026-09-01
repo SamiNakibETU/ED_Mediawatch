@@ -23,6 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config import get_settings
 from src.database import get_session_factory
+from src.services.affiliation import all_affiliations, party_of
 from src.services.analysis.llm_usage import BudgetExceeded
 from src.models.article import Article
 from src.models.claim import Claim
@@ -223,6 +224,12 @@ async def run_declaration_extraction(
         people: dict[str, int] = dict(
             (await db.execute(select(Personality.full_name, Personality.id))).all()
         )
+        # Les fiches et les affiliations datées, chargées une fois pour la passe :
+        # le parti inscrit sur un propos est celui du jour où il a été tenu, et
+        # une requête par déclaration serait ruineuse à ce volume.
+        fiches = {f.id: f for f in
+                  (await db.execute(select(Personality))).scalars().all()}
+        affils = await all_affiliations(db)
 
     async with factory() as db:
         await _backfill_done_marks(db)
@@ -280,7 +287,7 @@ async def run_declaration_extraction(
                         if await _store(
                             db, decl=decl, src_ref=src_ref, platform="x", post_id=post.id,
                             article_id=None, personality_id=p.id, speaker_name=p.full_name,
-                            party=(p.famille or p.group_code),
+                            party=party_of(affils, p, post.published_at),
                             published_at=post.published_at, model=model,
                         ):
                             n_new += 1
@@ -368,7 +375,8 @@ async def run_declaration_extraction(
                         if await _store(
                             db, decl=decl, src_ref=src_ref, platform="press", post_id=None,
                             article_id=art.id, personality_id=pid, speaker_name=who,
-                            party=None, published_at=art.published_at, model=model,
+                            party=party_of(affils, fiches.get(pid), art.published_at),
+                            published_at=art.published_at, model=model,
                         ):
                             n_new += 1
                     await db.commit()

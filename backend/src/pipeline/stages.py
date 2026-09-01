@@ -85,6 +85,11 @@ async def _cap_coding() -> dict:
     return await code_claims(limit=1500)
 
 
+async def _party_of_record() -> dict:
+    from src.services.analysis.party_of_record import fix_claim_parties
+    return await fix_claim_parties(limit=5000)
+
+
 async def _embed() -> dict:
     from src.services.analysis.claim_embeddings import embed_claims
     return await embed_claims(limit=5000)
@@ -158,6 +163,11 @@ STAGES: tuple[Stage, ...] = (
     # fiches et la revue s'agrègent tous par topique.
     Stage("cap_coding", "Codage thématique (grille CAP)", PAID, _cap_coding,
           depends_on=("extract_l0",), produces="topiques"),
+    # Gratuite, et placée juste après l'extraction : tout ce qui agrège par
+    # parti — sujets, fiches, revue — doit lire un parti daté, pas le parti du
+    # jour où la déclaration a été extraite.
+    Stage("party_of_record", "Parti à la date du propos", FREE, _party_of_record,
+          depends_on=("extract_l0",), produces="partis rectifiés"),
     Stage("embed", "Embeddings des déclarations", FREE, _embed,
           depends_on=("extract_l0",), produces="vecteurs"),
     Stage("vector_index", "Index vectoriel", FREE, _vector_index,

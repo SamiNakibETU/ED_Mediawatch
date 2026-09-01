@@ -57,3 +57,40 @@ def party_at(
     if current:
         return current[0].party
     return max(affils, key=lambda a: (a.date_start or date.min)).party
+
+async def all_affiliations(db: AsyncSession) -> dict[int, list[SpeakerAffiliation]]:
+    """Toutes les affiliations, groupees par locuteur.
+
+    Une centaine de lignes pour cent treize locuteurs : on charge le tout une
+    fois par passe plutot que de requeter par declaration. Le N+1 serait ici
+    particulierement couteux — l'extraction ecrit par milliers.
+    """
+    rows = (await db.execute(select(SpeakerAffiliation))).scalars().all()
+    grouped: dict[int, list[SpeakerAffiliation]] = {}
+    for a in rows:
+        grouped.setdefault(a.personality_id, []).append(a)
+    return grouped
+
+
+def party_of(
+    grouped: dict[int, list[SpeakerAffiliation]],
+    personality,
+    when: date | datetime | None,
+) -> str | None:
+    """Le parti a inscrire sur un propos : celui du jour ou il a ete tenu.
+
+    Ce que ca corrige. Le parti etait fige au moment de l'extraction, pris sur
+    la fiche du locuteur — c'est-a-dire son parti AUJOURD'HUI. Une declaration
+    d'Eric Ciotti en 2023 se retrouvait donc etiquetee UDR, un parti qui
+    n'existait pas encore. Toute comparaison « ce que dit le RN » contre « ce
+    que disait LR » etait fausse d'autant, et d'autant plus faussee que le
+    corpus remonte loin.
+
+    A defaut d'affiliation couvrant la date, on retombe sur la fiche : mieux
+    vaut le parti actuel que pas de parti du tout, et `party_at` a deja epuise
+    ce qu'on sait.
+    """
+    if personality is None:
+        return None
+    courant = personality.famille or personality.group_code
+    return party_at(grouped.get(personality.id), when) or courant

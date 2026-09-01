@@ -12,7 +12,7 @@ import asyncio
 from datetime import date
 
 import structlog
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 
 from src.database import get_session_factory, init_db
 from src.models.affiliation import SpeakerAffiliation
@@ -72,6 +72,26 @@ async def seed() -> dict:
     logger.info("seed_affiliations.done", **stats)
     print(f"Affiliations seedées: {stats}")
     return stats
+
+
+async def ensure_seeded() -> dict:
+    """Sème les affiliations si la table est vide, et seulement dans ce cas.
+
+    `seed()` reconstruit tout (il commence par un DELETE) : appelé au démarrage,
+    il effacerait à chaque redéploiement les transitions ajoutées à la main. La
+    garde « seulement si vide » est ce qui rend l'amorçage sûr en production, où
+    personne ne lance de script.
+
+    Sans affiliations en base, le parti d'un propos ne peut pas être résolu à sa
+    date : toute la comparaison par parti dans la durée reposerait sur le parti
+    du jour, et c'est exactement l'erreur qu'on cherche à écarter.
+    """
+    factory = get_session_factory()
+    async with factory() as db:
+        deja = await db.scalar(select(func.count()).select_from(SpeakerAffiliation))
+    if deja:
+        return {"affiliations": deja, "note": "déjà en base"}
+    return await seed()
 
 
 if __name__ == "__main__":
