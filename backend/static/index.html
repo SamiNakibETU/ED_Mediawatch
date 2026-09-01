@@ -6,7 +6,7 @@
   <title>L’observatoire — ED Mediawatch</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..600&family=Source+Sans+3:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=IBM+Plex+Mono:wght@400;500&display=swap" />
   <link rel="stylesheet" href="design.css" />
   <script>
     try { const t = localStorage.getItem("theme"); if (t) document.documentElement.dataset.theme = t; } catch {}
@@ -16,26 +16,26 @@
   <header id="masthead"></header>
   <div class="now" id="now" hidden></div>
 
-  <div class="wrap" style="padding-top:var(--s6);padding-bottom:var(--s8)">
+  <div class="wrap page">
     <!-- L'objet du produit, écrit en clair : on ne suit pas des comptes,
          on suit des sujets, et on regarde comment le propos bouge dessus. -->
-    <p class="dek" style="max-width:46rem;margin-top:0">
+    <p class="dek measure lede-first">
       Un observatoire du propos d’extrême droite dans la durée. Pas un fil d’actualité&nbsp;:
       ce qu’on cherche ici, c’est <strong>qui a défendu quoi, sur quel objet précis, et à quelle
       date</strong> — pour pouvoir le comparer. Tout ce qui se dit en ligne et dans la presse est
       consigné, daté, sourcé.
     </p>
 
-    <div id="fonds" style="margin-top:var(--s6)"></div>
+    <div id="fonds"></div>
 
     <div class="band"><h2>La une</h2>
       <span class="spacer"></span>
       <p>Le sujet où la comparaison a le plus à révéler.</p></div>
     <main id="une"><p class="state">Chargement…</p></main>
 
-    <div class="split" style="margin-top:var(--s7)">
+    <div class="split mt-7">
       <div>
-        <div class="band" style="margin-top:0"><h2>Sujets exploitables</h2>
+        <div class="band band--flush"><h2>Sujets exploitables</h2>
           <span class="spacer"></span>
           <p>Classés par nombre de voix, puis par étendue.</p></div>
         <div id="grid"></div>
@@ -43,12 +43,12 @@
 
       <aside>
         <section class="aside-block">
-          <p class="section-label" style="margin:0">À relire</p>
+          <p class="overline">À relire</p>
           <div id="pending"></div>
         </section>
         <section class="aside-block">
-          <p class="section-label" style="margin:0">Par thème</p>
-          <div class="filters" id="themes" style="margin-top:var(--s3)"></div>
+          <p class="overline">Par thème</p>
+          <div class="filters mt-4" id="themes"></div>
         </section>
       </aside>
     </div>

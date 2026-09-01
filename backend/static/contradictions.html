@@ -6,7 +6,7 @@
   <title>Validation — ED Mediawatch</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..600&family=Source+Sans+3:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=IBM+Plex+Mono:wght@400;500&display=swap" />
   <link rel="stylesheet" href="design.css" />
   <script>
     try { const t = localStorage.getItem("theme"); if (t) document.documentElement.dataset.theme = t; } catch {}
@@ -19,13 +19,13 @@
     <div class="filters" id="typeFilters" role="group" aria-label="Type d’incohérence"></div>
   </div>
 
-  <div class="wrap" style="padding-top:var(--s6);padding-bottom:var(--s8)">
+  <div class="wrap page">
     <main>
-      <p class="dek" style="max-width:46rem;margin-top:0">
+      <p class="dek measure lede-first">
         Chaque rapprochement ci-dessous est une <em>proposition</em> de la machine. Il n’existe
         pas tant qu’un humain ne l’a pas confirmé&nbsp;: vérifie la source des deux côtés avant
         de trancher. C’est ici, et seulement ici, qu’un propos devient publiable.</p>
-      <div id="stats-bar" style="margin-top:var(--s5)"></div>
+      <div id="stats-bar" class="mt-5"></div>
       <div class="band"><h2>File de relecture</h2><span class="spacer"></span>
         <p id="scopeNote"></p></div>
       <div class="verdicts" id="list"></div>

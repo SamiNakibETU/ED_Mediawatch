@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.database import get_db
 from src.models.claim import Claim
 from src.models.contradiction import Contradiction, TYPE_LABELS
+from src.models.personality import Personality
 from src.models.subject import Subject
 from src.services.analysis.claim_sources import resolve_claim_urls
 
@@ -73,19 +74,30 @@ async def list_subjects(
     frises: dict[int, list[dict]] = {}
     if subjects:
         ids = [s.id for s in subjects]
+        # Le compte X du locuteur voyage avec ses dates : c'est ce qui permet à
+        # la carte de montrer des VISAGES. Un sommaire de sujets n'a pas
+        # d'illustration — les gens qui parlent sont la seule image dont il
+        # dispose, et une jointure de plus ici évite une requête par carte.
         rows = (await db.execute(
-            select(Claim.subject_id, Claim.speaker_name, Claim.published_at)
+            select(Claim.subject_id, Claim.speaker_name, Personality.handle,
+                   Claim.published_at)
+            .outerjoin(Personality, Personality.id == Claim.personality_id)
             .where(Claim.subject_id.in_(ids), Claim.published_at.isnot(None))
             .order_by(Claim.published_at.asc())
         )).all()
         grouped: dict[int, dict[str, list]] = {}
-        for sid, who, when in rows:
-            grouped.setdefault(sid, {}).setdefault(who or "non attribué", []).append(when)
+        handles: dict[str, str] = {}
+        for sid, who, handle, when in rows:
+            nom = who or "non attribué"
+            if handle:
+                handles[nom] = handle
+            grouped.setdefault(sid, {}).setdefault(nom, []).append(when)
         for sid, by_who in grouped.items():
             # Quatre voix au plus : au-delà, la miniature devient un pâté de
             # lignes d'un pixel où l'on ne distingue plus rien.
             top = sorted(by_who.items(), key=lambda kv: -len(kv[1]))[:4]
-            frises[sid] = [{"speaker": w, "dates": d[:40]} for w, d in top]
+            frises[sid] = [{"speaker": w, "handle": handles.get(w), "dates": d[:40]}
+                           for w, d in top]
 
     # Le dernier propos en date sur chaque sujet. Un sommaire qui n'affiche que
     # des compteurs demande de cliquer pour savoir de quoi il retourne ; une

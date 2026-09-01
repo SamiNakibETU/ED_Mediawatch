@@ -6,7 +6,7 @@
   <title>Atelier — ED Mediawatch</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..600&family=Source+Sans+3:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=IBM+Plex+Mono:wght@400;500&display=swap" />
   <link rel="stylesheet" href="design.css" />
   <script>
     try { const t = localStorage.getItem("theme"); if (t) document.documentElement.dataset.theme = t; } catch {}
@@ -15,57 +15,57 @@
 <body data-page="atelier" data-tagline="Ce que la machine fait, et où elle en est">
   <header id="masthead"></header>
 
-  <div class="layout" style="grid-template-columns:1fr">
+  <div class="layout layout--norail">
     <main>
-      <p class="lede">Un observatoire qui ne montre pas son travail demande qu’on le croie sur parole.
-        Cette page dit ce qui a été collecté, ce qui en a été tiré, à quel étage la chaîne s’arrête
-        et pourquoi. Elle se rafraîchit seule&nbsp;: rien à lancer.</p>
+      <p class="lede lede-first">Un observatoire qui ne montre pas son travail demande qu’on le croie
+        sur parole. Cette page dit ce qui a été collecté, ce qui en a été tiré, à quel étage la
+        chaîne s’arrête et pourquoi. Elle se rafraîchit seule&nbsp;: rien à lancer.</p>
 
-      <div id="pouls" style="margin-bottom:var(--s7)"></div>
+      <div id="pouls" class="mb-7"></div>
 
       <!-- L'entonnoir : la réponse à « pourquoi il n'y a rien à l'écran ». -->
-      <div class="controls" style="padding-left:0;padding-right:0">
-        <p class="section-label" style="margin:0">Entonnoir</p>
+      <div class="controls flush">
+        <p class="section-label mb-0">Entonnoir</p>
         <div class="spacer"></div>
         <p class="live" id="live" hidden><span class="live__dot"></span><span id="liveText"></span></p>
       </div>
       <p class="chain-verdict" id="verdict"></p>
-      <div id="funnel"><p class="state">Chargement…</p></div>
+      <div id="funnel" class="card"><p class="state">Chargement…</p></div>
 
-      <section style="margin-top:var(--s8)">
-        <div class="band" style="margin-top:0"><h2>Sur quoi ils parlent</h2>
+      <section class="mt-8">
+        <div class="band band--flush"><h2>Sur quoi ils parlent</h2>
           <span class="spacer"></span>
           <p>Grille CAP — comparable au gouvernement, au Parlement, à la presse.</p></div>
-        <div id="themes"></div>
+        <div id="themes" class="card"></div>
       </section>
 
-      <section style="margin-top:var(--s8)">
+      <section class="mt-8">
         <p class="section-label">Dernière passe</p>
-        <div id="lastRun"></div>
+        <div id="lastRun" class="card"></div>
       </section>
 
-      <div class="cols" style="margin-top:var(--s8)">
+      <div class="cols mt-8">
         <section>
           <p class="section-label">Dépense</p>
-          <div id="spend"></div>
+          <div id="spend" class="card"></div>
         </section>
         <section>
           <p class="section-label">Fraîcheur des sources</p>
-          <div id="fresh"></div>
+          <div id="fresh" class="card"></div>
         </section>
       </div>
 
-      <section style="margin-top:var(--s8)">
+      <section class="mt-8">
         <p class="section-label">Journal des passes</p>
-        <div id="runs"></div>
+        <div id="runs" class="card"></div>
       </section>
 
-      <section style="margin-top:var(--s8)">
+      <section class="mt-8">
         <p class="section-label">La chaîne</p>
-        <p class="lede" style="margin-bottom:var(--s4)">L’ordre n’est pas dans la tête de quelqu’un&nbsp;:
+        <p class="lede mb-4">L’ordre n’est pas dans la tête de quelqu’un&nbsp;:
           chaque étape déclare ce dont elle dépend, et le graphe décide. Une étape qui échoue
           n’arrête que ce qui en dépend.</p>
-        <div id="graph"></div>
+        <div id="graph" class="card"></div>
       </section>
     </main>
   </div>

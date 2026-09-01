@@ -6,7 +6,7 @@
   <title>Le Compteur — ED Mediawatch</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..600&family=Source+Sans+3:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=IBM+Plex+Mono:wght@400;500&display=swap" />
   <link rel="stylesheet" href="design.css" />
   <script>
     try { const t = localStorage.getItem("theme"); if (t) document.documentElement.dataset.theme = t; } catch {}
@@ -21,16 +21,16 @@
       <div class="referents" id="list"></div>
     </aside>
     <main>
-      <p class="dek" style="max-width:46rem;margin-top:0">
+      <p class="dek measure lede-first">
         Les valeurs chiffrées annoncées publiquement sur un même objet, datées et attribuées.
         L’intérêt n’est pas la valeur mais l’<strong>écart</strong>&nbsp;: deux montants
         différents pour la même chose, ce sont deux affirmations dont une au moins est fausse.</p>
-      <div id="stats-bar" style="margin:var(--s5) 0 var(--s6)"></div>
+      <div id="stats-bar" class="mb-7"></div>
       <h1 id="title">Sélectionne un référent</h1>
       <p class="lede" id="sub">Chaque point est une valeur chiffrée annoncée publiquement, datée et attribuée. L’écart entre les points est ce qui se discute.</p>
-      <div id="chart"></div>
-      <p class="section-label" style="margin-top:var(--s6)">Relevé</p>
-      <div class="register" id="points"></div>
+      <div id="chart" class="card mt-5"></div>
+      <p class="section-label mt-7">Relevé</p>
+      <div class="card"><div class="register" id="points"></div></div>
     </main>
   </div>
 

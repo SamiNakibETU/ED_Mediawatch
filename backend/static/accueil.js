@@ -61,7 +61,7 @@ function renderFonds(f, nSubjects, nPending) {
 
 function story(s, big = false) {
   const l = s.latest;
-  return `<article class="story">
+  return `<article class="story${big ? " story--lead" : ""}">
     <div>
       <a href="${lien(s.id)}">
         ${kicker(s.theme, `${s.n_speakers} voix · ${duree(s.span_days)}`)}
@@ -69,16 +69,16 @@ function story(s, big = false) {
       </a>
       <p class="dek">${fmtNum(s.n_claims)} prises de position, ${periode(s.first_seen, s.last_seen)}.${
         big ? " C’est le sujet où le corpus permet le mieux de comparer : le plus de voix, sur la plus longue durée." : ""}</p>
-      <p style="margin-top:var(--s4)">
+      <p class="mt-4">
         <a class="btn btn--sm" href="${lien(s.id)}">Voir qui a dit quoi ${ico("source")}</a></p>
     </div>
     <div>
-      <p class="overline">${ico("locuteurs")} Répartition de la parole</p>
+      <p class="overline">${ico("locuteurs")} Qui parle</p>
       ${repartition(s.frise, s.n_claims)}
-      <p class="stamp" style="margin-top:var(--s3)">${escapeHtml(periode(s.first_seen, s.last_seen))}</p>
+      <p class="stamp mt-4">${escapeHtml(periode(s.first_seen, s.last_seen))}</p>
     </div>
     <div class="story__aside">
-      ${l ? `<p class="overline" style="margin-bottom:var(--s2)">${ico("temps")} Dernier propos</p>
+      ${l ? `<p class="overline">${ico("temps")} Dernier propos</p>
         <p class="stamp"><span class="latest__when">${escapeHtml(relTime(l.published_at))}</span>
           · ${escapeHtml(l.speaker || "locuteur non établi")}</p>
         <p class="latest__q">« ${escapeHtml((l.text || "").slice(0, 190))} »</p>`
@@ -91,7 +91,7 @@ function story(s, big = false) {
 
 function renderPending(items) {
   $("#pending").innerHTML = items.length
-    ? `<div class="ranked">${items.slice(0, 5).map((e, i) => `
+    ? `<div class="ranked mt-4">${items.slice(0, 5).map((e, i) => `
         <a class="ranked__item" href="contradictions.html">
           <span class="ranked__n">${i + 1}</span>
           <span>
@@ -99,9 +99,9 @@ function renderPending(items) {
             <span class="ranked__m">${escapeHtml(relTime(e.detected_at))} · score ${e.score}</span>
           </span>
         </a>`).join("")}</div>
-       <p style="margin-top:var(--s4)"><a class="btn btn--sm" href="contradictions.html">
+       <p class="mt-4"><a class="btn btn--sm" href="contradictions.html">
          Tout relire ${ico("source")}</a></p>`
-    : '<p class="state" style="padding:var(--s5) 0">Aucun rapprochement en attente.</p>';
+    : '<p class="state state--inline">Aucun rapprochement en attente.</p>';
 }
 
 function renderThemes(themes) {

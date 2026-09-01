@@ -6,7 +6,7 @@
   <title>Archive — ED Mediawatch</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..600&family=Source+Sans+3:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=IBM+Plex+Mono:wght@400;500&display=swap" />
   <link rel="stylesheet" href="design.css" />
   <script>
     try { const t = localStorage.getItem("theme"); if (t) document.documentElement.dataset.theme = t; } catch {}
@@ -15,29 +15,33 @@
 <body data-page="archive" data-tagline="Le fonds : tout ce qui a été dit, conservé">
   <header id="masthead"></header>
 
-  <div class="wrap" style="padding-top:var(--s6);padding-bottom:var(--s8)">
-    <p class="dek" style="max-width:44rem;margin-top:0">
+  <div class="wrap page">
+    <p class="dek measure lede-first">
       La matière première de l’observatoire&nbsp;: tout ce que publient les comptes suivis, et
       tous les articles où une figure parle ou se trouve citée. Rien n’est trié à l’entrée —
       c’est le fonds complet qui rend une comparaison honnête. Les analyses se lisent
       <a class="source-link" href="sujets.html">côté sujets</a>.
     </p>
 
-    <div class="band" style="margin-top:var(--s6)">
-      <div class="filters" id="sourceTabs" role="group" aria-label="Source"></div>
+    <div class="band">
+      <h2>Le fonds</h2>
       <span class="spacer"></span>
       <p id="count"></p>
     </div>
 
-    <div class="controls" style="padding-left:0;padding-right:0;margin-top:var(--s4)">
+    <div class="controls flush">
+      <div class="filters" id="sourceTabs" role="group" aria-label="Source"></div>
+    </div>
+
+    <div class="controls flush mt-3">
       <div class="filters" id="f1" role="group"></div>
       <div class="filters" id="f2" role="group"></div>
       <div class="spacer"></div>
       <label class="sr-only" for="q">Filtrer</label>
-      <input id="q" class="field" type="search" style="max-width:20rem" placeholder="Filtrer…" />
+      <input id="q" class="field field--inline" type="search" placeholder="Filtrer…" />
     </div>
 
-    <div class="register" id="list"></div>
+    <div class="card mt-4"><div class="register" id="list"></div></div>
     <p class="state" id="sentinel"></p>
   </div>
 
@@ -52,10 +56,10 @@
       </div>
       <article class="reader__body">
         <h1 id="readerTitle"></h1>
-        <p class="stamp" id="readerSub" style="margin-top:var(--s3)"></p>
+        <p class="stamp mt-3" id="readerSub"></p>
         <div class="entry__foot" id="readerPeople"></div>
         <div class="reader__text" id="readerBody"></div>
-        <div class="entry__foot" id="readerFoot" style="margin-top:var(--s6)"></div>
+        <div class="entry__foot mt-6" id="readerFoot"></div>
       </article>
     </aside>
   </div>

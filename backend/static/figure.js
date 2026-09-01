@@ -38,10 +38,12 @@ function renderList() {
 
   $("#figList").innerHTML = shown.length
     ? shown.map((f) => `
-      <button class="referent" data-id="${f.id}" aria-pressed="${state.id === f.id}">
-        <span class="referent__label">${escapeHtml(f.full_name)}</span>
-        <span class="referent__meta">${f.n_claims ? `${fmtNum(f.n_claims)} propos` : "aucun propos"}${
-          f.handle ? ` · @${escapeHtml(f.handle)}` : ""}</span>
+      <button class="referent referent--face" data-id="${f.id}" aria-pressed="${state.id === f.id}">
+        ${portrait(f.full_name, f.handle)}
+        <span>
+          <span class="referent__label">${escapeHtml(f.full_name)}</span>
+          <span class="referent__meta">${f.n_claims ? `${fmtNum(f.n_claims)} propos` : "aucun propos"}</span>
+        </span>
       </button>`).join("")
     : '<p class="state">Aucune figure ne correspond.</p>';
 
@@ -74,14 +76,14 @@ function renderSubjects() {
   const shown = (state.onlyConf ? conf : all).slice(0, 40);
 
   $("#subjects").innerHTML = `
-    <div class="filters" style="margin-bottom:var(--s4)">
+    <div class="filters filters--head">
       <button class="filter" data-conf="1" aria-pressed="${state.onlyConf}">
         Confrontables<span class="count">${conf.length}</span></button>
       <button class="filter" data-conf="0" aria-pressed="${!state.onlyConf}">
         Tous les sujets<span class="count">${all.length}</span></button>
     </div>
     ${shown.length
-      ? `<div class="ranked">${shown.map(subjectRow).join("")}</div>`
+      ? `<div class="ranked card">${shown.map(subjectRow).join("")}</div>`
       : `<p class="state"><span class="state__title">Aucun sujet confrontable</span>
          <span class="state__hint">Cette figure ne partage encore aucun objet de débat avec une
          autre voix du corpus. Affiche tous les sujets pour voir ce qu’elle porte seule.</span></p>`}`;
@@ -110,7 +112,7 @@ function renderAmplifies(rows) {
       supprimée.</p>`;
     return;
   }
-  host.innerHTML = `<div class="ranked">${rows.map((r) => `
+  host.innerHTML = `<div class="ranked card">${rows.map((r) => `
     <a class="ranked__item" href="https://x.com/${encodeURIComponent(r.handle)}"
        target="_blank" rel="noopener">
       <span class="ranked__n">${r.n}</span>
@@ -123,7 +125,7 @@ function renderAmplifies(rows) {
           · ${escapeHtml(periode(r.first_seen, r.last_seen))}</span>
       </span>
     </a>`).join("")}</div>
-    <p class="stamp" style="margin-top:var(--s3)">Relayer sans commentaire vaut
+    <p class="stamp mt-3">Relayer sans commentaire vaut
       adhésion ; commenter peut aussi bien approuver que dénoncer.</p>`;
 }
 
@@ -214,28 +216,34 @@ function render(d) {
     : 0;
   const conf = (d.by_subject || []).filter((x) => x.confrontable).length;
 
+  // Le portrait, en tête. Une fiche de personne sans visage est le seul écran
+  // du produit qui pouvait en porter un et n'en portait pas.
   $("#detail").innerHTML = `
-    <p class="overline">${ico("locuteurs")} Fiche</p>
-    <h1 class="hero-title" style="margin-top:0">${escapeHtml(f.full_name)}</h1>
-    <div class="entry__foot" style="margin-top:var(--s3)">
-      <span class="tag tag--group" style="--grp-color:${color}">${escapeHtml(f.group_code)}</span>
-      ${f.famille && f.famille.toLowerCase() !== (f.group_code || "").toLowerCase()
-        ? `<span class="tag">${escapeHtml(f.famille)}</span>` : ""}
-      ${f.role ? `<span class="tag">${escapeHtml(f.role)}</span>` : ""}
-      ${mandat(f.departement, f.circo)
-        ? `<span class="tag">${escapeHtml(mandat(f.departement, f.circo))}</span>` : ""}
-      ${f.handle ? `<a class="handle" href="https://x.com/${f.handle}" target="_blank" rel="noopener">@${escapeHtml(f.handle)}</a>` : ""}
-    </div>
+    <header class="profil">
+      ${portrait(f.full_name, f.handle)}
+      <div>
+        <p class="overline">${ico("locuteurs")} Fiche</p>
+        <h1 class="hero-title profil__nom">${escapeHtml(f.full_name)}</h1>
+        <div class="entry__foot">
+          <span class="tag tag--group" style="--grp-color:${color}">${escapeHtml(f.group_code)}</span>
+          ${f.famille && f.famille.toLowerCase() !== (f.group_code || "").toLowerCase()
+            ? `<span class="tag">${escapeHtml(f.famille)}</span>` : ""}
+          ${f.role ? `<span class="tag">${escapeHtml(f.role)}</span>` : ""}
+          ${mandat(f.departement, f.circo)
+            ? `<span class="tag">${escapeHtml(mandat(f.departement, f.circo))}</span>` : ""}
+          ${f.handle ? `<a class="handle" href="https://x.com/${f.handle}" target="_blank" rel="noopener">@${escapeHtml(f.handle)}</a>` : ""}
+        </div>
+        <div class="statbar">
+          <span class="statbar__item"><span class="statbar__n">${fmtNum(s.n_claims)}</span> propos consignés</span>
+          <span class="statbar__item"><span class="statbar__n statbar__n--accent">${fmtNum(conf)}</span>
+            sujets confrontables</span>
+          <span class="statbar__item"><span class="statbar__n">${months}</span> mois de recul</span>
+          <span class="statbar__item">${escapeHtml(periode(s.first_seen, s.last_seen))}</span>
+        </div>
+      </div>
+    </header>
 
-    <div class="statbar" style="margin-top:var(--s5)">
-      <span class="statbar__item"><span class="statbar__n">${fmtNum(s.n_claims)}</span> propos consignés</span>
-      <span class="statbar__item"><span class="statbar__n statbar__n--accent">${fmtNum(conf)}</span>
-        sujets confrontables</span>
-      <span class="statbar__item"><span class="statbar__n">${months}</span> mois de recul</span>
-      <span class="statbar__item">${escapeHtml(periode(s.first_seen, s.last_seen))}</span>
-    </div>
-
-    ${months < 24 && s.first_seen ? `<p class="rationale" style="border-top:none;padding-top:var(--s3)">
+    ${months < 24 && s.first_seen ? `<p class="caveat">
       Un changement de position se lit sur plusieurs années. En deçà, l’absence de revirement
       ne prouve rien — c’est une limite du corpus, pas un résultat.</p>` : ""}
 

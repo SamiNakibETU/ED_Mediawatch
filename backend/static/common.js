@@ -178,9 +178,11 @@ function mountMasthead() {
   const host = $("#masthead");
   if (!host) return;
   const current = document.body.dataset.page;
-  const nav = PAGES.map(([href, key, label, icon]) =>
-    `<a href="${href}"${key === current ? ' aria-current="page"' : ""}>${
-      ico(icon)}<span>${label}</span></a>`).join("");
+  // Les rubriques, sans pictogramme. Huit icônes alignées au-dessus d'un titre
+  // de publication donnaient une barre d'outils d'application ; un ours de
+  // journal nomme ses sections, il ne les illustre pas.
+  const nav = PAGES.map(([href, key, label]) =>
+    `<a href="${href}"${key === current ? ' aria-current="page"' : ""}>${label}</a>`).join("");
 
   host.className = "masthead";
   host.innerHTML = `<div class="masthead__inner">
@@ -222,11 +224,35 @@ function mountMasthead() {
 // lettres, et se lit instantanément. La frise complète, elle, garde son sens
 // sur la page du sujet : elle y a un axe daté, des libellés et de la place.
 
+// Depuis, un visage accompagne chaque nom quand le locuteur est une figure
+// suivie. Un sommaire de sujets n'a aucune illustration à sa disposition — les
+// gens qui parlent SONT son image, et une rangée de portraits dit d'un coup
+// d'œil si un sujet est porté par une voix ou par cinq.
+
+// Les initiales : le repli quand il n'y a pas de photo, et le seul rendu
+// possible pour « non attribué » — qui n'est personne, et ne doit donc pas
+// recevoir de visage.
+function initiales(nom) {
+  const mots = String(nom).trim().split(/\s+/).filter((m) => /^[A-ZÀ-Þ]/.test(m));
+  return (mots.length ? mots : [String(nom)])
+    .map((m) => m[0]).slice(0, 2).join("").toUpperCase();
+}
+
+function portrait(nom, handle) {
+  const repli = `<span class="face face--txt">${escapeHtml(initiales(nom))}</span>`;
+  if (!handle) return repli;
+  // `onerror` : le service de portraits ne connaît pas tous les comptes, et une
+  // image cassée serait pire que des initiales.
+  return `<img class="face" src="https://unavatar.io/x/${encodeURIComponent(handle)}?fallback=false"
+    alt="" loading="lazy" width="28" height="28"
+    onerror="this.outerHTML=this.dataset.fb" data-fb='${repli}' />`;
+}
+
 function repartition(frise, total) {
   const lanes = (frise || []).filter((f) => f.dates?.length);
   if (!lanes.length) return "";
 
-  const compte = lanes.map((l) => ({ who: l.speaker, n: l.dates.length }))
+  const compte = lanes.map((l) => ({ who: l.speaker, handle: l.handle, n: l.dates.length }))
     .sort((a, b) => b.n - a.n);
   const dit = compte.reduce((n, x) => n + x.n, 0);
   const reste = Math.max(0, (total || dit) - dit);
@@ -242,9 +268,13 @@ function repartition(frise, total) {
     return /^[A-ZÀ-Þ]/.test(suite) ? suite : nom;
   };
 
-  return `<p class="repart">${compte.slice(0, 4).map((x) =>
-      `<span class="repart__x"><b>${x.n}</b> ${escapeHtml(court(x.who))}</span>`).join("")}${
-    reste ? `<span class="repart__x repart__x--rest">+${reste} ailleurs</span>` : ""}</p>`;
+  return `<ul class="repart">${compte.slice(0, 4).map((x) => `
+    <li class="repart__x">
+      ${portrait(x.who, x.handle)}
+      <span class="repart__who">${escapeHtml(court(x.who))}</span>
+      <b class="repart__n">${x.n}</b>
+    </li>`).join("")}${
+    reste ? `<li class="repart__x repart__x--rest">+${reste} ailleurs</li>` : ""}</ul>`;
 }
 
 // ── Arbre thématique (Thème → Sous-thème) ───────────────────────────────

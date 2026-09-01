@@ -50,12 +50,11 @@ const sentinel = $("#sentinel");
 // ── Rendu : X ───────────────────────────────────────────────────────────────
 
 function avatar(p) {
-  const color = (GROUPS[p.group_code] || GROUPS.ALL).color;
   const initials = p.full_name.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
-  const fallback = `<div class="initials" style="background:${color}">${initials}</div>`;
+  const fallback = `<div class="face face--txt">${initials}</div>`;
   const src = p.photo_url || (p.handle ? `https://unavatar.io/x/${p.handle}?fallback=false` : "");
   return src
-    ? `<img class="entry__avatar" src="${src}" alt="" loading="lazy" width="44" height="44"
+    ? `<img class="face" src="${src}" alt="" loading="lazy" width="40" height="40"
          onerror="this.outerHTML=this.dataset.fb" data-fb='${fallback}' />`
     : fallback;
 }

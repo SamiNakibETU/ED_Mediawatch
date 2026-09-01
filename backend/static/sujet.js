@@ -122,7 +122,7 @@ function render(d) {
   const total = speakers.reduce((n, x) => n + x.n, 0);
 
   const filtres = speakers.length > 1
-    ? `<div class="filters" style="margin-top:var(--s4)">
+    ? `<div class="filters mt-4">
         <button class="filter" data-who="" aria-pressed="${!state.speaker}">Tous</button>
         ${speakers.map((x) => `<button class="filter" data-who="${escapeHtml(x.name)}"
            aria-pressed="${state.speaker === x.name}">${escapeHtml(x.name)}<span class="count">${x.n}</span></button>`).join("")}
@@ -135,18 +135,20 @@ function render(d) {
       <h1 class="hero-title">${escapeHtml(s.label)}</h1>
       <p class="dek">${fmtNum(total)} prises de position consignées, ${periode(s.first_seen, s.last_seen)}.
         ${portee(s)}</p>
-      ${s.named ? "" : `<p class="stamp" style="margin-top:var(--s3)">Libellé provisoire, tiré des
+      ${s.named ? "" : `<p class="stamp mt-4">Libellé provisoire, tiré des
         mots du corpus — le nommage n’est pas encore passé sur ce sujet.</p>`}
     </header>
 
     <div class="band"><h2>Qui a dit quoi, quand</h2>
       <span class="spacer"></span><p>Clique un repère pour lire le propos.</p></div>
-    ${frise(speakers, s.theme)}
+    <!-- La frise est LA vue du produit : elle est posée sur une surface à elle,
+         pas laissée à flotter sur le fond de la page. -->
+    <div class="card">${frise(speakers, s.theme)}</div>
 
     <div class="band"><h2>Les propos</h2>
       <span class="spacer"></span><p>Datés, cités mot pour mot, sourcés.</p></div>
     ${filtres}
-    <div id="positions">${positionsHtml(speakers)}</div>
+    <div class="card mt-4" id="positions">${positionsHtml(speakers)}</div>
 
     ${d.contradictions?.length ? `
       <div class="band"><h2>Rapprochements</h2>

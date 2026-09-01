@@ -1,44 +1,59 @@
 /* ED Mediawatch — système visuel.
  *
- * Registre d'archive, pas tableau de bord. Le produit consigne des propos datés,
- * attribués, sourcés : la forme doit dire « pièce au dossier », pas « SaaS ».
+ * Le produit consigne des propos datés, attribués, sourcés, et les met en
+ * regard dans la durée. La forme doit servir cette lecture : trouver un sujet,
+ * voir qui s'y exprime, remonter à la source.
  *
- * Trois familles, trois rôles stricts :
- *   Newsreader     titres, verbatim, corps éditorial (variable, dessinée pour la presse)
- *   IBM Plex Sans  interface : navigation, boutons, étiquettes
- *   IBM Plex Mono  données : dates, compteurs, scores, identifiants (tabular)
+ * Deux plans, et un seul. Le fond de page est un gris chaud ; ce qu'on lit est
+ * posé dessus en blanc. C'est la grammaire de Bloomberg et de Cursor, et elle
+ * règle un défaut de la version précédente : tout était blanc sur blanc, séparé
+ * par des filets, et vingt filets de même valeur ne hiérarchisent plus rien.
+ * Une surface se pose maintenant ; elle ne se découpe plus.
  *
- * Une seule couleur d'accent (bleu d'encre). Les couleurs sémantiques
- * (validé / en attente / contradiction) et les couleurs de parti sont des
- * ENCODAGES DE DONNÉES, jamais des accents décoratifs — et jamais seules :
- * toujours doublées d'un libellé.
+ * Trois familles, trois rôles stricts — et pas quatre :
+ *   Archivo         titres, navigation, interface. Une grotesque étroite et
+ *                   contrastée : c'est elle qui date la page. Le sérif en
+ *                   titre lisait « ouvrage ancien » là où on veut « rédaction ».
+ *   Source Serif 4  RÉSERVÉ aux propos cités. Le sérif garde une fonction :
+ *                   signaler que ces mots-là sont ceux de quelqu'un d'autre.
+ *   IBM Plex Mono   les données : dates, compteurs, scores (chasse tabulaire).
  *
- * Pas de carte sauf quand la carte EST l'interaction (file de validation).
- * Ailleurs : filets. Une surface ne s'entoure pas, elle se sépare.
+ * Une seule couleur d'accent, le carmin de Terra Nova. Les couleurs sémantiques
+ * (validé / en attente / contradiction), les familles politiques et les six
+ * familles thématiques sont des ENCODAGES DE DONNÉES, jamais des accents
+ * décoratifs — et jamais seules : toujours doublées d'un libellé.
  */
 
 /* ── Tokens ──────────────────────────────────────────────────────────── */
 
 :root {
   /* Charte Terra Nova, relevée sur tnova.fr : carmin #A41B30 en surtitre et
-   * signature, prune #53414A pour les aplats, encre #333, papier blanc.
-   * Ce produit paraît sous ce nom ; il ne peut pas avoir sa propre couleur. */
-  --paper:        #FFFFFF;
-  --surface:      #FFFFFF;
-  --surface-sunk: #F7F7F7;
-  --ink:          #1A1A1A;
+   * signature, prune #53414A pour les aplats, encre #333. Ce produit paraît
+   * sous ce nom ; il ne peut pas avoir sa propre couleur. */
+  --paper:        #F4F3F1;   /* le fond : ce qui porte, jamais ce qu'on lit */
+  --surface:      #FFFFFF;   /* ce qu'on lit : posé sur le fond */
+  --surface-sunk: #EAE8E5;   /* creux : survol, champ, piste de jauge */
+  --ink:          #17161A;
   --ink-soft:     #333333;
   --muted:        #53414A;   /* prune Terra Nova */
-  --faint:        #8A8189;
-  --rule:         #E2DFE1;
-  --rule-strong:  #C3BDC1;
+  /* Assombri depuis #8A8189 : à 11 px sur le fond, l'ancien ton passait sous
+   * le seuil de contraste et les micro-libellés devenaient une texture. */
+  --faint:        #6E656C;
 
-  /* Accent unique : le carmin. Employé pour ce qui EST de l'accent — surtitre,
-   * lien actif, appel à l'action — jamais pour décorer une surface. */
+  /* Deux valeurs de filet, pas quatre : séparer, ou ouvrir une section. Un
+   * troisième trait n'ajoute pas de niveau, il brouille les deux autres. */
+  --rule:         #E3E0DC;
+  --rule-strong:  #C6C1BC;
+
+  /* Accent unique : le carmin. Pour ce qui EST de l'accent — surtitre, lien
+   * actif, appel à l'action — jamais pour décorer une surface. */
   --accent:       #A41B30;
-  --accent-hot:   #F14668;
+  --accent-hot:   #C42132;
   --accent-soft:  #FBF0F2;
   --accent-line:  #E7CDD3;
+  /* Le rouge du direct, distinct du carmin de marque : un point qui bat ne dit
+   * pas la même chose qu'un titre de rubrique. */
+  --live:         #C42132;
 
   /* Sémantique — statut, pas décoration. */
   --ok:      #2F6B45;
@@ -50,7 +65,19 @@
   --grp-udr:    #8A6A1F;
   --grp-figure: #6B4A63;
 
-  /* Échelle typographique — quarte (1.333), pas de valeur hors échelle. */
+  /* Familles thématiques : déclinées de la charte, pas d'un nuancier arbitraire.
+   * Six familles et non quinze couleurs — un arc-en-ciel ne se mémorise pas ;
+   * six familles disent qu'un locuteur ne parle que de sécurité. */
+  --th-eco:    #53414A;   /* économie, pouvoir d'achat */
+  --th-secu:   #A41B30;   /* immigration, sécurité, justice */
+  --th-intl:   #2F5D6B;   /* international */
+  --th-social: #8A6A1F;   /* social, santé, logement, éducation */
+  --th-envt:   #2F6B45;   /* écologie, énergie, agriculture */
+  --th-inst:   #6B4A63;   /* institutions, culture et identité */
+
+  /* Échelle typographique — quarte (1.333), pas de valeur hors échelle. Les
+   * deux tailles d'affichage sont fluides : un titre reste un titre du
+   * téléphone au grand écran, sans point de rupture arbitraire. */
   --t-micro:   0.6875rem;
   --t-small:   0.8125rem;
   --t-ui:      0.9375rem;
@@ -58,8 +85,13 @@
   --t-title:   1.25rem;
   --t-head:    1.75rem;
   --t-display: 2.5rem;
+  /* Le titre de une vit dans une colonne de carte, pas en pleine largeur : à
+   * 3,5 rem il tombait sur trois lignes et écrasait tout le reste de la bande. */
+  --t-hero:    clamp(1.875rem, 3.2vw, 2.625rem);
+  --t-lead:    clamp(1.5rem, 2.5vw, 2rem);
+  --t-card:    1.25rem;
 
-  --lh-tight: 1.15;
+  --lh-tight: 1.12;
   --lh-ui:    1.45;
   --lh-read:  1.6;
 
@@ -68,53 +100,70 @@
 
   --measure-read: 38rem;
   --measure-ui:   46rem;
+  /* Une seule largeur de page. Deux valeurs concurrentes (72 et 76 rem)
+   * décalaient le bandeau du contenu qu'il coiffe, d'un demi-pouce. */
+  --page-w: 74rem;
 
-  --r-sharp: 2px;
-  --r-soft:  3px;
+  /* Rayons concentriques : une carte à 10 px contient des éléments à 4 px, et
+   * les pastilles filent à la capsule. Trois valeurs, pas une par composant. */
+  --r-sm:   4px;
+  --r-md:   10px;
+  --r-full: 999px;
+
+  /* La profondeur vient de l'ombre, la structure du filet. Une bordure posée
+   * pour simuler un relief additionne des traits sans rien séparer. */
+  --shadow-card:  0 1px 2px rgb(23 22 26 / 0.05);
+  --shadow-lift:  0 4px 14px rgb(23 22 26 / 0.08);
 
   --dur-fast: 120ms;
   --dur-base: 200ms;
   --ease: cubic-bezier(0.2, 0, 0.13, 1);
 
-  /* Les polices de la maison : Source Serif / Source Sans. Le monospace reste
-   * pour les données — un chiffre qui bouge de colonne en colonne est illisible,
-   * et Terra Nova n'a pas de chasse fixe. */
-  --font-display: "Source Serif 4", "Source Serif Pro", Georgia, serif;
-  --font-ui: "Source Sans 3", "Source Sans Pro", system-ui, sans-serif;
+  --font-display: Archivo, "Helvetica Neue", system-ui, sans-serif;
+  --font-ui: Archivo, system-ui, -apple-system, sans-serif;
+  --font-serif: "Source Serif 4", "Source Serif Pro", Georgia, serif;
   --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
 
   color-scheme: light;
 }
 
 /* Le sombre reste disponible — une salle de rédaction ne travaille pas toujours
- * en plein jour — mais ce n'est plus le défaut : la charte est sur blanc. */
+ * en plein jour — mais ce n'est plus le défaut : la charte est sur clair. Seuls
+ * les tokens changent ; aucune règle de composant ne connaît le thème. */
 @media (prefers-color-scheme: dark) {
   :root[data-theme="dark"] { color-scheme: dark; }
 }
 
 :root[data-theme="dark"] {
-  --paper:        #17141A;
-  --surface:      #1E1A21;
-  --surface-sunk: #110F14;
+  --paper:        #141317;
+  --surface:      #1D1B21;
+  --surface-sunk: #26232B;
   --ink:          #F4F1F3;
   --ink-soft:     #D6CFD4;
-  --muted:        #A2969E;
-  --faint:        #756B72;
-  --rule:         #2E2833;
-  --rule-strong:  #453C4A;
+  --muted:        #A99EA6;
+  --faint:        #857B83;
+  --rule:         #2E2A33;
+  --rule-strong:  #453F4A;
 
-  --accent:       #F14668;
+  --accent:       #F1566F;
   --accent-hot:   #FF6B87;
   --accent-soft:  #2A1620;
   --accent-line:  #5A2F3C;
+  --live:         #FF5A6E;
 
   --ok:      #6FA985;
   --pending: #C9A253;
-  --alert:   #F14668;
+  --alert:   #F1566F;
 
-  --grp-rn:     #A2969E;
+  --grp-rn:     #A99EA6;
   --grp-udr:    #C9A253;
   --grp-figure: #B08CA6;
+
+  --th-eco: #B7A6AF; --th-secu: #F1566F; --th-intl: #7FB3C4;
+  --th-social: #C9A253; --th-envt: #7FB394; --th-inst: #B294C4;
+
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.3);
+  --shadow-lift: 0 4px 14px rgb(0 0 0 / 0.4);
 
   color-scheme: dark;
 }
@@ -134,14 +183,56 @@ body {
   line-height: var(--lh-ui);
   font-feature-settings: "kern", "liga";
   text-rendering: optimizeLegibility;
+  /* Sur macOS le texte rend plus gras que dessiné ; une grotesque en pâtit
+   * plus qu'un sérif. Posé une fois à la racine, pour tout le document. */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
+/* Les titres portent la grotesque, serrée. L'approche négative croît avec le
+ * corps : à 3,5 rem, l'espacement par défaut fait flotter les mots. */
 h1, h2, h3, h4 {
   font-family: var(--font-display);
-  font-weight: 600;
+  font-weight: 700;
   line-height: var(--lh-tight);
+  letter-spacing: -0.02em;
   text-wrap: balance;
   margin: 0;
+}
+
+/* ── La carte : ce qu'on lit, posé sur le fond ─────────────────────────────
+ *
+ * Le seul composant ajouté par la refonte, et celui qui la porte. Une surface
+ * blanche sur le gris de la page se détache sans qu'on ait à la cerner de
+ * traits ; le filet qui l'entoure ne sert plus qu'à tenir son bord, et l'ombre
+ * fait le relief. C'est ce qui remplace les vingt hairlines de même valeur qui
+ * découpaient l'ancienne page sans jamais la hiérarchiser. */
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-card);
+  padding: var(--s5);
+  min-width: 0;
+}
+
+/* Une liste a filets posee dans une carte : ses separations internes restent,
+ * mais son trait d'ouverture et le filet de sa derniere ligne feraient doublon
+ * avec le bord de la carte — deux traits a 2 px l'un de l'autre. */
+.card > :where(.register, .funnel, .kv) { border-top: 0; }
+.card > :where(.register, .funnel, .kv) > :first-child { padding-top: 0; }
+.card > :where(.register, .funnel, .kv) > :last-child {
+  border-bottom: 0; padding-bottom: 0;
+}
+
+/* Une carte cliquable se soulève ; une carte de lecture ne bouge pas. Le
+ * mouvement est une réponse à une intention, pas une décoration. */
+a.card, button.card { display: block; text-align: left; width: 100%;
+  transition: box-shadow var(--dur-base) var(--ease),
+              border-color var(--dur-base) var(--ease); }
+a.card:hover, button.card:hover {
+  box-shadow: var(--shadow-lift); border-color: var(--rule-strong);
 }
 
 a { color: inherit; text-decoration: none; }
@@ -162,7 +253,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
-  border-radius: var(--r-sharp);
+  border-radius: var(--r-sm);
 }
 
 ::selection { background: var(--accent-soft); color: var(--ink); }
@@ -175,13 +266,12 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 
 .masthead {
   position: sticky; top: 0; z-index: 20;
-  background: color-mix(in srgb, var(--paper) 92%, transparent);
-  backdrop-filter: saturate(150%) blur(8px);
+  background: var(--surface);
   border-bottom: 1px solid var(--rule);
 }
 
 .masthead__inner {
-  max-width: 72rem; margin: 0 auto;
+  max-width: var(--page-w); margin: 0 auto;
   padding: var(--s3) var(--s4);
   display: flex; align-items: baseline; gap: var(--s5);
 }
@@ -191,20 +281,20 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
  * lisait un journal plutôt qu'un tableau de bord. */
 .wordmark {
   font-family: var(--font-display);
-  font-size: clamp(1.5rem, 2.6vw, 2.125rem);
-  font-weight: 700;
-  letter-spacing: -0.03em;
+  font-size: clamp(1.375rem, 2.2vw, 1.75rem);
+  font-weight: 800;
+  letter-spacing: -0.035em;
   line-height: 1;
   white-space: nowrap;
 }
-.wordmark span { color: var(--muted); font-weight: 400; }
+.wordmark span { color: var(--muted); font-weight: 500; }
 
 /* L'accroche est une phrase, pas une étiquette : en capitales monospacées elle
  * se lisait comme un code de rubrique. */
 .masthead__tagline {
-  font-family: var(--font-display);
-  font-size: var(--t-ui);
-  line-height: 1.2;
+  font-family: var(--font-ui);
+  font-size: var(--t-small);
+  line-height: 1.25;
   color: var(--muted);
   max-width: 15rem;
   white-space: normal;
@@ -221,19 +311,23 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 }
 .masthead__nav::-webkit-scrollbar { display: none; }
 .masthead__nav .nav {
-  max-width: 72rem; margin: 0 auto;
+  max-width: var(--page-w); margin: 0 auto;
   padding: var(--s2) var(--s4);
 }
 
-/* Navigation : onglets soulignés, pas pastilles colorées. */
-.nav { display: flex; gap: var(--s4); align-items: baseline; }
+/* Navigation : rubriques en capitales serrées, soulignées à l'actif. Les
+ * icônes ont sauté — huit pictogrammes en enfilade au-dessus d'un titre de
+ * publication, c'est une barre d'outils, pas un ours de journal. */
+.nav { display: flex; gap: var(--s5); align-items: baseline; }
 .nav a, .nav span { white-space: nowrap; }
 .nav a, .nav span {
   display: inline-flex; align-items: center; gap: var(--s2);
-  font-size: var(--t-ui);
-  font-weight: 500;
+  font-size: var(--t-small);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   color: var(--muted);
-  padding-bottom: 3px;
+  padding-bottom: 5px;
   border-bottom: 2px solid transparent;
   transition: color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
 }
@@ -260,7 +354,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
  * L'accroche cède la première : elle situe le propos, elle ne le porte pas.
  * Le relevé chiffré passe à la ligne plutôt que de disparaître — c'est une
  * donnée, pas une décoration. */
-@media (max-width: 720px) {
+@media (max-width: 900px) {
   .masthead__inner { flex-wrap: wrap; gap: var(--s3); row-gap: var(--s2); }
   .masthead__tagline { display: none; }
   /* Ligne 1 : le titre et la bascule. Ligne 2 : les indicateurs, ensemble —
@@ -272,47 +366,60 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 /* ── Barre de contrôle ───────────────────────────────────────────────── */
 
 .controls {
-  max-width: 72rem; margin: 0 auto;
+  max-width: var(--page-w); margin: 0 auto;
   padding: 0 var(--s4) var(--s3);
   display: flex; align-items: center; gap: var(--s3); flex-wrap: wrap;
 }
 
-.filters { display: flex; gap: var(--s1); flex-wrap: wrap; align-items: center; }
+.filters { display: flex; gap: var(--s2); flex-wrap: wrap; align-items: center; }
+.filters--head { margin-bottom: var(--s4); }
 
-/* Filtre = texte + soulignement. Pas de pastille colorée. */
-/* `.filter` s'emploie en <button> comme en <a> : la une renvoie vers un thème
- * par un lien, et un lien qui ne ressemble pas au filtre d'à côté sème le
- * doute sur ce qu'il fait. */
+/* Pastille de filtre — la forme la plus lisible d'un choix parmi d'autres,
+ * telle que Fast Company range ses rubriques : une capsule posée, un état actif
+ * qui s'inverse franchement au lieu de se signaler par un demi-ton.
+ *
+ * `.filter` s'emploie en <button> comme en <a> : la une renvoie vers un thème
+ * par un lien, et un lien qui ne ressemble pas au filtre d'à côté sème le doute
+ * sur ce qu'il fait. */
 .filter {
-  display: inline-flex; align-items: center; gap: var(--s1);
+  display: inline-flex; align-items: center; gap: var(--s2);
   font-size: var(--t-small);
-  color: var(--muted);
-  padding: var(--s1) var(--s2);
-  min-height: 32px;
-  border-radius: var(--r-soft);
-  border: 1px solid transparent;
-  transition: color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
-}
-.filter:hover { color: var(--ink); background: var(--surface-sunk); }
-.filter[aria-pressed="true"] {
-  color: var(--ink);
   font-weight: 500;
+  color: var(--ink-soft);
+  padding: var(--s1) var(--s3);
+  min-height: 32px;
   background: var(--surface);
-  border-color: var(--rule);
+  border-radius: var(--r-full);
+  border: 1px solid var(--rule);
+  transition: color var(--dur-fast) var(--ease),
+              background var(--dur-fast) var(--ease),
+              border-color var(--dur-fast) var(--ease);
 }
+/* Le point coloré porte la famille thématique ; sans lui, il faudrait teinter
+ * toute la capsule, et douze capsules teintées font un nuancier. */
+.filter[style*="--th"]::before {
+  content: ""; width: 7px; height: 7px; flex: none; border-radius: 50%;
+  background: var(--th, var(--accent));
+}
+.filter:hover { border-color: var(--rule-strong); background: var(--surface-sunk); }
+.filter[aria-pressed="true"] {
+  color: var(--surface);
+  background: var(--ink);
+  border-color: var(--ink);
+}
+.filter[aria-pressed="true"] .count { color: color-mix(in srgb, var(--surface) 70%, transparent); }
 .filter .count {
   font-family: var(--font-mono);
   font-size: var(--t-micro);
   font-variant-numeric: tabular-nums;
   color: var(--faint);
-  margin-left: var(--s1);
 }
 
 .field {
   width: 100%;
   background: var(--surface);
   border: 1px solid var(--rule);
-  border-radius: var(--r-soft);
+  border-radius: var(--r-sm);
   padding: var(--s2) var(--s3);
   min-height: 40px;
   font-size: var(--t-ui);
@@ -332,12 +439,12 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 /* ── Grille ──────────────────────────────────────────────────────────── */
 
 .layout {
-  max-width: 72rem; margin: 0 auto;
+  max-width: var(--page-w); margin: 0 auto;
   padding: var(--s5) var(--s4) var(--s8);
   display: grid; grid-template-columns: 13rem 1fr; gap: var(--s7);
   align-items: start;
 }
-@media (max-width: 860px) {
+@media (max-width: 900px) {
   .layout { grid-template-columns: 1fr; gap: var(--s5); }
   .rail { display: none; }
 }
@@ -371,7 +478,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   min-height: 30px;
   font-size: var(--t-small);
   color: var(--ink-soft);
-  border-radius: var(--r-soft);
+  border-radius: var(--r-sm);
   border-left: 2px solid transparent;
   transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
 }
@@ -393,25 +500,18 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 .register { border-top: 1px solid var(--rule); }
 
 .entry {
-  display: grid; grid-template-columns: 2.75rem 1fr; gap: var(--s3);
+  --face-size: 2.5rem;
+  display: grid; grid-template-columns: var(--face-size) 1fr; gap: var(--s3);
   padding: var(--s5) 0;
   border-bottom: 1px solid var(--rule);
 }
-@media (max-width: 560px) { .entry { grid-template-columns: 1fr; } .entry__avatar { display: none; } }
-
-.entry__avatar {
-  width: 2.75rem; height: 2.75rem;
-  border-radius: 50%;
-  object-fit: cover;
-  background: var(--surface-sunk);
-  border: 1px solid var(--rule);
-}
-.initials {
-  width: 2.75rem; height: 2.75rem; border-radius: 50%;
-  display: grid; place-items: center;
-  font-family: var(--font-mono); font-size: var(--t-small); font-weight: 500;
-  color: var(--surface); letter-spacing: 0.02em;
-}
+/* Une piste de grille ne descend pas sous la largeur mini de son contenu : une
+ * URL insecable y suffisait a pousser toute la page hors du telephone. */
+.entry > * { min-width: 0; }
+/* Le portrait retrecit sur telephone, il ne disparait pas : c'est la seule
+ * image du corpus, et un registre de propos sans visage se lit comme un
+ * journal de bord. */
+@media (max-width: 600px) { .entry { --face-size: 2rem; gap: var(--s2); } }
 
 .entry__head {
   display: flex; align-items: baseline; gap: var(--s2); flex-wrap: wrap;
@@ -428,6 +528,10 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   color: var(--muted);
   white-space: nowrap;
 }
+/* Une date ne se coupe pas — mais une PHRASE en chasse fixe, si. Un `nowrap`
+ * indistinct faisait sortir une note de deux lignes hors du telephone, et la
+ * page entiere defilait lateralement pour elle. */
+p.stamp { white-space: normal; }
 
 /* Étiquette : filet + libellé. Jamais un aplat de couleur pour décorer. */
 .tag {
@@ -436,7 +540,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   letter-spacing: 0.02em;
   color: var(--muted);
   border: 1px solid var(--rule);
-  border-radius: var(--r-sharp);
+  border-radius: var(--r-sm);
   padding: 1px var(--s2);
   white-space: nowrap;
 }
@@ -445,21 +549,23 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 .tag--receipt { color: var(--ok); border-color: color-mix(in oklab, var(--ok) 35%, var(--rule)); }
 
 .prose {
-  font-family: var(--font-display);
+  font-family: var(--font-serif);
   font-size: var(--t-read);
   line-height: var(--lh-read);
   color: var(--ink);
   max-width: var(--measure-read);
   margin: var(--s2) 0 0;
   white-space: pre-wrap;
-  overflow-wrap: break-word;
+  /* `break-word` casse une longue URL a l'affichage mais pas dans le calcul de
+   * la largeur mini de la piste de grille : c'est `anywhere` qui les deux. */
+  overflow-wrap: anywhere;
 }
 
 .quoted {
   margin: var(--s3) 0 0;
   padding-left: var(--s3);
   border-left: 1px solid var(--rule-strong);
-  font-family: var(--font-display);
+  font-family: var(--font-serif);
   font-size: var(--t-small);
   font-style: italic;
   color: var(--muted);
@@ -470,7 +576,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   display: block; margin-top: var(--s4);
   max-width: var(--measure-read); width: 100%;
   max-height: 22rem; object-fit: cover;
-  border: 1px solid var(--rule); border-radius: var(--r-soft);
+  border: 1px solid var(--rule); border-radius: var(--r-sm);
 }
 
 .entry__foot {
@@ -536,20 +642,19 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 .reader__close {
   min-width: 44px; min-height: 44px;
   display: grid; place-items: center;
-  color: var(--muted); border-radius: var(--r-soft);
+  color: var(--muted); border-radius: var(--r-sm);
 }
 .reader__close:hover { color: var(--ink); background: var(--surface-sunk); }
 .reader__body { padding: var(--s5) var(--s6) var(--s8); }
 .reader__body h1 { font-size: var(--t-head); max-width: var(--measure-read); }
+/* Pas de lettrine : elle costume un article de presse repris pour analyse en
+ * page de revue littéraire, et sur un chapô de trois lignes elle déborde le
+ * paragraphe qu'elle est censée ouvrir. */
 .reader__text {
-  font-family: var(--font-display);
+  font-family: var(--font-serif);
   font-size: var(--t-read); line-height: var(--lh-read);
   max-width: var(--measure-read); white-space: pre-wrap;
   margin-top: var(--s5); color: var(--ink);
-}
-.reader__text::first-letter {
-  float: left; font-size: 3rem; line-height: 0.82;
-  padding: 0.1em var(--s2) 0 0; font-weight: 600;
 }
 
 /* ── File de validation : ici, le bloc EST l'unité de décision ──────── */
@@ -559,7 +664,8 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 .verdict {
   background: var(--surface);
   border: 1px solid var(--rule);
-  border-radius: var(--r-soft);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-card);
   padding: var(--s5);
 }
 .verdict__head { display: flex; align-items: center; gap: var(--s3); flex-wrap: wrap; margin-bottom: var(--s4); }
@@ -567,7 +673,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 .verdict__actions { display: flex; gap: var(--s2); margin-left: auto; }
 
 .claims { display: grid; grid-template-columns: 1fr auto 1fr; gap: var(--s4); align-items: start; }
-@media (max-width: 640px) { .claims { grid-template-columns: 1fr; } .claims__vs { justify-self: start; } }
+@media (max-width: 600px) { .claims { grid-template-columns: 1fr; } .claims__vs { justify-self: start; } }
 .claims__vs {
   font-family: var(--font-mono); font-size: var(--t-small);
   color: var(--faint); align-self: center;
@@ -578,7 +684,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   font-variant-numeric: tabular-nums; font-weight: 500; color: var(--ink);
 }
 .claim__text {
-  font-family: var(--font-display); font-style: italic;
+  font-family: var(--font-serif); font-style: italic;
   font-size: var(--t-small); line-height: var(--lh-read);
   color: var(--ink-soft); margin: var(--s2) 0 0;
 }
@@ -600,7 +706,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 .referent {
   width: 100%; text-align: left;
   padding: var(--s3);
-  border-radius: var(--r-soft);
+  border-radius: var(--r-sm);
   border-left: 2px solid transparent;
   transition: background var(--dur-fast) var(--ease);
 }
@@ -619,8 +725,9 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 .chart-frame {
   background: var(--surface);
   border: 1px solid var(--rule);
-  border-radius: var(--r-soft);
-  padding: var(--s4);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-card);
+  padding: var(--s5);
 }
 
 /* Tracé écrit à la main : le graphe est du SVG, stylé ici comme le reste.
@@ -651,7 +758,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   margin-top: var(--s5); padding: var(--s3);
   font-family: var(--font-ui); font-size: var(--t-small);
   color: var(--muted);
-  border: 1px solid var(--rule); border-radius: var(--r-soft);
+  border: 1px solid var(--rule); border-radius: var(--r-sm);
   background: var(--surface);
   transition: color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
 }
@@ -666,12 +773,14 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   font-size: var(--t-small);
   color: var(--muted);
 }
-.state__title { font-family: var(--font-display); font-size: var(--t-title); color: var(--ink); margin-bottom: var(--s2); }
+.state__title { font-family: var(--font-ui); font-size: var(--t-title); color: var(--ink); margin-bottom: var(--s2); }
 .state__hint { max-width: 28rem; margin: 0 auto; }
 .state--error { color: var(--alert); }
+/* Vide à l'intérieur d'un bloc : pas les quatre rem d'une page vide. */
+.state--inline { padding: var(--s5) 0; text-align: left; }
 
 .lede {
-  font-family: var(--font-display);
+  font-family: var(--font-ui);
   font-size: var(--t-read);
   line-height: var(--lh-read);
   color: var(--muted);
@@ -723,7 +832,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   display: flex; flex-direction: column; gap: var(--s1);
   padding: var(--s3) 0;
   border-top: 1px solid var(--rule);
-  font-family: var(--font-display);
+  font-family: var(--font-serif);
   font-size: var(--t-small);
   line-height: var(--lh-read);
   color: var(--ink-soft);
@@ -755,7 +864,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
  * renvoyer sous le texte le plaçait après l'explication du blocage : le
  * compteur arrivait en conclusion d'un paragraphe au lieu de répondre tout de
  * suite à « combien ». */
-@media (max-width: 560px) {
+@media (max-width: 600px) {
   .funnel__step { gap: var(--s3); }
   .funnel__n { font-size: var(--t-title); }
 }
@@ -876,7 +985,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   display: inline-flex; align-items: center; gap: var(--s2);
   font-family: var(--font-mono); font-size: var(--t-micro); color: var(--faint);
 }
-.live__dot { width: 5px; height: 5px; border-radius: 50%; background: var(--ok); }
+.live__dot { width: 6px; height: 6px; border-radius: 50%; background: var(--live); }
 @media (prefers-reduced-motion: no-preference) {
   .live__dot { animation: pulse 2.4s var(--ease) infinite; }
   @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
@@ -902,29 +1011,6 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
  * éléments liés.
  * ═══════════════════════════════════════════════════════════════════════════ */
 
-:root {
-  /* Échelle d'affichage : fluide, pour que le titre reste un titre du
-   * téléphone au grand écran sans point de rupture arbitraire. */
-  --t-hero: clamp(2.125rem, 4.6vw, 3.375rem);
-  --t-lead: clamp(1.5rem, 2.5vw, 2rem);
-  --t-card: 1.3125rem;
-
-  /* Familles thématiques : déclinées de la charte, pas d'un nuancier arbitraire.
-   * Six familles et non quinze couleurs — un arc-en-ciel ne se mémorise pas ;
-   * six familles disent qu'un locuteur ne parle que de sécurité. */
-  --th-eco:    #53414A;   /* économie, pouvoir d'achat */
-  --th-secu:   #A41B30;   /* immigration, sécurité, justice */
-  --th-intl:   #2F5D6B;   /* international */
-  --th-social: #8A6A1F;   /* social, santé, logement, éducation */
-  --th-envt:   #2F6B45;   /* écologie, énergie, agriculture */
-  --th-inst:   #6B4A63;   /* institutions, culture et identité */
-}
-
-:root[data-theme="dark"] {
-  --th-eco: #B7A6AF; --th-secu: #F14668; --th-intl: #7FB3C4;
-  --th-social: #C9A253; --th-envt: #7FB394; --th-inst: #B294C4;
-}
-
 /* ── Surtitre : ranger l'objet avant de le lire ──────────────────────────── */
 
 .kicker {
@@ -947,27 +1033,27 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 .hero-title {
   font-family: var(--font-display);
   font-size: var(--t-hero);
-  font-weight: 600;
-  line-height: 1.04;
-  letter-spacing: -0.02em;
+  font-weight: 800;
+  line-height: 1.02;
+  letter-spacing: -0.038em;
   margin: var(--s3) 0 0;
   text-wrap: balance;
 }
 .lead-title {
   font-family: var(--font-display);
   font-size: var(--t-lead);
-  font-weight: 600;
-  line-height: 1.1;
-  letter-spacing: -0.015em;
+  font-weight: 700;
+  line-height: 1.08;
+  letter-spacing: -0.028em;
   margin: var(--s2) 0 0;
   text-wrap: balance;
 }
 .card-title {
   font-family: var(--font-display);
   font-size: var(--t-card);
-  font-weight: 500;
-  line-height: 1.18;
-  letter-spacing: -0.01em;
+  font-weight: 700;
+  line-height: 1.16;
+  letter-spacing: -0.022em;
   margin: var(--s2) 0 0;
   text-wrap: balance;
   transition: color var(--dur-fast) var(--ease);
@@ -985,7 +1071,12 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 
 /* ── Grilles éditoriales ────────────────────────────────────────────────── */
 
-.wrap { max-width: 76rem; margin: 0 auto; padding: 0 var(--s4); }
+.wrap { max-width: var(--page-w); margin: 0 auto; padding: 0 var(--s4); }
+.page { padding-top: var(--s6); padding-bottom: var(--s8); }
+/* Le chapô ouvre la page : il ne prend pas la marge d'un paragraphe courant. */
+.lede-first { margin-top: 0; }
+/* Première bande d'une colonne : elle ouvre déjà, elle n'a pas à s'écarter. */
+.band--flush { margin-top: 0; }
 
 .split {
   display: grid;
@@ -995,38 +1086,49 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 }
 @media (max-width: 900px) { .split { grid-template-columns: 1fr; gap: var(--s6); } }
 
+/* Une grille de sujets : des cartes posées sur le fond, séparées par du vide.
+ * La version en tableau à filets internes se lisait comme une feuille de
+ * calcul — et une case sans bord ne se désigne pas comme cliquable. */
 .tiles {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
-  border-top: 1px solid var(--rule-strong);
+  grid-template-columns: repeat(auto-fill, minmax(19rem, 1fr));
+  gap: var(--s4);
 }
-/* Filets internes seulement : la grille se lit comme un tableau, sans cadre
- * autour de chaque case. Une case ne s'entoure pas, elle se sépare. */
 .tile {
   display: flex; flex-direction: column;
-  padding: var(--s5) var(--s5) var(--s5) 0;
-  border-bottom: 1px solid var(--rule);
+  padding: var(--s5);
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-card);
   text-align: left;
   min-width: 0;
+  transition: box-shadow var(--dur-base) var(--ease),
+              border-color var(--dur-base) var(--ease);
 }
-.tiles > .tile + .tile { border-left: 1px solid var(--rule); padding-left: var(--s5); }
-@media (max-width: 640px) {
-  .tiles > .tile + .tile { border-left: none; padding-left: 0; }
-}
+.tile:hover { box-shadow: var(--shadow-lift); border-color: var(--rule-strong); }
 .tile:hover .card-title { color: var(--accent); }
 .tile__foot {
   margin-top: auto; padding-top: var(--s4);
   display: flex; align-items: baseline; gap: var(--s3); flex-wrap: wrap;
 }
 
-/* Colonne d'appoint : dense, hiérarchisée par le filet. */
-.aside-block { border-top: 2px solid var(--accent); padding-top: var(--s3); }
-.aside-block + .aside-block { margin-top: var(--s7); }
-.aside-list { border-top: 1px solid var(--rule); margin-top: var(--s3); }
+/* Colonne d'appoint : une carte, comme le reste de la page — un bloc qui
+ * flottait sur le fond à côté de surfaces posées se lisait comme un reliquat. */
+.aside-block {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-card);
+  padding: var(--s5);
+}
+.aside-block + .aside-block { margin-top: var(--s4); }
+.aside-list { margin-top: var(--s3); }
 .aside-item {
   display: block; width: 100%; text-align: left;
-  padding: var(--s3) 0; border-bottom: 1px solid var(--rule);
+  padding: var(--s3) 0;
 }
+.aside-item + .aside-item { border-top: 1px solid var(--rule); }
 .aside-item:hover .aside-item__t { color: var(--accent); }
 .aside-item__t {
   font-family: var(--font-display); font-size: var(--t-ui);
@@ -1047,6 +1149,11 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
  * sa constance ; l'écart entre deux lignes montre le désaccord. */
 
 .frise { margin-top: var(--s5); }
+/* Dans une carte, la marge est déjà donnée par le padding, et le dernier filet
+ * d'une liste doublerait le bord de la surface. */
+.card > .frise:first-child { margin-top: 0; }
+.card > .frise__lane:last-child,
+.card > .position:last-child { border-bottom: none; padding-bottom: 0; }
 
 .frise__head {
   display: grid; grid-template-columns: 11rem 1fr; gap: var(--s4);
@@ -1088,7 +1195,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 .frise__dot:hover, .frise__dot:focus-visible { width: 17px; height: 17px; }
 .frise__dot[aria-pressed="true"] { width: 17px; height: 17px; border-color: var(--ink); }
 
-@media (max-width: 640px) {
+@media (max-width: 600px) {
   .frise__lane { grid-template-columns: 1fr; gap: var(--s2); }
   .frise__head { display: none; }
 }
@@ -1113,7 +1220,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   margin-bottom: var(--s2);
 }
 .position__q {
-  font-family: var(--font-display);
+  font-family: var(--font-serif);
   font-size: var(--t-read); line-height: var(--lh-read);
   color: var(--ink); max-width: var(--measure-read); margin: 0;
 }
@@ -1121,14 +1228,19 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 
 /* ── Bandeau de section ─────────────────────────────────────────────────── */
 
+/* Une section s'OUVRE par un trait épais posé au-dessus de son titre, comme
+ * MIT Technology Review ouvre ses rubriques. Le trait souligné en dessous
+ * fermait la section au moment de l'annoncer, et se confondait avec les filets
+ * de séparation qui suivaient. */
 .band {
   display: flex; align-items: baseline; gap: var(--s3); flex-wrap: wrap;
-  border-bottom: 2px solid var(--accent);
-  padding-bottom: var(--s2); margin: var(--s8) 0 0;
+  border-top: 3px solid var(--th, var(--ink));
+  padding-top: var(--s3); margin: var(--s7) 0 var(--s4);
 }
 .band h2 {
-  font-family: var(--font-display); font-size: var(--t-title);
-  font-weight: 600; margin: 0; letter-spacing: -0.01em;
+  font-family: var(--font-display); font-size: var(--t-small);
+  font-weight: 700; margin: 0;
+  letter-spacing: 0.07em; text-transform: uppercase;
 }
 .band p { font-size: var(--t-small); color: var(--muted); margin: 0; }
 
@@ -1140,9 +1252,9 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
  * pour la même raison — dire ce qu'on couvre en ce moment vaut mieux que de
  * lister ses rubriques, qui ne changent jamais. */
 
-.now { border-bottom: 1px solid var(--rule); background: var(--surface-sunk); }
+.now { border-bottom: 1px solid var(--rule); background: var(--surface); }
 .now__inner {
-  max-width: 76rem; margin: 0 auto; padding: var(--s2) var(--s4);
+  max-width: var(--page-w); margin: 0 auto; padding: var(--s2) var(--s4);
   display: flex; align-items: baseline; gap: var(--s4);
   overflow-x: auto; scrollbar-width: none;
 }
@@ -1168,31 +1280,49 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
  * d'image mais qui a une forme : trois voix sur deux ans ne ressemblent pas à
  * quinze propos tassés sur une semaine. */
 
+/* Trois colonnes, mais pas trois tiers. La colonne des noms est la plus étroite
+ * — un patronyme et un compte tiennent en peu de place ; la citation est la
+ * plus large après le titre, parce qu'une phrase découpée à trois mots par
+ * ligne cesse d'être lisible, et c'est la seule vraie voix de la carte. */
 .story {
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 0.85fr);
-  gap: var(--s6);
-  padding: var(--s6) 0;
-  border-bottom: 1px solid var(--rule);
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.8fr) minmax(0, 1.05fr);
+  gap: var(--s5);
+  padding: var(--s5);
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-card);
   align-items: start;
 }
-.story:first-child { padding-top: var(--s5); }
+.story + .story { margin-top: var(--s4); }
+
+/* La une : même bande, plus d'air, et le titre au corps d'affichage. Une
+ * hiérarchie se fait par la taille et le blanc, pas par un cadre de couleur. */
+.story--lead {
+  padding: var(--s6);
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 0.75fr) minmax(0, 1fr);
+  gap: var(--s6);
+}
+.story--lead .story__aside { padding-left: var(--s6); }
+
 .story__aside {
   border-left: 1px solid var(--rule);
   padding-left: var(--s5);
   align-self: stretch;
 }
 @media (max-width: 900px) {
-  .story { grid-template-columns: 1fr; gap: var(--s4); }
+  .story, .story--lead { grid-template-columns: 1fr; gap: var(--s4); padding: var(--s5); }
   .story__aside { border-left: none; padding-left: 0; border-top: 1px solid var(--rule); padding-top: var(--s3); }
+  .story--lead .story__aside { padding-left: 0; }
 }
 
 .story__title {
   font-family: var(--font-display);
-  font-size: clamp(1.5rem, 2.3vw, 2rem);
+  font-size: clamp(1.375rem, 2.1vw, 1.875rem);
   font-weight: 700;
-  line-height: 1.06;
-  letter-spacing: -0.02em;
+  line-height: 1.08;
+  letter-spacing: -0.028em;
   margin: var(--s2) 0 0;
   text-wrap: balance;
   transition: color var(--dur-fast) var(--ease);
@@ -1203,7 +1333,7 @@ a:hover > .story__title, a:hover .story__title { color: var(--accent); }
  * Une date relative en tête dit immédiatement si le sujet est vivant. */
 .latest__when { font-weight: 600; color: var(--ink); }
 .latest__q {
-  font-family: var(--font-display);
+  font-family: var(--font-serif);
   font-size: var(--t-ui); line-height: 1.4; color: var(--ink-soft);
   margin: var(--s2) 0 0;
 }
@@ -1213,35 +1343,82 @@ a:hover > .story__title, a:hover .story__title { color: var(--accent); }
  * d'un coup ; des points sur une ligne de 200 px, non. */
 
 .repart {
-  display: flex; flex-wrap: wrap; gap: var(--s1) var(--s4);
-  margin: 0; font-size: var(--t-small); color: var(--muted);
+  display: flex; flex-direction: column; gap: var(--s2);
+  margin: 0; padding: 0; list-style: none;
+  font-size: var(--t-small); color: var(--ink-soft);
 }
-.repart__x { white-space: nowrap; }
-.repart__x b {
-  font-family: var(--font-mono); font-weight: 500; color: var(--ink);
-  font-variant-numeric: tabular-nums; margin-right: 2px;
+.repart__x { display: flex; align-items: center; gap: var(--s2); min-width: 0; }
+.repart__who { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Le compte file à droite, aligné d'une ligne à l'autre : c'est ce qui rend la
+ * comparaison entre locuteurs lisible sans tracer de barres. */
+.repart__n {
+  margin-left: auto; font-family: var(--font-mono); font-weight: 500;
+  font-variant-numeric: tabular-nums; color: var(--ink);
 }
-.repart__x--rest { color: var(--faint); }
+.repart__x--rest { color: var(--faint); padding-left: calc(28px + var(--s2)); }
+
+/* Le portrait d'un locuteur. Sa taille vient du bloc qui l'accueille : 28 px
+ * dans une ligne de texte, 40 px dans le registre, 5 rem en tête de fiche. Une
+ * seule classe pour les trois — il y en avait deux, `.face` et `.initials`,
+ * qui ne différaient que par leur taille et divergeaient à chaque retouche. */
+.face {
+  width: var(--face-size, 28px); height: var(--face-size, 28px); flex: none;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--surface-sunk);
+  box-shadow: inset 0 0 0 1px rgb(23 22 26 / 0.1);
+}
+:root[data-theme="dark"] .face { box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.12); }
+.face--txt {
+  display: grid; place-items: center;
+  font-family: var(--font-mono); font-size: var(--t-micro); font-weight: 500;
+  color: var(--muted); letter-spacing: 0.02em;
+}
+
+/* ── En-tête de fiche : le portrait, puis l'identité ─────────────────────── */
+
+.profil { display: grid; grid-template-columns: auto 1fr; gap: var(--s5); align-items: start; }
+.profil > .face { --face-size: 5rem; font-size: var(--t-title); }
+.profil__nom { margin-top: var(--s1); }
+.profil .entry__foot { margin-top: var(--s3); }
+@media (max-width: 600px) {
+  .profil { grid-template-columns: 1fr; gap: var(--s3); }
+  .profil > .face { --face-size: 3.5rem; }
+}
+
+/* Une réserve de lecture : ce que le corpus ne permet PAS de conclure. Écrite
+ * en clair, à côté des chiffres qu'elle nuance, et pas en note de bas de page. */
+.caveat {
+  margin: var(--s5) 0 0;
+  padding-left: var(--s3);
+  border-left: 2px solid var(--pending);
+  font-size: var(--t-small); color: var(--muted);
+  max-width: var(--measure-ui);
+}
+
+/* Le répertoire latéral porte les mêmes visages que le reste du produit. */
+.referent--face { display: grid; grid-template-columns: 28px 1fr; gap: var(--s3); align-items: center; }
 
 /* ── Classement ─────────────────────────────────────────────────────────────
  * Un rang numéroté dit ce qu'un tri implicite ne dit pas : que la liste est
  * ordonnée, et selon quoi. Le critère est écrit à côté du titre de section. */
 
-.ranked { border-top: 1px solid var(--rule); }
 .ranked__item {
-  display: grid; grid-template-columns: 2.5rem 1fr; gap: var(--s3);
-  padding: var(--s4) 0; border-bottom: 1px solid var(--rule);
-  align-items: baseline;
+  display: grid; grid-template-columns: 2rem 1fr; gap: var(--s3);
+  padding: var(--s3) 0; align-items: baseline;
 }
+.ranked__item + .ranked__item { border-top: 1px solid var(--rule); }
 .ranked__n {
-  font-family: var(--font-display); font-size: var(--t-head);
-  font-weight: 700; line-height: 1; color: var(--rule-strong);
+  font-family: var(--font-display); font-size: var(--t-title);
+  font-weight: 800; line-height: 1; color: var(--rule-strong);
   font-variant-numeric: tabular-nums;
+  transition: color var(--dur-fast) var(--ease);
 }
 .ranked__item:hover .ranked__n { color: var(--th, var(--accent)); }
 .ranked__t {
   font-family: var(--font-display); font-size: var(--t-ui);
-  font-weight: 600; line-height: 1.2; color: var(--ink);
+  font-weight: 600; line-height: 1.25; color: var(--ink);
+  letter-spacing: -0.012em;
   transition: color var(--dur-fast) var(--ease);
 }
 .ranked__item:hover .ranked__t { color: var(--accent); }
@@ -1252,61 +1429,45 @@ a:hover > .story__title, a:hover .story__title { color: var(--accent); }
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
- * PLATEFORME — grille bento, indicateurs, icônes
- *
- * Repris de Lebanon Monitor, la plateforme sœur : cellules posées sur un fond
- * sombre avec un écart d'un pixel, l'écart FAISANT la bordure. Un cadre dessiné
- * autour de chaque case additionne les traits ; un écart les partage. À vingt
- * cellules, la différence entre les deux se voit.
- *
- * Ce qui reste du registre d'archive : les surfaces de LECTURE. Un propos cité
- * se lit en Newsreader sur une colonne mesurée, pas en 11px capitales. Un
- * tableau de bord et une revue n'ont pas le même métier ; ce fichier fait
- * cohabiter les deux au lieu de choisir.
+ * RELEVÉS, INDICATEURS, COMMANDES
  * ═══════════════════════════════════════════════════════════════════════════ */
 
-/* ── Bandeau de chiffres ───────────────────────────────────────────────────
+/* ── L'étendue du fonds, en une ligne ──────────────────────────────────────
  *
- * Ce qui était ici : quatre cartes identiques, un gros chiffre au centre de
- * chacune. C'est la mise en page par défaut de tout tableau de bord généré, et
- * ça se voit — quatre boîtes de même poids donnent la même importance à des
- * choses qui n'en ont pas, et occupent un écran pour quatre nombres.
+ * Deux versions ont échoué ici. D'abord quatre cartes à gros chiffre : la mise
+ * en page par défaut de tout tableau de bord généré, quatre boîtes de même
+ * poids pour des grandeurs qui n'ont pas la même importance. Puis une barre de
+ * chiffres à 20 px encadrée de filets, qui gardait le défaut principal — un
+ * relevé d'inventaire posé en tête de page, avant ce qu'on est venu lire.
  *
- * Une salle de marché fait l'inverse : une ligne dense, des chiffres petits et
- * tabulaires collés à leur libellé, des filets pour séparer. On lit les quatre
- * d'un seul regard au lieu d'en balayer quatre. */
+ * Ce qui reste : une ligne de mention, sous le chapô, à la taille du texte
+ * courant. L'étendue du corpus doit être VÉRIFIABLE, pas proclamée. Le chiffre
+ * est en chasse fixe, un peu appuyé ; le reste est une phrase. */
 
 .statbar {
-  display: flex; flex-wrap: wrap;
-  border-top: 2px solid var(--accent);
-  border-bottom: 1px solid var(--rule);
-}
-.statbar__item {
-  display: flex; align-items: baseline; gap: var(--s2);
-  padding: var(--s3) var(--s5) var(--s3) 0;
-  margin-right: var(--s5);
-  border-right: 1px solid var(--rule);
+  display: flex; flex-wrap: wrap; gap: var(--s2) var(--s5);
+  margin: var(--s4) 0 0;
+  padding: 0;
   font-size: var(--t-small);
   color: var(--muted);
+}
+.statbar__item {
+  display: inline-flex; align-items: baseline; gap: var(--s2);
   white-space: nowrap;
 }
-.statbar__item:last-child { border-right: none; margin-right: 0; padding-right: 0; }
 .statbar__n {
   font-family: var(--font-mono);
-  font-size: var(--t-title);
+  font-size: var(--t-small);
   font-variant-numeric: tabular-nums;
   font-weight: 500;
   color: var(--ink);
-  letter-spacing: -0.02em;
 }
 .statbar__n--accent { color: var(--accent); }
 .statbar__of { font-family: var(--font-mono); font-size: var(--t-micro); color: var(--faint); }
 a.statbar__item { transition: color var(--dur-fast) var(--ease); }
-a.statbar__item:hover { color: var(--ink); }
+a.statbar__item { border-bottom: 1px solid var(--rule); }
+a.statbar__item:hover { color: var(--ink); border-color: var(--accent); }
 a.statbar__item:hover .statbar__n { color: var(--accent); }
-@media (max-width: 560px) {
-  .statbar__item { border-right: none; margin-right: 0; padding-right: 0; flex-basis: 100%; }
-}
 
 /* Micro-étiquette : le métier d'un bloc, au-dessus de son contenu. */
 .overline {
@@ -1357,26 +1518,46 @@ a.statbar__item:hover .statbar__n { color: var(--accent); }
 
 .btn {
   display: inline-flex; align-items: center; gap: var(--s2);
-  font-family: var(--font-ui); font-size: var(--t-small); font-weight: 500;
+  font-family: var(--font-ui); font-size: var(--t-small); font-weight: 600;
   padding: var(--s2) var(--s4);
   min-height: 36px;
   border: 1px solid var(--rule-strong);
-  border-radius: var(--r-soft);
+  border-radius: var(--r-sm);
   background: var(--surface);
   color: var(--ink);
   cursor: pointer;
   transition: border-color var(--dur-fast) var(--ease),
-              background var(--dur-fast) var(--ease);
+              background var(--dur-fast) var(--ease),
+              scale var(--dur-fast) var(--ease);
 }
 .btn:hover { border-color: var(--accent); background: var(--surface-sunk); }
+/* Retour tactile à l'appui : le bouton répond avant que la page ne réponde. */
+.btn:active { scale: 0.96; }
 .btn--primary {
-  background: var(--accent); border-color: var(--accent); color: var(--paper);
+  background: var(--accent); border-color: var(--accent); color: #FFFFFF;
 }
-.btn--primary:hover { filter: brightness(1.1); background: var(--accent); }
+.btn--primary:hover { background: var(--accent-hot); border-color: var(--accent-hot); }
 .btn--ghost { border-color: transparent; background: transparent; color: var(--muted); }
 .btn--ghost:hover { color: var(--ink); border-color: var(--rule); }
-.btn--sm { min-height: 28px; padding: var(--s1) var(--s3); font-size: var(--t-micro); }
+.btn--sm { min-height: 30px; padding: var(--s1) var(--s3); font-size: var(--t-micro); }
 
-.nav .ico { color: var(--faint); transition: color var(--dur-fast) var(--ease); }
-.nav a:hover .ico, .nav a[aria-current="page"] .ico { color: var(--accent); }
-@media (max-width: 560px) { .nav .ico { display: none; } }
+/* ── Utilitaires d'espacement ──────────────────────────────────────────────
+ * Six déclarations, pour retirer des HTML les `style="margin-top: …"` semés au
+ * fil des pages : l'espacement vertical appartient au système, pas au balisage,
+ * sans quoi il dérive d'une page à l'autre. */
+.mt-3 { margin-top: var(--s3); }
+.mt-4 { margin-top: var(--s4); }
+.mt-5 { margin-top: var(--s5); }
+.mt-6 { margin-top: var(--s6); }
+.mt-7 { margin-top: var(--s7); }
+.mt-8 { margin-top: var(--s8); }
+.mb-0 { margin-bottom: 0; }
+.mb-3 { margin-bottom: var(--s3); }
+.mb-4 { margin-bottom: var(--s4); }
+.mb-5 { margin-bottom: var(--s5); }
+.mb-7 { margin-bottom: var(--s7); }
+.measure { max-width: var(--measure-ui); }
+.flush { padding-left: 0; padding-right: 0; }
+/* Un champ de filtre n'a pas a s'etirer sur toute la ligne : sa largeur dit
+ * combien on attend qu'on y tape. */
+.field--inline { max-width: 22rem; }
