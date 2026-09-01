@@ -80,7 +80,7 @@ function story(s, big = false) {
     <div class="story__aside">
       ${l ? `<p class="overline">${ico("temps")} Dernier propos</p>
         <p class="stamp"><span class="latest__when">${escapeHtml(relTime(l.published_at))}</span>
-          · ${escapeHtml(l.speaker || "locuteur non établi")}</p>
+          · <span class="nowrap">${escapeHtml(l.speaker || "locuteur non établi")}</span></p>
         <p class="latest__q">« ${escapeHtml((l.text || "").slice(0, 190))} »</p>`
         : '<p class="stamp">Aucun propos daté.</p>'}
     </div>
@@ -96,7 +96,8 @@ function renderPending(items) {
           <span class="ranked__n">${i + 1}</span>
           <span>
             <span class="ranked__t">${escapeHtml(e.claim_a?.speaker_name || "locuteur non établi")}</span>
-            <span class="ranked__m">${escapeHtml(relTime(e.detected_at))} · score ${e.score}</span>
+            <span class="ranked__m"><span class="nowrap">${escapeHtml(relTime(e.detected_at))}</span>
+              · <span class="nowrap">score ${e.score}</span></span>
           </span>
         </a>`).join("")}</div>
        <p class="mt-4"><a class="btn btn--sm" href="contradictions.html">

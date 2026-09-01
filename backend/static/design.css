@@ -78,8 +78,12 @@
   /* Échelle typographique — quarte (1.333), pas de valeur hors échelle. Les
    * deux tailles d'affichage sont fluides : un titre reste un titre du
    * téléphone au grand écran, sans point de rupture arbitraire. */
-  --t-micro:   0.6875rem;
-  --t-small:   0.8125rem;
+  /* Deux crans remontes apres mesure : 11 px pour une date, 13 px pour un
+   * complement de contenu, c'est le plancher d'un tableau de bord, pas d'un
+   * texte qu'on lit. Le detail d'un etage d'entonnoir ou la fonction d'un
+   * depute sont du contenu. */
+  --t-micro:   0.75rem;
+  --t-small:   0.875rem;
   --t-ui:      0.9375rem;
   --t-read:    1.0625rem;
   --t-title:   1.25rem;
@@ -98,8 +102,12 @@
   --s1: 0.25rem; --s2: 0.5rem;  --s3: 0.75rem; --s4: 1rem;
   --s5: 1.5rem;  --s6: 2rem;    --s7: 3rem;    --s8: 4rem;
 
-  --measure-read: 38rem;
-  --measure-ui:   46rem;
+  /* La longueur de ligne se mesure en CARACTERES, pas en rem : une largeur
+   * fixe donne 71 signes a 17 px et 98 a 15 px, alors que l'oeil decroche au
+   * dela de 75 quelle que soit la taille. En `ch`, la mesure suit la police.
+   * Constate ici : le chapo de la une courait sur 98 signes. */
+  --measure-read: 66ch;
+  --measure-ui:   62ch;
   /* Une seule largeur de page. Deux valeurs concurrentes (72 et 76 rem)
    * décalaient le bandeau du contenu qu'il coiffe, d'un demi-pouce. */
   --page-w: 74rem;
@@ -356,6 +364,19 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
  * donnée, pas une décoration. */
 @media (max-width: 900px) {
   .masthead__inner { flex-wrap: wrap; gap: var(--s3); row-gap: var(--s2); }
+  /* Sept rubriques ne tiennent dans aucun telephone : la nav defile, et le
+   * degrade le dit. Au dessus de 900 px elle tient, donc pas de degrade. */
+  .masthead__nav { mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent); }
+  /* Une rubrique haute de 26 px se rate au doigt une fois sur trois. Le pouce
+   * demande 44 px ; la souris s'en accommode, d'ou la regle au telephone
+   * seulement — sur grand ecran, 44 px de haut feraient une barre d'outils. */
+  .nav a, .nav span { min-height: 44px; padding-bottom: 0; align-items: center; }
+  .nav a[aria-current="page"] { box-shadow: inset 0 -2px 0 var(--accent); border-bottom-color: transparent; }
+  /* Une action se vise au pouce : 44 px. Un lien dans une bande dense se
+   * contente du plancher de 24 px — porter sept liens a 44 px triplerait la
+   * hauteur de la bande pour la rendre moins lisible, pas plus. */
+  .btn, .btn--sm { min-height: 44px; }
+  .now a, a.statbar__item, a.wordmark { padding-block: var(--s2); }
   .masthead__tagline { display: none; }
   /* Ligne 1 : le titre et la bascule. Ligne 2 : les indicateurs, ensemble —
    * séparés, ils occupaient trois lignes pour deux informations. */
@@ -532,6 +553,10 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
  * indistinct faisait sortir une note de deux lignes hors du telephone, et la
  * page entiere defilait lateralement pour elle. */
 p.stamp { white-space: normal; }
+/* Un nom propre ne se coupe pas en deux. Quand la colonne est trop etroite, la
+ * ligne se plie AVANT le nom, pas au milieu — « Marine Le / Pen » se lit comme
+ * une erreur de saisie. */
+.nowrap { white-space: nowrap; }
 
 /* Étiquette : filet + libellé. Jamais un aplat de couleur pour décorer. */
 .tag {
@@ -929,6 +954,9 @@ p.stamp { white-space: normal; }
 /* Un libellé court coupé en deux (« Collecte » / « X ») se lit comme deux
  * champs au lieu d'un. */
 .kv__k { color: var(--muted); white-space: nowrap; }
+/* Sur telephone la contrainte s'inverse : un libelle d'etape insecable pousse
+ * la colonne hors de l'ecran, ce qui coute plus qu'un libelle sur deux lignes. */
+@media (max-width: 600px) { .kv__k { white-space: normal; min-width: 0; } }
 .kv__v {
   margin-left: auto; font-family: var(--font-mono);
   font-variant-numeric: tabular-nums; color: var(--ink);
@@ -1253,10 +1281,16 @@ p.stamp { white-space: normal; }
  * lister ses rubriques, qui ne changent jamais. */
 
 .now { border-bottom: 1px solid var(--rule); background: var(--surface); }
+/* Une bande qui defile sans le dire se lit comme un texte coupe. Le degrade
+ * de bord est la seule affordance qui reste quand la barre de defilement est
+ * masquee — et elle l'est, sinon elle barre la bande en permanence.
+ * Applique la ou le debordement est structurel (sept sujets, sept rubriques),
+ * jamais « au cas ou » : un degrade sur un contenu qui tient est un defaut. */
 .now__inner {
   max-width: var(--page-w); margin: 0 auto; padding: var(--s2) var(--s4);
   display: flex; align-items: baseline; gap: var(--s4);
   overflow-x: auto; scrollbar-width: none;
+  mask-image: linear-gradient(to right, #000 calc(100% - 3rem), transparent);
 }
 .now__inner::-webkit-scrollbar { display: none; }
 .now__label {
@@ -1556,7 +1590,6 @@ a.statbar__item:hover .statbar__n { color: var(--accent); }
 .mb-4 { margin-bottom: var(--s4); }
 .mb-5 { margin-bottom: var(--s5); }
 .mb-7 { margin-bottom: var(--s7); }
-.measure { max-width: var(--measure-ui); }
 .flush { padding-left: 0; padding-right: 0; }
 /* Un champ de filtre n'a pas a s'etirer sur toute la ligne : sa largeur dit
  * combien on attend qu'on y tape. */
