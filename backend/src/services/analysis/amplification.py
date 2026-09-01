@@ -14,7 +14,7 @@ from collections import Counter
 from datetime import datetime, timedelta, timezone
 
 import structlog
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select
 
 from src.database import get_session_factory
 from src.models.amplification import Amplification
@@ -76,7 +76,11 @@ async def who_they_amplify(personality_id: int, *, limit: int = 20) -> list[dict
         rows = (await db.execute(
             select(Amplification.target_handle,
                    func.count(),
-                   func.sum(func.iif(Amplification.kind == "retweet", 1, 0)),
+                   # `case` et non `func.iif` : iif() est une fonction SQLite.
+                   # Postgres l'ignore, et la requête n'aurait échoué qu'en
+                   # production, à l'ouverture d'une fiche — jamais ici, où les
+                   # tests tournent sur SQLite.
+                   func.sum(case((Amplification.kind == "retweet", 1), else_=0)),
                    func.min(Amplification.published_at),
                    func.max(Amplification.published_at))
             .where(Amplification.personality_id == personality_id)

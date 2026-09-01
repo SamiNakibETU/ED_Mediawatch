@@ -324,6 +324,16 @@ async def run_declaration_extraction(
                 continue
             src_ref = f"art{art.id}"
             _SRC_CACHE[src_ref] = text
+            # Les figures suivies repérées dans l'article : un contexte donné au
+            # modèle pour orthographier un nom, jamais une réponse à recopier.
+            #
+            # Cette ligne a manqué pendant trois jours : sa suppression par
+            # mégarde a fait échouer extract_l0 en production (NameError) à
+            # chaque passe, et tout l'aval — codage, embeddings, sujets — était
+            # sauté. Le local n'a rien vu : sa boucle presse n'avait plus rien à
+            # traiter, la ligne ne s'exécutait jamais. Un test couvre désormais
+            # le chemin presse de bout en bout.
+            mp = art.matched_personalities or []
             # JAMAIS de locuteur présumé pour un article : un papier qui mentionne
             # une figure contient aussi la voix du journaliste et des tiers cités.
             # Attribuer tout le contenu à `mp[0]` fabriquait des imputations fausses

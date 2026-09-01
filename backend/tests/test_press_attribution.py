@@ -20,10 +20,21 @@ qui parle, puis de le vérifier. Ces tests verrouillent les deux moitiés :
 jamais de déduction, et jamais d'attribution non vérifiée.
 """
 
+import asyncio
 import inspect
 import re
+from datetime import datetime, timezone
 
+from sqlalchemy import select
+
+from src.config import get_settings
+from src.database import get_engine, get_session_factory, init_db
+from src.models.article import Article
+from src.models.claim import Claim
+from src.models.media_source import MediaSource
+from src.models.personality import Personality
 from src.services.analysis import claim_extractor, declaration_extractor
+from src.services.analysis.claim_llm import Declaration, DeclarationSet
 from src.services.analysis.declaration_extractor import attributed_speaker
 
 SOURCE = (
@@ -110,3 +121,143 @@ def test_x_posts_keep_their_certain_attribution():
     src = inspect.getsource(declaration_extractor.run_declaration_extraction)
     assert "speaker=p.full_name" in src.replace(" ", "").replace("\n", "") \
         or "speaker=p.full_name" in src
+
+
+# ── Le chemin presse, exécuté ────────────────────────────────────────────
+#
+# Tout ce qui précède lit le code sans le faire tourner. Ça a suffi à laisser
+# passer une panne de trois jours : une ligne supprimée par mégarde faisait
+# échouer la boucle presse sur un NameError à la première itération, en
+# production, à chaque passe — et tout l'aval (codage, vecteurs, sujets) était
+# sauté. Le local ne voyait rien, sa file d'articles étant vide : la ligne ne
+# s'exécutait jamais. Un test qui LIT le code ne remplace pas un test qui le
+# LANCE.
+
+_CACHES = (get_settings, get_engine, get_session_factory)
+
+ARTICLE_TITRE = "Face aux patrons, Marine Le Pen déroule un programme libéral"
+ARTICLE_CORPS = (
+    "« Il faut baisser les impôts », a déclaré Marine Le Pen devant le MEDEF. "
+    "De son côté, Marylise Léon estime que la réforme est injuste et le dit "
+    "sans détour. Jordan Bardella n’a pas réagi."
+)
+
+
+def _decl(verbatim: str, speaker: str | None) -> Declaration:
+    """Le vrai schéma, pas un double : `_store` applique de vraies règles
+    dessus (verbatim présent dans la source, check_worthy)."""
+    return Declaration(
+        verbatim=verbatim, canonical=verbatim, claim_type="normatif",
+        theme="economie", stance_target="les impôts", check_worthy=True,
+        speaker=speaker,
+    )
+
+
+class _PresseLLM:
+    """Rend deux voix pour un même papier — le cas normal d'un article."""
+
+    def __init__(self):
+        self.known_recu: list[str] | None = None
+        self.speaker_recu: str | None = "sentinelle"
+        self._s = get_settings()
+
+    def available(self) -> bool:
+        return True
+
+    async def segment_declarations(self, *, text, speaker=None, known=None):
+        self.known_recu = known
+        self.speaker_recu = speaker
+        return DeclarationSet(has_declaration=True, declarations=[
+            _decl("Il faut baisser les impôts", "Marine Le Pen"),
+            _decl("la réforme est injuste", "Marylise Léon"),
+            _decl("un programme libéral", "Emmanuel Macron"),   # absent du texte
+        ])
+
+
+def _extraire_un_article(tmp_path, monkeypatch):
+    """Un article, deux figures suivies, une passe complète d'extraction."""
+    monkeypatch.setenv("DATABASE_URL", f"sqlite+aiosqlite:///{tmp_path / 'presse.db'}")
+    monkeypatch.setenv("L0_PILOT_HANDLES", "")
+    for c in _CACHES:
+        c.cache_clear()
+
+    llm = _PresseLLM()
+    claims: list[Claim] = []
+
+    async def go():
+        await init_db()
+        factory = get_session_factory()
+        async with factory() as db:
+            db.add(MediaSource(id="lemonde", name="Le Monde",
+                               rss_url="https://lemonde.fr/rss.xml"))
+            db.add(Personality(full_name="Marine Le Pen", handle="mlp_officiel",
+                               group_code="RN"))
+            db.add(Personality(full_name="Jordan Bardella", handle="j_bardella",
+                               group_code="RN"))
+            await db.commit()
+            db.add(Article(
+                media_source_id="lemonde", url="https://lemonde.fr/a/1",
+                url_hash="h1", title=ARTICLE_TITRE, content=ARTICLE_CORPS,
+                published_at=datetime(2026, 5, 4, tzinfo=timezone.utc),
+                matched_personalities=["Marine Le Pen", "Jordan Bardella",
+                                       "Figure inconnue au répertoire"],
+            ))
+            await db.commit()
+
+        monkeypatch.setattr(declaration_extractor, "get_claim_llm", lambda: llm)
+        stats = await declaration_extractor.run_declaration_extraction(
+            limit_posts=0, limit_articles=10
+        )
+
+        async with factory() as db:
+            claims.extend((await db.execute(
+                select(Claim).order_by(Claim.id))).scalars().all())
+        return stats
+
+    try:
+        stats = asyncio.run(go())
+    finally:
+        for c in _CACHES:
+            c.cache_clear()
+    return stats, claims, llm
+
+
+def test_the_press_path_runs_end_to_end(tmp_path, monkeypatch):
+    """La boucle presse doit produire des déclarations, pas une exception.
+
+    C'est le test qui manquait : il échoue à la première itération si le
+    contexte des figures repérées disparaît de nouveau."""
+    stats, claims, llm = _extraire_un_article(tmp_path, monkeypatch)
+
+    assert stats["articles_processed"] == 1
+    assert stats["remaining_articles"] == 0, "l'article n'a pas été marqué comme vu"
+    assert len(claims) == 3, "les déclarations retenues doivent entrer au Grand Livre"
+
+
+def test_the_model_gets_the_followed_figures_as_context_only(tmp_path, monkeypatch):
+    """Les figures repérées sont un contexte d'orthographe, jamais une réponse :
+    `speaker` reste vide pour un article, et le contexte est filtré sur le
+    répertoire — un nom qui n'y est pas ne doit pas être proposé."""
+    _, _, llm = _extraire_un_article(tmp_path, monkeypatch)
+
+    assert llm.speaker_recu is None, "un locuteur a été présumé pour un article"
+    assert llm.known_recu == ["Marine Le Pen", "Jordan Bardella"]
+
+
+def test_each_press_declaration_is_attributed_on_its_own(tmp_path, monkeypatch):
+    """Un papier porte plusieurs voix : chacune est vérifiée séparément.
+
+    Trois sorts distincts pour trois propos du même article — la figure suivie
+    rattachée à sa fiche, la voix extérieure nommée sans fiche, et le propos
+    dont le locuteur proposé n'est pas dans le texte CONSERVÉ mais non attribué.
+    Refuser une attribution n'est pas refuser le propos : le texte a bien été
+    écrit, c'est seulement le « qui » qui n'est pas établi."""
+    stats, claims, _ = _extraire_un_article(tmp_path, monkeypatch)
+
+    par_nom = {c.speaker_name: c for c in claims}
+    assert set(par_nom) == {"Marine Le Pen", "Marylise Léon", None}
+    assert par_nom["Marine Le Pen"].personality_id is not None
+    assert par_nom["Marylise Léon"].personality_id is None
+    assert par_nom[None].personality_id is None
+    assert stats["press_attributed"] == 2
+    assert all(c.platform == "press" and c.article_id for c in claims)
