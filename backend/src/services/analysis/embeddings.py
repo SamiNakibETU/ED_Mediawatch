@@ -31,13 +31,43 @@ except Exception:  # noqa: BLE001
 
 
 def cosine(a: list[float], b: list[float]) -> float:
+    """Cosinus entre deux vecteurs du MEME espace.
+
+    `zip` s'arrete au plus court : comparer un vecteur de 1 024 dimensions a un
+    de 384 aurait rendu un nombre plausible, calcule sur le tiers des
+    coordonnees de l'un et la totalite de l'autre. Un corpus embarque par deux
+    backends produirait alors des rapprochements faux sans qu'aucune erreur
+    n'apparaisse — le pire des deux mondes. On rend zero, et le recalcul des
+    embeddings remet le corpus dans un seul espace.
+    """
+    if len(a) != len(b):
+        return 0.0
     dot = sum(x * y for x, y in zip(a, b))
     na = math.sqrt(sum(x * x for x in a))
     nb = math.sqrt(sum(y * y for y in b))
     return dot / (na * nb) if na and nb else 0.0
 
 
+# Dimension par modele. Elle ne se devine pas et ne se mesure pas sans appel
+# facture : l'index vectoriel doit la connaitre AVANT le premier vecteur.
+_COHERE_DIMS = {"embed-multilingual-v3.0": 1024, "embed-multilingual-light-v3.0": 384}
+
+
 class CohereEmbedder:
+    """Cohere, avec repli local quand la cle est refusee.
+
+    Une cle ABSENTE etait deja prevue (`get_embedder`) ; une cle REVOQUEE ne
+    l'etait pas, et c'est le cas le plus courant — un secret tourne, un essai
+    expire. Elle passait tous les controles de disponibilite puis echouait en
+    401 a chaque appel : pas de vecteur, donc pas de sujet, donc une une vide,
+    pendant que la chaine se declarait par ailleurs en bonne sante.
+
+    Le repli n'est pas gratuit : les vecteurs locaux ont 384 dimensions contre
+    1024, et deux espaces differents ne se comparent pas. C'est pourquoi
+    `dim()` suit le backend REELLEMENT actif, et pourquoi l'embedding des
+    declarations est recalcule quand la dimension change.
+    """
+
     def __init__(self) -> None:
         s = get_settings()
         self._model = s.cohere_embed_model
@@ -46,20 +76,45 @@ class CohereEmbedder:
             if (cohere and s.cohere_api_key)
             else None
         )
+        self._fallback: LocalEmbedder | None = None
 
     def available(self) -> bool:
-        return self._client is not None
+        return self._client is not None or bool(
+            self._fallback and self._fallback.available())
+
+    def dim(self) -> int:
+        if self._client is None and self._fallback is not None:
+            return self._fallback.dim()
+        return _COHERE_DIMS.get(self._model, 1024)
+
+    def _demote(self, exc: Exception) -> None:
+        """Cohere nous refuse : on continue en local plutot que de s'arreter."""
+        logger.warning("embeddings.cohere_rejected", error=str(exc)[:160])
+        self._client = None
+        self._fallback = LocalEmbedder()
 
     async def embed(self, texts: list[str], *, query: bool = False) -> list[list[float]]:
-        if not self._client or not texts:
+        if not texts:
             return []
-        resp = await self._client.embed(
-            model=self._model,
-            texts=texts,
-            input_type="search_query" if query else "search_document",
-            embedding_types=["float"],
-        )
-        return list(resp.embeddings.float_)
+        if self._client is not None:
+            try:
+                resp = await self._client.embed(
+                    model=self._model,
+                    texts=texts,
+                    input_type="search_query" if query else "search_document",
+                    embedding_types=["float"],
+                )
+                return list(resp.embeddings.float_)
+            except Exception as exc:  # noqa: BLE001
+                # Un quota atteint ou une panne passagere doivent remonter : on
+                # ne bascule que sur un refus d'identite, qui ne se repare pas
+                # tout seul.
+                if getattr(exc, "status_code", None) not in (401, 403):
+                    raise
+                self._demote(exc)
+        if self._fallback is not None:
+            return await self._fallback.embed(texts, query=query)
+        return []
 
 
 class LocalEmbedder:
@@ -78,6 +133,7 @@ class LocalEmbedder:
 
     MODEL_NAME = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
     BATCH = 128
+    DIM = 384
 
     def __init__(self) -> None:
         self._model = None
@@ -90,6 +146,9 @@ class LocalEmbedder:
 
     def available(self) -> bool:
         return self._cls is not None
+
+    def dim(self) -> int:
+        return self.DIM
 
     def _ensure(self):
         if self._model is None and self._cls is not None:
@@ -139,7 +198,8 @@ def backend_tag() -> str:
     """Identifiant du backend actif — les vecteurs de backends différents ne se
     comparent pas (dimensions et espaces distincts)."""
     emb = get_embedder()
-    return "cohere" if isinstance(emb, CohereEmbedder) else "local-minilm"
+    actif_cohere = isinstance(emb, CohereEmbedder) and emb._client is not None
+    return "cohere" if actif_cohere else "local-minilm"
 
 
 async def embed_referents() -> dict:

@@ -29,12 +29,21 @@ def _claim_text(c: Claim) -> str:
 
 
 async def embed_claims(limit: int = 2000) -> dict:
-    """Calcule l'embedding des claims qui n'en ont pas encore (idempotent)."""
+    """Calcule l'embedding des declarations qui n'en ont pas — ou plus.
+
+    « Ou plus » : quand le backend change (cle Cohere revoquee, repli local),
+    les vecteurs deja en base appartiennent a un autre espace, de dimension
+    differente. Les garder reviendrait a comparer des choux et des carottes, et
+    l'index vectoriel, declare sur une seule dimension, refuserait les autres.
+    On les recalcule, par lots bornes comme le reste.
+    """
     embedder = get_embedder()
     if not embedder.available():
-        return {"embedded": 0, "skipped": "cohere indisponible"}
+        return {"embedded": 0, "skipped": "aucun backend d'embedding"}
 
+    dim = embedder.dim()
     factory = get_session_factory()
+    perimes: list[Claim] = []
     async with factory() as db:
         todo = list(
             (
@@ -43,6 +52,21 @@ async def embed_claims(limit: int = 2000) -> dict:
                 )
             ).scalars().all()
         )
+        # Puis, dans la place qui reste, ceux d'un espace perime.
+        reste = limit - len(todo)
+        if reste > 0:
+            for c in (await db.execute(
+                select(Claim).where(Claim.embedding.isnot(None))
+                .order_by(Claim.id).limit(limit)
+            )).scalars().all():
+                if len(c.embedding or []) != dim:
+                    perimes.append(c)
+                    if len(perimes) >= reste:
+                        break
+        if perimes:
+            logger.warning("embeddings.dimension_changed",
+                           attendu=dim, a_recalculer=len(perimes))
+        todo += perimes
         texts = [_claim_text(c) for c in todo]
         pairs = [(c, t) for c, t in zip(todo, texts) if t]
         if not pairs:
@@ -53,7 +77,7 @@ async def embed_claims(limit: int = 2000) -> dict:
             if obj:
                 obj.embedding = v
         await db.commit()
-    return {"embedded": len(pairs)}
+    return {"embedded": len(pairs), "dim": dim, "recalcules": len(perimes)}
 
 
 def _greedy_groups(items: list[tuple[int, list[float]]], threshold: float) -> list[list[int]]:

@@ -29,10 +29,14 @@ from src.database import get_engine, get_session_factory
 
 logger = structlog.get_logger(__name__)
 
-# Dimension du modèle d'embeddings courant (MiniLM multilingue local : 384 ;
-# Cohere embed-multilingual-v3 : 1024). Lue au premier usage sur un vecteur réel
-# plutôt que codée en dur — changer de modèle ne doit pas casser silencieusement.
-DEFAULT_DIM = 384
+# La dimension appartient au backend d'embedding, pas a ce module : MiniLM
+# local en produit 384, Cohere multilingue v3 en produit 1 024. Codee en dur
+# ici, elle creait une colonne `vector(384)` qui refusait les vecteurs Cohere —
+# une panne qui n'apparait qu'en production, et seulement si la cle marche.
+def current_dim() -> int:
+    from src.services.analysis.embeddings import get_embedder
+
+    return get_embedder().dim()
 
 
 def is_postgres() -> bool:
@@ -42,7 +46,7 @@ def is_postgres() -> bool:
 class VectorIndex:
     """Interface commune : trouver les k plus proches d'un vecteur."""
 
-    async def ensure_ready(self, dim: int = DEFAULT_DIM) -> dict:
+    async def ensure_ready(self, dim: int | None = None) -> dict:
         raise NotImplementedError
 
     async def sync(self, limit: int = 5000) -> dict:
@@ -58,7 +62,8 @@ class VectorIndex:
 class PgVectorIndex(VectorIndex):
     """Index HNSW dans PostgreSQL. Toute la DDL est idempotente."""
 
-    async def ensure_ready(self, dim: int = DEFAULT_DIM) -> dict:
+    async def ensure_ready(self, dim: int | None = None) -> dict:
+        dim = dim or current_dim()
         engine = get_engine()
         steps: list[str] = []
         async with engine.begin() as conn:
@@ -123,7 +128,7 @@ class BruteForceIndex(VectorIndex):
     au-delà de quelques milliers de vecteurs.
     """
 
-    async def ensure_ready(self, dim: int = DEFAULT_DIM) -> dict:
+    async def ensure_ready(self, dim: int | None = None) -> dict:
         return {"ready": True, "done": [], "note": "force brute (SQLite)"}
 
     async def sync(self, limit: int = 5000) -> dict:
