@@ -119,7 +119,7 @@ async def figure_detail(
     )).all()
     by_subject = [
         {
-            "id": sub.id, "label": sub.label, "theme": sub.theme,
+            "id": sub.id, "label": sub.label, "theme": sub.theme, "status": sub.status,
             "n": n, "first_seen": lo, "last_seen": hi,
             "span_days": (hi - lo).days if (lo and hi) else 0,
             "n_speakers": sub.n_speakers or 1,

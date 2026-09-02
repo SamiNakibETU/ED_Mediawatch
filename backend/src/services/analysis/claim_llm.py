@@ -526,6 +526,27 @@ class ClaimLLM:
             )
         return None
 
+    async def write_review(self, *, prompt: str, system: str):
+        """Écrit la revue d'un sujet sur une période (cf. `review.py`).
+
+        Import tardif : `review` importe ce module. Le schéma impose des
+        paragraphes CITANTS — c'est la relecture, côté appelant, qui écarte
+        ceux qui ne le sont pas."""
+        from src.services.analysis.review import RevueEcrite
+
+        prov = self._s.claim_tier2_provider
+        if prov == "anthropic" and self._anthropic is not None:
+            return await self._tier2_anthropic(
+                prompt, schema=RevueEcrite, system=system, max_tokens=1800,
+                task="revue",
+            )
+        if prov in self._openai:
+            return await self._tier2_openai(
+                prov, prompt, schema=RevueEcrite, system=system, max_tokens=2200,
+                task="revue",
+            )
+        return None
+
     async def judge_contradiction(self, prompt: str, system: str | None = None):
         """A4 — verdict structuré sur une paire de déclarations (juge sémantique).
 

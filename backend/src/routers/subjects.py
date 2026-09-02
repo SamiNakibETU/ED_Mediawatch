@@ -131,7 +131,7 @@ async def list_subjects(
         "themes": themes,
         "items": [
             {
-                "id": s.id, "label": s.label, "theme": s.theme,
+                "id": s.id, "label": s.label, "theme": s.theme, "status": s.status,
                 "n_claims": s.n_claims, "n_speakers": s.n_speakers,
                 "span_days": _span_days(s),
                 "first_seen": s.first_seen, "last_seen": s.last_seen,
@@ -197,7 +197,7 @@ async def subject_detail(
 
     return {
         "subject": {
-            "id": subject.id, "label": subject.label, "theme": subject.theme,
+            "id": subject.id, "label": subject.label, "theme": subject.theme, "status": subject.status,
             "n_claims": subject.n_claims, "n_speakers": subject.n_speakers,
             "span_days": _span_days(subject),
             "first_seen": subject.first_seen, "last_seen": subject.last_seen,

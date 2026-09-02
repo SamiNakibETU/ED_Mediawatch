@@ -12,6 +12,7 @@ from src.models.personality import Personality
 from src.models.post import Post
 from src.models.pipeline_run import PipelineRun, PipelineStep
 from src.models.subject import Subject
+from src.models.review import Review
 from src.models.referentiel import Referent, Subtheme, Theme
 from src.models.taxonomy import Actualite, Sujet
 
@@ -27,6 +28,7 @@ __all__ = [
     "Referent",
     "Sujet",
     "Actualite",
+    "Review",
     "SpeakerAffiliation",
     "Claim",
     "Contradiction",

@@ -61,7 +61,7 @@ function subjectRow(x) {
   return `<a class="ranked__item" href="sujet.html?id=${x.id}" style="--th:${themeVar(x.theme)}">
     <span class="ranked__n">${x.n}</span>
     <span>
-      <span class="ranked__t">${escapeHtml(x.label)}</span>
+      <span class="ranked__t">${nomSujet(x)}</span>
       <span class="ranked__m">${escapeHtml(themeLabel(x.theme) || "sans thème")}
         · ${duree(x.span_days)} · ${x.confrontable
           ? `${x.n_speakers} voix — confrontable`

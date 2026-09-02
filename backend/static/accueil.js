@@ -21,7 +21,7 @@ function renderNow(items) {
   host.innerHTML = `<div class="now__inner">
     <span class="now__label">En ce moment</span>
     ${items.slice(0, 7).map((s) =>
-      `<a href="${lien(s.id)}" style="--th:${themeVar(s.theme)}">${escapeHtml(s.label)}</a>`).join("")}
+      `<a href="${lien(s.id)}" style="--th:${themeVar(s.theme)}">${nomSujet(s)}</a>`).join("")}
   </div>`;
 }
 
@@ -65,7 +65,7 @@ function story(s, big = false) {
     <div>
       <a href="${lien(s.id)}">
         ${kicker(s.theme, `${s.n_speakers} voix · ${duree(s.span_days)}`)}
-        <h${big ? 1 : 2} class="${big ? "hero-title" : "story__title"}">${escapeHtml(s.label)}</h${big ? 1 : 2}>
+        <h${big ? 1 : 2} class="${big ? "hero-title" : "story__title"}">${nomSujet(s)}</h${big ? 1 : 2}>
       </a>
       <p class="dek">${fmtNum(s.n_claims)} prises de position, ${periode(s.first_seen, s.last_seen)}.${
         big ? " C’est le sujet où le corpus permet le mieux de comparer : le plus de voix, sur la plus longue durée." : ""}</p>
@@ -105,6 +105,30 @@ function renderPending(items) {
     : '<p class="state state--inline">Aucun rapprochement en attente.</p>';
 }
 
+// ── La revue de la semaine ──────────────────────────────────────────────────
+//
+// Une base bien tenue ne fait pas une lecture. La revue est l'angle que
+// l'observatoire propose : ce qui s'est dit, sujet par sujet, sur la semaine
+// close — et chaque phrase y cite les déclarations qu'elle rapporte.
+
+function renderRevue(items) {
+  const host = $("#revue");
+  if (!items.length) { host.hidden = true; return; }
+  host.hidden = false;
+  const quand = items[0].period;
+  host.innerHTML = `
+    <div class="band"><h2>La revue</h2><span class="spacer"></span>
+      <p>Ce qui s’est dit sur chaque sujet, la semaine close.</p></div>
+    <div class="tiles">${items.slice(0, 3).map((r) => `
+      <a class="tile" href="revue.html?id=${r.id}">
+        ${kicker(r.theme, r.status === "brouillon" ? "brouillon" : "relue")}
+        <h3 class="card-title">${escapeHtml(r.title || "sans titre")}</h3>
+        <p class="dek">${escapeHtml(r.subject_label || "")}</p>
+        <p class="tile__foot"><span class="stamp">${fmtNum(r.n_sources)} déclarations citées</span></p>
+      </a>`).join("")}</div>
+    <p class="mt-4"><a class="btn btn--sm" href="revue.html">Toutes les revues ${ico("source")}</a></p>`;
+}
+
 function renderThemes(themes) {
   $("#themes").innerHTML = Object.entries(themes || {})
     .sort((a, b) => b[1] - a[1]).slice(0, 12)
@@ -140,12 +164,14 @@ async function load() {
 
   // Le bento a besoin de deux sources ; ni l'une ni l'autre ne doit empêcher la
   // une de s'afficher.
-  const [funnel, pending] = await Promise.all([
+  const [funnel, pending, revues] = await Promise.all([
     fetchJSON("/pipeline/funnel").catch(() => null),
     fetchJSON("/contradictions?limit=6").catch(() => null),
+    fetchJSON("/reviews?limit=3").catch(() => null),
   ]);
   renderFonds(funnel, items.length, pending?.total ?? 0);
   renderPending(pending?.items || []);
+  renderRevue(revues?.items || []);
 }
 
 load();

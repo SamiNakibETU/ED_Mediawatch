@@ -18,7 +18,7 @@ const state = { conf: true, q: "", theme: null, themes: {} };
 const tuile = (s) => `
   <a class="tile" href="sujet.html?id=${s.id}">
     ${kicker(s.theme)}
-    <h3 class="card-title">${escapeHtml(s.label)}</h3>
+    <h3 class="card-title">${nomSujet(s)}</h3>
     <div class="tile__foot">
       <span class="stamp"><b>${s.n_speakers}</b> ${s.n_speakers > 1 ? "locuteurs" : "locuteur"}
         · <b>${fmtNum(s.n_claims)}</b> propos</span>

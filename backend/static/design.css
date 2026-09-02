@@ -1409,6 +1409,40 @@ a:hover > .story__title, a:hover .story__title { color: var(--accent); }
   color: var(--muted); letter-spacing: 0.02em;
 }
 
+/* Un libellé provisoire : les mots-clés d'un regroupement pas encore nommé.
+ * Marqué comme tel plutôt que présenté en titre — sinon le produit a l'air de
+ * recracher sa tuyauterie — et marqué autrement que par la seule couleur. */
+.provisoire {
+  font-style: italic;
+  color: var(--muted);
+}
+.provisoire::after {
+  content: " (sujet non encore nommé)";
+  font-family: var(--font-mono); font-style: normal;
+  font-size: var(--t-micro); color: var(--faint);
+  white-space: nowrap;
+}
+
+/* ── La revue : une phrase, et sous elle ce qui la fonde ────────────────────
+ *
+ * La mise en page porte la règle de fond. Le paragraphe de synthèse est en
+ * corps de lecture ; les déclarations qu'il cite viennent dessous, en retrait,
+ * derrière un filet. Aucune phrase ne s'affiche seule : c'est ce qui distingue
+ * une revue d'observatoire d'un résumé, et sans les sources sous les phrases le
+ * lecteur ne peut pas faire la différence entre ce qui a été dit et ce qu'un
+ * modèle a cru comprendre. */
+
+.revue__bloc { margin-top: var(--s7); max-width: var(--measure-read); }
+.revue__texte {
+  font-size: var(--t-read); line-height: var(--lh-read);
+  color: var(--ink); margin: 0;
+}
+.revue__sources {
+  margin-top: var(--s4); padding-left: var(--s4);
+  border-left: 2px solid var(--rule);
+}
+.revue__sources .position { border: 0; padding: var(--s3) 0 0; }
+
 /* ── En-tête de fiche : le portrait, puis l'identité ─────────────────────── */
 
 .profil { display: grid; grid-template-columns: auto 1fr; gap: var(--s5); align-items: start; }

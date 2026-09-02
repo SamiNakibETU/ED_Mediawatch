@@ -134,6 +134,11 @@ async def _detect() -> dict:
     return await run_contradiction_detection()
 
 
+async def _review() -> dict:
+    from src.services.analysis.review import build_reviews
+    return await build_reviews(limit=6, semaines=2)
+
+
 async def _judge() -> dict:
     from src.services.analysis.contradiction_judge import run_semantic_judging
     return await run_semantic_judging(max_pairs=60)
@@ -182,6 +187,12 @@ STAGES: tuple[Stage, ...] = (
           depends_on=("enrich_claims",), produces="rapprochements chiffrés"),
     Stage("judge", "Juge sémantique", PAID, _judge,
           depends_on=("build_subjects",), produces="contradictions à relire"),
+    # Après le nommage : une revue qui désigne son sujet par « sujet 412 » ne
+    # se lit pas. Bornée à six sujets et deux semaines par passe — la revue est
+    # le poste le plus cher de la chaîne, et rien ne presse : une semaine close
+    # le reste.
+    Stage("review", "Revue hebdomadaire", PAID, _review,
+          depends_on=("label_subjects",), produces="revues"),
 )
 
 BY_NAME: dict[str, Stage] = {s.name: s for s in STAGES}

@@ -141,9 +141,25 @@ const ico = (name, cls = "") =>
 // objet en tête (« les retraites »), pas avec l'envie de lire un compte. Le fil
 // X et la presse sont le FONDS — la matière première, rangée sous « Archive »,
 // consultable mais pas la vitrine.
+// Le nom d'un sujet, ou l'aveu qu'il n'en a pas encore.
+//
+// Un sujet non nommé porte les mots-clés de son regroupement — « adherents
+// affilies cfdt designe ». Les afficher tels quels en titre donne l'impression
+// d'un produit qui recrache sa tuyauterie ; les masquer ferait disparaître le
+// sujet. On les montre pour ce qu'ils sont : une description provisoire.
+function nomSujet(s) {
+  const label = (s && s.label) || "";
+  if (!s || s.status === undefined || s.status === "labelled" || s.status === "curated") {
+    return escapeHtml(label);
+  }
+  return `<span class="provisoire">${escapeHtml(label)}</span>`;
+}
+
+
 const PAGES = [
   ["index.html", "accueil", "L’observatoire", "observatoire"],
   ["sujets.html", "sujets", "Sujets", "sujets"],
+  ["revue.html", "revue", "Revue", "revue"],
   ["figure.html", "figures", "Locuteurs", "locuteurs"],
   ["compteur.html", "compteur", "Chiffres", "chiffres"],
   ["archive.html", "archive", "Archive", "archive"],
