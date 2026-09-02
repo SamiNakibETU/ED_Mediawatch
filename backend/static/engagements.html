@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Engagements — ED Mediawatch</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=IBM+Plex+Mono:wght@400;500&display=swap" />
+  <link rel="stylesheet" href="design.css" />
+  <script>
+    try { const t = localStorage.getItem("theme"); if (t) document.documentElement.dataset.theme = t; } catch {}
+  </script>
+</head>
+<body data-page="engagements" data-tagline="Ce à quoi ils se sont engagés, daté et sourcé">
+  <header id="masthead"></header>
+
+  <div class="wrap page">
+    <p class="dek lede-first">
+      Ce à quoi chacun s’est engagé — pas ce qu’il déplore, pas ce qu’il exige des autres.
+      Seuls entrent ici les engagements <strong>vérifiables</strong>&nbsp;: ceux dont on peut
+      dire, en observant, s’ils ont été tenus. C’est la règle du
+      <a class="link" href="https://www.polimetre.org" target="_blank" rel="noopener">Polimètre</a>,
+      et elle écarte « nous serons plus fermes » autant qu’elle retient
+      « nous supprimerons ».
+    </p>
+
+    <p class="caveat">Aucun verdict n’est posé. Les partis suivis ici n’ont jamais gouverné&nbsp;:
+      leurs engagements sont tous en attente, et le resteront jusqu’à ce qu’ils aient les moyens
+      de les tenir. Le registre vaut par ce qu’il consigne aujourd’hui pour la confrontation
+      de demain.</p>
+
+    <div class="filters mt-6" id="qui" role="group" aria-label="Locuteur"></div>
+
+    <div class="band"><h2>Registre</h2><span class="spacer"></span><p id="count"></p></div>
+    <div class="card"><div class="register" id="list"></div></div>
+    <p class="state" id="sentinel"></p>
+  </div>
+
+  <script src="common.js"></script>
+  <script src="engagements.js"></script>
+</body>
+</html>

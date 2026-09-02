@@ -1423,6 +1423,24 @@ a:hover > .story__title, a:hover .story__title { color: var(--accent); }
   white-space: nowrap;
 }
 
+/* Le registre des engagements : pas de portrait en tête de ligne — le locuteur
+ * est déjà nommé, et une colonne de visages détournerait de ce qu'on vient
+ * lire, à savoir la promesse et son critère de vérification. */
+.entry--plain { grid-template-columns: 1fr; }
+
+/* « Tenu si » : le critère d'observation. C'est lui qui fait la différence
+ * entre un registre d'engagements et une collection de citations — sans lui,
+ * « tenu » ou « rompu » resterait une opinion. */
+.engagement__mesure {
+  margin: var(--s3) 0 0;
+  padding-left: var(--s3);
+  border-left: 2px solid var(--accent-line);
+  font-size: var(--t-small);
+  color: var(--ink-soft);
+  max-width: var(--measure-read);
+}
+.engagement__mesure .overline { display: inline; margin: 0 var(--s2) 0 0; }
+
 /* ── La revue : une phrase, et sous elle ce qui la fonde ────────────────────
  *
  * La mise en page porte la règle de fond. Le paragraphe de synthèse est en

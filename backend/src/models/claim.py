@@ -63,6 +63,15 @@ class Claim(Base, TimestampMixin):
     # et une colonne trop courte ne se voit pas en SQLite — elle casse en
     # Postgres, a chaque passe.
     cap_version: Mapped[str | None] = mapped_column(String(120))
+
+    # ── Engagement (méthode Polimètre, cf. services/analysis/pledges.py) ──
+    # Un engagement EST une déclaration : lui donner sa table ferait deux
+    # objets pour une même phrase, à tenir synchronisés pour rien. Trois
+    # colonnes suffisent — et `pledge_version` est large, on a déjà payé une
+    # fois le prix d'une colonne trop courte visible en production seulement.
+    pledge_version: Mapped[str | None] = mapped_column(String(120))
+    pledge_measure: Mapped[str | None] = mapped_column(String(400))
+    pledge_status: Mapped[str | None] = mapped_column(String(24), index=True)
     referent_key: Mapped[str | None] = mapped_column(
         ForeignKey("referents.key", ondelete="SET NULL"), index=True
     )

@@ -21,7 +21,7 @@ import structlog
 from pydantic import BaseModel, Field
 
 from src.config import get_settings
-from src.services.analysis.llm_usage import get_llm_budget
+from src.services.analysis.llm_usage import BudgetExceeded, get_llm_budget
 
 logger = structlog.get_logger(__name__)
 
@@ -524,6 +524,54 @@ class ClaimLLM:
                 prov, prompt, schema=SubjectLabel, system=system, max_tokens=400,
                 task="subject_label",
             )
+        return None
+
+    async def read_pledge(self, *, verbatim: str, canonical: str | None = None):
+        """Lit un engagement dans une déclaration, en DEUX questions.
+
+        Q1 au tier 1 — le locuteur engage-t-il SA propre action ? Elle écarte à
+        bas prix les injonctions adressées à d'autres et les jugements, qui
+        forment l'essentiel des propos normatifs.
+
+        Q2 au tier 2 — qu'observerait-on pour dire que c'est tenu ? C'est le
+        filtre de vérifiabilité du Polimètre, et il demande de comprendre la
+        phrase, pas de la classer.
+        """
+        from src.services.analysis.pledges import (
+            EngagementLu, Q1_SYSTEM as _Q1, Q2_SYSTEM as _Q2,
+        )
+
+        # Le modèle voit les deux : la reformulation lève les « nous » et les
+        # « il » — sans quoi il ne peut pas dire QUI s'engage — mais le fragment
+        # se recopie dans le texte original, seul endroit où les mots sont ceux
+        # du locuteur.
+        brut = (verbatim or "").strip()[:800]
+        reformule = (canonical or "").strip()[:800]
+        extrait = reformule or brut
+        try:
+            q1 = await self._ask_tier1(
+                _Q1, f"Déclaration : {extrait!r}\n\nRéponse :", "engagement_q1")
+        except BudgetExceeded:
+            raise
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("claim_llm.pledge_q1_fail", error=str(exc)[:120])
+            return None
+        if "oui" not in q1.lower():
+            return None
+
+        prompt = (f"Texte original, seul endroit où recopier le fragment :\n"
+                  f"«««\n{brut}\n»»»"
+                  + (f"\n\nReformulation, pour comprendre qui s'engage :\n{reformule}"
+                     if reformule and reformule != brut else ""))
+        prov = self._s.claim_tier2_provider
+        if prov == "anthropic" and self._anthropic is not None:
+            return await self._tier2_anthropic(
+                prompt, schema=EngagementLu, system=_Q2, max_tokens=400,
+                task="engagement_q2")
+        if prov in self._openai:
+            return await self._tier2_openai(
+                prov, prompt, schema=EngagementLu, system=_Q2, max_tokens=500,
+                task="engagement_q2")
         return None
 
     async def write_review(self, *, prompt: str, system: str):

@@ -160,6 +160,7 @@ const PAGES = [
   ["index.html", "accueil", "L’observatoire", "observatoire"],
   ["sujets.html", "sujets", "Sujets", "sujets"],
   ["revue.html", "revue", "Revue", "revue"],
+  ["engagements.html", "engagements", "Engagements", "chiffres"],
   ["figure.html", "figures", "Locuteurs", "locuteurs"],
   ["compteur.html", "compteur", "Chiffres", "chiffres"],
   ["archive.html", "archive", "Archive", "archive"],

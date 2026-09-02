@@ -85,6 +85,11 @@ async def _cap_coding() -> dict:
     return await code_claims(limit=1500)
 
 
+async def _pledges() -> dict:
+    from src.services.analysis.pledges import detect_pledges
+    return await detect_pledges(limit=400)
+
+
 async def _party_of_record() -> dict:
     from src.services.analysis.party_of_record import fix_claim_parties
     return await fix_claim_parties(limit=5000)
@@ -173,6 +178,11 @@ STAGES: tuple[Stage, ...] = (
     # jour où la déclaration a été extraite.
     Stage("party_of_record", "Parti à la date du propos", FREE, _party_of_record,
           depends_on=("extract_l0",), produces="partis rectifiés"),
+    # Le registre des engagements. Bornée à 400 par passe : la question ne se
+    # pose que pour les propos normatifs et prédictifs, et rien ne presse — un
+    # engagement pris hier vaudra la même chose demain.
+    Stage("pledges", "Registre des engagements", PAID, _pledges,
+          depends_on=("extract_l0",), produces="engagements"),
     Stage("embed", "Embeddings des déclarations", FREE, _embed,
           depends_on=("extract_l0",), produces="vecteurs"),
     Stage("vector_index", "Index vectoriel", FREE, _vector_index,
