@@ -132,3 +132,34 @@ def test_enrichment_keeps_genuinely_short_text(tmp_path, monkeypatch):
     finally:
         for c in _CACHES:
             c.cache_clear()
+
+
+# ── Le moignon de lien laissé par la coupe à 280 ───────────────────────────
+
+
+def test_a_cut_link_leaves_a_stump_that_reads_as_a_typo():
+    """Vu dans le registre : « Bonne rentrée à tous ! 🇫🇷 h ».
+
+    Un tweet coupé au milieu de son adresse finit par « h », « htt »,
+    « https://t.c ». L'expansion des t.co ne peut rien y faire — le lien
+    raccourci n'est plus reconnaissable — et la page attribue alors à la figure
+    une faute de frappe qui est une faute de la collecte.
+    """
+    from src.services.collection.x_syndication import _trim_cut_link
+
+    assert _trim_cut_link("Bonne rentrée à tous ! h", truncated=True) == \
+        "Bonne rentrée à tous !"
+    assert _trim_cut_link("c’est au peuple de décider. https://t.c",
+                          truncated=True) == "c’est au peuple de décider."
+
+
+def test_a_complete_tweet_ending_in_h_is_left_alone():
+    """« Rendez-vous à 15 h » est un texte juste. Sans le drapeau de troncature
+    pour trancher, la correction couperait des fins de phrase légitimes — et une
+    citation amputée est plus grave qu'un moignon visible."""
+    from src.services.collection.x_syndication import _trim_cut_link
+
+    assert _trim_cut_link("Rendez-vous à 15 h", truncated=False) == \
+        "Rendez-vous à 15 h"
+    assert _trim_cut_link("Un texte entier, sans lien.", truncated=True) == \
+        "Un texte entier, sans lien."

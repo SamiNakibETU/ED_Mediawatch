@@ -62,6 +62,33 @@ def _expand_urls(text: str, entities: dict | None) -> str:
     return text
 
 
+# Le début d'une adresse, dans l'ordre où on la tape. Une coupe à 280 signes
+# tombe n'importe où dedans.
+_DEBUTS_URL = tuple(
+    "https://t.co/"[:n] for n in range(len("https://t.co/"), 0, -1)
+)
+
+
+def _trim_cut_link(text: str, *, truncated: bool) -> str:
+    """Retire le moignon de lien laissé par une coupe à 280 signes.
+
+    Un tweet coupé au milieu de son adresse finit par « h », « htt »,
+    « https://t.c ». `_expand_urls` ne peut rien y faire : le t.co raccourci
+    n'est plus reconnaissable, donc il reste tel quel — et le registre affiche
+    « Bonne rentrée à tous ! 🇫🇷 h », ce qui a l'air d'une faute de frappe de la
+    figure alors que c'est une faute de la collecte.
+
+    Le garde-fou est le drapeau de troncature, sans lequel on couperait des
+    textes justes : un tweet peut légitimement finir par « à 15 h ».
+    """
+    if not truncated:
+        return text
+    tete, sep, queue = text.rstrip().rpartition(" ")
+    if sep and queue in _DEBUTS_URL:
+        return tete.rstrip()
+    return text
+
+
 def _media_url(tweet: dict) -> str | None:
     """Premier média. Pour une vidéo, la variante mp4 au meilleur débit (leçon du
     parseur Nitter, `parseVideoVariants`) plutôt que la vignette : c'est la piste
@@ -110,6 +137,7 @@ def _tweet_dict(tweet: dict, handle: str) -> dict | None:
     # La syndication coupe à 280 : un texte affiché qui touche la limite est
     # probablement un « note tweet » tronqué → texte intégral à récupérer par ID.
     truncated = (end - start) >= TRUNCATION_HINT
+    text = _trim_cut_link(text, truncated=truncated)
 
     is_retweet = rt is not None
     is_reply = bool(reply_to)
