@@ -232,16 +232,34 @@ async def _run_stages(ordered: list[Stage], run_id: int) -> tuple[list[dict], se
     return report, failed, budget_hit
 
 
-def _embedder_ok() -> bool:
-    """Y a-t-il de quoi vectoriser ? La question n'a pas de reponse evidente :
-    une cle peut etre presente et refusee, et le repli local n'est installe
-    qu'en developpement."""
-    from src.services.analysis.embeddings import get_embedder
+async def _embed_refuse() -> str | None:
+    """Ce que la dernière passe a réellement obtenu du fournisseur de vecteurs.
 
-    try:
-        return get_embedder().available()
-    except Exception:  # noqa: BLE001
-        return False
+    Demander à l'embedder s'il est « disponible » ne répond pas à la question :
+    une clé révoquée fabrique un client parfaitement valide qui échoue au
+    premier appel. La seule preuve est le résultat de la dernière tentative, et
+    il est déjà en base — inutile de le redemander au fournisseur.
+
+    Sans ça, l'entonnoir promettait « la prochaine passe les vectorise » à
+    chaque passe, indéfiniment, sur une chaîne qui n'avançait plus d'un pas.
+    """
+    from src.models.pipeline_run import PipelineStep
+
+    factory = get_session_factory()
+    async with factory() as db:
+        step = (await db.execute(
+            select(PipelineStep).where(PipelineStep.stage == "embed")
+            .order_by(PipelineStep.id.desc()).limit(1)
+        )).scalars().first()
+    if step is None:
+        return None
+    detail = step.detail or ""
+    if step.status == "failed":
+        refuse = ("clé refusée" if "401" in detail or "api key" in detail.lower()
+                  else "erreur du fournisseur")
+        return f"le fournisseur de vecteurs a répondu : {refuse}"
+    skipped = (step.stats or {}).get("skipped")
+    return str(skipped) if skipped else None
 
 
 async def funnel() -> dict:
@@ -259,6 +277,9 @@ async def funnel() -> dict:
     # Un run mort ne doit jamais s'afficher « en cours » : c'est précisément
     # sur cet écran qu'on vient chercher la vérité.
     await reap_stale_runs()
+
+    # Pourquoi la vectorisation n'avance pas, si elle n'avance pas.
+    refus = await _embed_refuse()
 
     factory = get_session_factory()
     async with factory() as db:
@@ -336,11 +357,12 @@ async def funnel() -> dict:
         # répétait indéfiniment sur une chaîne qui n'avançait plus.
         {"key": "vectorisation", "step": "Déclarations vectorisées", "n": embedded,
          "detail": f"{claims - embedded} sans vecteur" if claims else "",
-         "blocked": (("embeddings manquants — sujets impossibles" if _embedder_ok()
-                      else "aucun backend d'embedding : clé refusée ou absente")
+         "blocked": (("aucun backend d'embedding — " + refus if refus
+                      else "embeddings manquants — sujets impossibles")
                      if claims and embedded < claims else None),
-         "todo": (("étape gratuite : la prochaine passe les vectorise" if _embedder_ok()
-                   else "renseigner une clé d'embedding valide — rien ne repartira sans")
+         "todo": (("renseigner une clé d'embedding valide : rien en aval ne "
+                   "repartira sans" if refus
+                   else "étape gratuite : la prochaine passe les vectorise")
                   if claims and embedded < claims else None)},
         {"key": "sujets", "step": "Sujets constitués", "n": subjects,
          "detail": f"{labelled} nommés · {confrontable} à ≥2 locuteurs",
