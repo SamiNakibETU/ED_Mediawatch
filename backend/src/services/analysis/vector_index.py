@@ -33,9 +33,32 @@ logger = structlog.get_logger(__name__)
 # local en produit 384, Cohere multilingue v3 en produit 1 024. Codee en dur
 # ici, elle creait une colonne `vector(384)` qui refusait les vecteurs Cohere —
 # une panne qui n'apparait qu'en production, et seulement si la cle marche.
-def current_dim() -> int:
+async def current_dim() -> int:
+    """La dimension des vecteurs qui EXISTENT, à défaut celle qu'annonce le
+    backend.
+
+    L'ordre compte, et il a coûté une panne. `get_embedder().dim()` annonce ce
+    que le backend produirait s'il marchait : en production, avec une clé Cohere
+    refusée, il répondait 1 024 alors qu'il ne rendait plus rien. La colonne
+    existante, elle, était en 384. L'index tentait donc d'y écrire des vecteurs
+    de 1 024 et échouait à chaque passe, sur des données que personne n'avait
+    changées.
+
+    Un vecteur déjà en base est un fait ; la déclaration du backend est une
+    intention. On lit le fait quand il existe.
+    """
+    from sqlalchemy import select
+
+    from src.models.claim import Claim
     from src.services.analysis.embeddings import get_embedder
 
+    factory = get_session_factory()
+    async with factory() as db:
+        vec = (await db.execute(
+            select(Claim.embedding).where(Claim.embedding.isnot(None)).limit(1)
+        )).scalars().first()
+    if isinstance(vec, list) and vec:
+        return len(vec)
     return get_embedder().dim()
 
 
@@ -62,8 +85,39 @@ class VectorIndex:
 class PgVectorIndex(VectorIndex):
     """Index HNSW dans PostgreSQL. Toute la DDL est idempotente."""
 
+    async def _actual_dim(self) -> int | None:
+        """La dimension de la colonne vectorielle telle qu'elle est en base."""
+        engine = get_engine()
+        async with engine.begin() as conn:
+            try:
+                row = (await conn.execute(text(
+                    "SELECT a.atttypmod FROM pg_attribute a "
+                    "JOIN pg_class c ON c.oid = a.attrelid "
+                    "WHERE c.relname = 'claims' AND a.attname = 'embedding_vec'"
+                ))).first()
+            except Exception:  # noqa: BLE001
+                return None
+        return int(row[0]) if row and row[0] and row[0] > 0 else None
+
     async def ensure_ready(self, dim: int | None = None) -> dict:
-        dim = dim or current_dim()
+        dim = dim or await current_dim()
+        # Une colonne pgvector ne s'élargit pas : sa dimension fait partie du
+        # type. Quand elle ne correspond plus, on la refait — sans perte, parce
+        # que `embedding_vec` n'est qu'une projection de `claims.embedding`, que
+        # `sync()` recopie ensuite. Sans ça, l'index échouait à chaque passe et
+        # rien en aval ne repartait.
+        actuelle = await self._actual_dim()
+        if actuelle is not None and actuelle != dim:
+            logger.warning("vector_index.dimension_changed", etait=actuelle, devient=dim)
+            engine = get_engine()
+            async with engine.begin() as conn:
+                for stmt in ("DROP INDEX IF EXISTS ix_claims_embedding_vec",
+                             "ALTER TABLE claims DROP COLUMN IF EXISTS embedding_vec"):
+                    try:
+                        await conn.execute(text(stmt))
+                    except Exception as exc:  # noqa: BLE001
+                        logger.warning("vector_index.recreate_failed",
+                                       stmt=stmt[:40], error=str(exc)[:120])
         engine = get_engine()
         steps: list[str] = []
         async with engine.begin() as conn:
