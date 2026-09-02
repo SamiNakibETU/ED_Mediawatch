@@ -52,6 +52,15 @@ def cosine(a: list[float], b: list[float]) -> float:
 # facture : l'index vectoriel doit la connaitre AVANT le premier vecteur.
 _COHERE_DIMS = {"embed-multilingual-v3.0": 1024, "embed-multilingual-light-v3.0": 384}
 
+# Cohere refuse au-dela de 96 textes par appel. Ce n'est pas un reglage de
+# performance mais une limite de l'API : la depasser rend 400, et le lot entier
+# est perdu. Vecu en production le 02/09/2026, des la premiere passe avec une
+# cle valide — « total number of texts must be at most 96 - received 5000 ».
+# Le defaut existait depuis l'ecriture de cette classe ; il ne pouvait pas se
+# voir tant que le corpus tenait en quelques dizaines de declarations, puis tant
+# que la cle etait refusee.
+_COHERE_LOT = 96
+
 
 class CohereEmbedder:
     """Cohere, avec repli local quand la cle est refusee.
@@ -98,13 +107,16 @@ class CohereEmbedder:
             return []
         if self._client is not None:
             try:
-                resp = await self._client.embed(
-                    model=self._model,
-                    texts=texts,
-                    input_type="search_query" if query else "search_document",
-                    embedding_types=["float"],
-                )
-                return list(resp.embeddings.float_)
+                out: list[list[float]] = []
+                for i in range(0, len(texts), _COHERE_LOT):
+                    resp = await self._client.embed(
+                        model=self._model,
+                        texts=texts[i : i + _COHERE_LOT],
+                        input_type="search_query" if query else "search_document",
+                        embedding_types=["float"],
+                    )
+                    out.extend(resp.embeddings.float_)
+                return out
             except Exception as exc:  # noqa: BLE001
                 # Un quota atteint ou une panne passagere doivent remonter : on
                 # ne bascule que sur un refus d'identite, qui ne se repare pas

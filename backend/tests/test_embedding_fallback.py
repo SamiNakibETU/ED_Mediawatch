@@ -123,3 +123,75 @@ def test_the_local_backend_declares_its_dimension():
     """L'index vectoriel déclare une colonne d'une dimension fixe : il doit la
     connaître avant d'avoir vu le premier vecteur."""
     assert LocalEmbedder.DIM == 384
+
+
+# ── La limite de lot du fournisseur ────────────────────────────────────────
+
+
+class _CohereQuiCompte:
+    """Un faux client qui applique la vraie limite de l'API."""
+
+    LIMITE = 96
+
+    def __init__(self):
+        self.appels = []
+
+    async def embed(self, *, model, texts, input_type, embedding_types):
+        self.appels.append(len(texts))
+        if len(texts) > self.LIMITE:
+            raise ValueError(
+                f"total number of texts must be at most {self.LIMITE} "
+                f"- received {len(texts)}")
+
+        class _R:
+            class embeddings:  # noqa: N801
+                float_ = [[0.5] * 1024 for _ in texts]
+        return _R()
+
+
+def test_a_large_batch_is_split_to_the_provider_limit():
+    """Vécu en production le 02/09/2026, à la première passe avec une clé
+    valide : le pipeline envoyait 5 000 textes en un appel, Cohere en accepte
+    96, et le lot entier était perdu.
+
+    Le défaut existait depuis l'écriture de la classe. Il ne pouvait pas se voir
+    tant que le corpus tenait en quelques dizaines de déclarations, puis tant
+    que la clé était refusée — l'échec d'authentification masquait l'échec de
+    conception.
+    """
+    emb = CohereEmbedder.__new__(CohereEmbedder)
+    emb._model = "embed-multilingual-v3.0"
+    emb._client = _CohereQuiCompte()
+    emb._fallback = None
+
+    vecteurs = asyncio.run(emb.embed([f"déclaration {i}" for i in range(250)]))
+
+    assert len(vecteurs) == 250, "on récupère autant de vecteurs que de textes"
+    assert emb._client.appels == [96, 96, 58]
+    assert all(len(v) == 1024 for v in vecteurs)
+
+
+def test_the_order_of_vectors_follows_the_order_of_texts():
+    """Les vecteurs sont réappariés aux déclarations par position : un lot
+    remis dans le désordre attribuerait à chaque propos le vecteur d'un autre,
+    et le regroupement en sujets deviendrait aléatoire sans qu'une seule erreur
+    ne soit levée."""
+
+    class _Indexe(_CohereQuiCompte):
+        async def embed(self, *, model, texts, input_type, embedding_types):
+            self.appels.append(len(texts))
+
+            class _R:
+                class embeddings:  # noqa: N801
+                    float_ = [[float(len(t))] for t in texts]
+            return _R()
+
+    emb = CohereEmbedder.__new__(CohereEmbedder)
+    emb._model = "embed-multilingual-v3.0"
+    emb._client = _Indexe()
+    emb._fallback = None
+
+    textes = ["a" * n for n in range(1, 200)]
+    vecteurs = asyncio.run(emb.embed(textes))
+
+    assert [v[0] for v in vecteurs] == [float(len(t)) for t in textes]
