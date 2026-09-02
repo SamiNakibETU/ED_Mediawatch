@@ -72,6 +72,52 @@ def _mean(vectors: list[list[float]]) -> list[float]:
     return [sum(v[i] for v in vectors) / n for i in range(len(vectors[0]))]
 
 
+async def _resync_counters(db) -> tuple[int, int]:
+    """Recale les compteurs de TOUS les sujets sur les déclarations réelles.
+
+    `n_claims`, `n_speakers`, `first_seen` et `last_seen` sont des valeurs
+    dérivées, écrites au moment où un sujet est construit. Le problème est ce
+    qui arrive aux AUTRES : une passe qui re-regroupe déplace des déclarations
+    d'un sujet vers un autre, met à jour ceux qu'elle vient de bâtir, et laisse
+    les sujets appauvris avec le compte d'avant.
+
+    Mesuré ici : 325 sujets sur 1 087 annonçaient des propos qu'ils n'avaient
+    plus. La une affichait « 5 voix · 19 prises de position » pour un sujet dont
+    aucune déclaration ne dépendait — et la frise en dessous était vide, ce qui
+    est la seule raison pour laquelle ça se voyait.
+
+    Un sujet qui ne porte plus rien n'est pas un sujet : il est retiré. Ses
+    déclarations sont ailleurs, la reconstruction du tour suivant le recréera si
+    le regroupement le redemande.
+    """
+    reels = {
+        sid: (n, voix, d0, d1)
+        for sid, n, voix, d0, d1 in (await db.execute(
+            select(Claim.subject_id, func.count(Claim.id),
+                   func.count(func.distinct(Claim.speaker_name)),
+                   func.min(Claim.published_at), func.max(Claim.published_at))
+            .where(Claim.subject_id.isnot(None))
+            .group_by(Claim.subject_id)
+        )).all()
+    }
+
+    vidés = corrigés = 0
+    for subj in (await db.execute(select(Subject))).scalars().all():
+        n, voix, d0, d1 = reels.get(subj.id, (0, 0, None, None))
+        if n == 0:
+            await db.delete(subj)
+            vidés += 1
+            continue
+        if (subj.n_claims, subj.n_speakers) != (n, voix):
+            corrigés += 1
+        subj.n_claims, subj.n_speakers = n, voix
+        subj.first_seen, subj.last_seen = d0, d1
+    await db.commit()
+    if vidés or corrigés:
+        logger.info("subjects.counters_resynced", vidés=vidés, corrigés=corrigés)
+    return vidés, corrigés
+
+
 async def build_subjects(*, min_claims: int = 2, limit: int = 8000) -> dict:
     """(Re)construit les sujets depuis les déclarations. Idempotent.
 
@@ -226,8 +272,11 @@ async def build_subjects(*, min_claims: int = 2, limit: int = 8000) -> dict:
                     assigned += 1
         await db.commit()
 
+        vidés, corrigés = await _resync_counters(db)
+
     stats = {
         "subjects": len(kept), "created": created, "updated": updated,
+        "compteurs_corriges": corrigés, "sujets_vides_retires": vidés,
         "claims_assigned": assigned, "orphans_attached": attached, "subjects_seeded": seeded,
         "labels_merged": len(merged),
         "claims_without_subject": len(claims) - sum(len(cs) for cs in kept.values()),

@@ -140,9 +140,12 @@ function renderThemes(themes) {
 
 async function load() {
   let items = [];
+  // Le nombre annoncé est celui du fonds, pas celui de la page chargée.
+  let total = 0;
   try {
     const subj = await fetchJSON("/subjects?limit=25&confrontable=true");
     items = subj.items || [];
+    total = subj.total ?? items.length;
     renderThemes(subj.themes);
     renderNow(items);
 
@@ -156,7 +159,7 @@ async function load() {
       $("#une").innerHTML = story(items[0], true);
       $("#grid").innerHTML = items.slice(1, 9).map((s) => story(s)).join("");
     }
-    $("#stats").innerHTML = `<strong>${fmtNum(items.length)}</strong> sujets exploitables`;
+    $("#stats").innerHTML = `<strong>${fmtNum(total)}</strong> sujets exploitables`;
   } catch (e) {
     $("#une").innerHTML =
       `<p class="state state--error">Les sujets n’ont pas pu être chargés (${escapeHtml(e.message)}).</p>`;
@@ -169,7 +172,7 @@ async function load() {
     fetchJSON("/contradictions?limit=6").catch(() => null),
     fetchJSON("/reviews?limit=3").catch(() => null),
   ]);
-  renderFonds(funnel, items.length, pending?.total ?? 0);
+  renderFonds(funnel, total, pending?.total ?? 0);
   renderPending(pending?.items || []);
   renderRevue(revues?.items || []);
 }

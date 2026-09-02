@@ -2,18 +2,7 @@
 // L'écart entre deux points est le matériau du travail : on le montre, on ne le lisse pas.
 // Helpers ($, fetchJSON, fmtNum, exactDate) : common.js.
 
-const PARTY_VAR = {
-  RN: "--grp-rn", UDR: "--grp-udr", FIGURE: "--grp-figure",
-  "Reconquête": "--grp-figure", "Droite radicale": "--grp-figure",
-};
-
-const PARTY_CLASS = {
-  RN: "rn", UDR: "udr", FIGURE: "figure",
-  "Reconquête": "figure", "Droite radicale": "figure",
-};
-
 const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-const colorFor = (party) => css(PARTY_VAR[party] || "--muted");
 
 // Les unités arrivent du LLM sous forme de slugs (`pct_pib`). Un identifiant
 // machine affiché tel quel dans un relevé public le fait passer pour un code
@@ -65,6 +54,28 @@ function niceTicks(lo, hi, target = 4) {
   return [lo, hi];
 }
 
+// Le nom de famille seul : dans un relevé où chaque point porte une étiquette,
+// « Marine Le Pen » et « Sébastien Chenu » se chevauchent, « Le Pen » et
+// « Chenu » non.
+function nomCourt(qui) {
+  const mots = String(qui || "").trim().split(/\s+/);
+  if (mots.length < 2) return qui || "locuteur inconnu";
+  const i = mots.findIndex((m, k) => k > 0 && /^[A-ZÉÈÀÂÎÔÛÄËÏÖÜÇ]/.test(m));
+  return i > 0 ? mots.slice(i).join(" ") : mots[mots.length - 1];
+}
+
+// Le format de date suit l'ÉTENDUE, pas une convention fixe. Cinq valeurs
+// annoncées dans le même mois donnaient trois graduations identiques —
+// « juin 26 » trois fois — soit un axe qui n'ordonne rien.
+function formatAxe(span) {
+  const jour = 864e5;
+  if (span < 2 * jour) return (t) => new Date(t).toLocaleString("fr-FR",
+    { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  if (span < 300 * jour) return (t) => new Date(t).toLocaleDateString("fr-FR",
+    { day: "numeric", month: "short" });
+  return (t) => new Date(t).toLocaleDateString("fr-FR", { month: "short", year: "2-digit" });
+}
+
 function plot(points, unit) {
   if (points.length < 2) {
     return `<p class="state">${points.length
@@ -72,12 +83,16 @@ function plot(points, unit) {
       : "Aucune valeur datée pour ce référent."}</p>`;
   }
 
-  const W = 760, H = 240, L = 56, R = 16, T = 16, B = 34;
+  // Marge droite courte : l'étiquette se pose CONTRE son point, pas dans une
+  // colonne à part. Alignées à droite, les étiquettes perdaient le lien avec
+  // leur point dès que deux valeurs se rapprochaient — on lisait cinq noms et
+  // cinq points sans savoir lequel allait avec lequel.
+  const W = 760, H = 260, L = 52, R = 24, T = 20, B = 34;
   const xs = points.map((p) => asDate(p.published_at).getTime());
   const ys = points.map((p) => p.value);
   let [y0, y1] = [Math.min(...ys), Math.max(...ys)];
   if (y0 === y1) { y0 -= 1; y1 += 1; }
-  const pad = (y1 - y0) * 0.12;
+  const pad = (y1 - y0) * 0.16;
   y0 -= pad; y1 += pad;
   let [x0, x1] = [Math.min(...xs), Math.max(...xs)];
   if (x0 === x1) { x0 -= 864e5; x1 += 864e5; }
@@ -85,38 +100,41 @@ function plot(points, unit) {
   const px = (t) => L + ((t - x0) / (x1 - x0)) * (W - L - R);
   const py = (v) => T + (1 - (v - y0) / (y1 - y0)) * (H - T - B);
 
-  const yTicks = niceTicks(y0, y1);
-  const xTicks = [x0, (x0 + x1) / 2, x1];
-  const fmtDate = (t) => new Date(t).toLocaleDateString("fr-FR", { month: "short", year: "2-digit" });
-
-  const grid = yTicks.map((v) => `
+  const fmtDate = formatAxe(x1 - x0);
+  const grid = niceTicks(y0, y1).map((v) => `
     <line class="plot__grid" x1="${L}" x2="${W - R}"
           y1="${py(v).toFixed(1)}" y2="${py(v).toFixed(1)}" />
     <text class="plot__tick" x="${L - 8}" y="${(py(v) + 3.5).toFixed(1)}"
           text-anchor="end">${num(v)}</text>`).join("");
 
-  const xAxis = xTicks.map((t, i) => `
+  const xAxis = [x0, (x0 + x1) / 2, x1].map((t, i) => `
     <text class="plot__tick" x="${px(t).toFixed(1)}" y="${H - 12}"
           text-anchor="${i === 0 ? "start" : i === 2 ? "end" : "middle"}">${fmtDate(t)}</text>`).join("");
 
-  // Un `<title>` natif plutôt qu'une infobulle scriptée : lisible au clavier,
-  // au lecteur d'écran, et sans une ligne de JavaScript de plus.
-  //
-  // Les couleurs passent par des classes et non par un attribut : `var()` dans
-  // un attribut de présentation SVG n'est pas honoré partout, et une couleur
-  // résolue au rendu ne suivrait pas le basculement clair/sombre.
-  const dots = points.map((p) => `
-    <circle class="plot__dot plot__dot--${PARTY_CLASS[p.party] || "autre"}"
-            cx="${px(asDate(p.published_at).getTime()).toFixed(1)}"
-            cy="${py(p.value).toFixed(1)}" r="5">
-      <title>${escapeHtml(`${num(p.value)} ${unitLabel(unit)} · ${p.speaker || "locuteur inconnu"} · ${
-        asDate(p.published_at).toLocaleDateString("fr-FR")}`)}</title>
-    </circle>`).join("");
+  const marques = points.map((p) => {
+    const cx = px(asDate(p.published_at).getTime());
+    const cy = py(p.value);
+    // L'étiquette bascule à gauche du point quand elle déborderait la zone :
+    // un nom coupé au bord vaut moins qu'un nom du mauvais côté.
+    const droite = cx < W - R - 130;
+    return `
+    <g class="plot__pt">
+      <circle class="plot__dot"
+              cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="5">
+        <title>${escapeHtml(`${num(p.value)} ${unitLabel(unit)} · ${p.speaker || "locuteur inconnu"} · ${
+          asDate(p.published_at).toLocaleDateString("fr-FR")}`)}</title>
+      </circle>
+      <text class="plot__nom" x="${(cx + (droite ? 11 : -11)).toFixed(1)}"
+            y="${(cy + 4).toFixed(1)}" text-anchor="${droite ? "start" : "end"}">
+        <tspan class="plot__val">${num(p.value)}</tspan>
+        ${escapeHtml(nomCourt(p.speaker))}</text>
+    </g>`;
+  }).join("");
 
   return `<div class="chart-frame">
     <svg class="plot" viewBox="0 0 ${W} ${H}" role="img"
          aria-label="Valeurs annoncées dans le temps, en ${escapeHtml(unitLabel(unit))}">
-      ${grid}${xAxis}${dots}
+      ${grid}${xAxis}${marques}
     </svg>
   </div>`;
 }
@@ -179,8 +197,13 @@ async function loadCompteur(key) {
   }
 
   $("#title").textContent = data.label;
+  // L'écart en toutes lettres sous le titre plutôt que tracé dans le graphe :
+  // c'est le résultat de la page, il se lit avant d'aller compter les points.
+  const vals = (data.points || []).map((p) => p.value).filter((v) => v != null);
+  const ecart = vals.length > 1 ? Math.max(...vals) - Math.min(...vals) : null;
   $("#sub").textContent = `${data.n} valeur${data.n > 1 ? "s" : ""} annoncée${
-    data.n > 1 ? "s" : ""} · exprimées en ${unitLabel(data.unit) || "unité inconnue"}`;
+    data.n > 1 ? "s" : ""} · en ${unitLabel(data.unit) || "unité inconnue"}${
+    ecart ? ` · écart de ${num(ecart)}` : ""}`;
 
   $("#chart").innerHTML = plot(
     data.points.filter((p) => p.published_at && p.value != null), data.unit);
@@ -189,7 +212,7 @@ async function loadCompteur(key) {
     <article class="entry enter" style="grid-template-columns:1fr">
       <div>
         <div class="entry__head">
-          <span class="claim__value" style="color:${colorFor(p.party)}">${num(p.value)} ${escapeHtml(unitLabel(data.unit))}</span>
+          <span class="claim__value">${num(p.value)} ${escapeHtml(unitLabel(data.unit))}</span>
           <span class="speaker">${escapeHtml(p.speaker || "locuteur inconnu")}</span>
           <span class="tag">${escapeHtml(p.party || p.platform)}</span>
           ${p.human_validated ? '<span class="tag tag--receipt">validé</span>' : ""}

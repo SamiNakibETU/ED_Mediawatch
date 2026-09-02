@@ -73,19 +73,28 @@
   --alert:   #A41B30;
 
   /* Encodage des familles politiques (toujours doublé d'un libellé). */
-  --grp-rn:     #53414A;
-  --grp-udr:    #8A6A1F;
-  --grp-figure: #6B4A63;
+  /* Le parti ne se code plus par une couleur. Il l'était par les trois mêmes
+   * valeurs que trois des familles thématiques — #53414A voulait dire « RN »
+   * sur une fiche et « économie » sur la une. Deux encodages qui partagent une
+   * couleur n'en font pas deux, ils en font zéro.
+   *
+   * Et le parti est TOUJOURS écrit à côté : « RN », « UDR ». Une couleur qui
+   * double un mot n'ajoute rien, elle occupe une place dans un système qui n'a
+   * de la place que pour un encodage — celui des familles thématiques. */
 
   /* Familles thématiques : déclinées de la charte, pas d'un nuancier arbitraire.
    * Six familles et non quinze couleurs — un arc-en-ciel ne se mémorise pas ;
    * six familles disent qu'un locuteur ne parle que de sécurité. */
-  --th-eco:    #53414A;   /* économie, pouvoir d'achat */
-  --th-secu:   #A41B30;   /* immigration, sécurité, justice */
-  --th-intl:   #2F5D6B;   /* international */
+  /* Six teintes réparties sur le cercle, à chroma et clarté voisins : elles se
+   * distinguent l'une de l'autre sans qu'aucune ne crie. La sécurité n'est plus
+   * au carmin exact de la marque — un carré qui a la couleur d'un lien se lit
+   * comme un lien. */
+  --th-eco:    #4A5480;   /* économie, pouvoir d'achat */
+  --th-secu:   #B4442A;   /* immigration, sécurité, justice */
+  --th-intl:   #24697A;   /* international */
   --th-social: #8A6A1F;   /* social, santé, logement, éducation */
   --th-envt:   #2F6B45;   /* écologie, énergie, agriculture */
-  --th-inst:   #6B4A63;   /* institutions, culture et identité */
+  --th-inst:   #7A4A6B;   /* institutions, culture et identité */
 
   /* Échelle typographique — quarte (1.333), pas de valeur hors échelle. Les
    * deux tailles d'affichage sont fluides : un titre reste un titre du
@@ -182,12 +191,8 @@
   --pending: #C9A253;
   --alert:   #F1566F;
 
-  --grp-rn:     #A99EA6;
-  --grp-udr:    #C9A253;
-  --grp-figure: #B08CA6;
-
-  --th-eco: #B7A6AF; --th-secu: #F1566F; --th-intl: #7FB3C4;
-  --th-social: #C9A253; --th-envt: #7FB394; --th-inst: #B294C4;
+  --th-eco: #9AA6D8; --th-secu: #E8836A; --th-intl: #6FB2C6;
+  --th-social: #D4B268; --th-envt: #7FBF9C; --th-inst: #C79BBC;
 
   --shadow-card: none;
   --shadow-lift: none;
@@ -571,7 +576,6 @@ p.stamp { white-space: normal; }
   padding: 1px var(--s2);
   white-space: nowrap;
 }
-.tag--group { color: var(--grp-color, var(--muted)); }
 .tag--theme { color: var(--accent); background: var(--accent-soft); }
 .tag--receipt { color: var(--ok); }
 
@@ -771,10 +775,30 @@ p.stamp { white-space: normal; }
   transition: r var(--dur-fast) var(--ease);
 }
 .plot__dot:hover { r: 7; }
-.plot__dot--rn { fill: var(--grp-rn); }
-.plot__dot--udr { fill: var(--grp-udr); }
-.plot__dot--figure { fill: var(--grp-figure); }
-.plot__dot--autre { fill: var(--muted); }
+/* Un seul ton pour tous les points : chacun porte désormais le nom de qui l'a
+ * annoncé, juste à côté. Colorer par parti en plus du nom écrit revenait à dire
+ * deux fois la même chose, avec des couleurs empruntées aux thèmes. */
+.plot__dot { fill: var(--ink); }
+
+/* L'écart, tracé plutôt que laissé à mesurer à l'œil : c'est l'objet de la
+ * page, pas une annotation. */
+.plot__span { stroke: var(--accent); stroke-width: 2; }
+.plot__ecart {
+  font-family: var(--font-mono); font-size: 10px;
+  fill: var(--accent); font-variant-numeric: tabular-nums;
+}
+
+/* Chaque point porte son nom. Une infobulle au survol suppose qu'on sait déjà
+ * quoi survoler — et sur une page dont le sujet est la comparaison, il faut
+ * pouvoir lire les deux valeurs et les deux locuteurs d'un seul regard. */
+.plot__nom {
+  font-family: var(--font-ui); font-size: 12px;
+  fill: var(--ink);
+}
+.plot__val {
+  font-family: var(--font-mono); font-size: 11px;
+  fill: var(--muted); font-variant-numeric: tabular-nums;
+}
 
 /* Révéler la suite : un bouton qui annonce ce qu'il reste, pas un « voir plus »
  * qui ne dit rien. Une fiche de 1 400 propos rendue d'un bloc faisait 17 000 px

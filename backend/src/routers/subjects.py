@@ -66,6 +66,10 @@ async def list_subjects(
              and _span_days(s) >= MIN_SPAN_DAYS),  # exploitables d'abord
         -(s.n_speakers or 0), -_span_days(s), -(s.n_claims or 0),
     ))
+    # Le total AVANT découpe : renvoyer la taille de la page ferait afficher
+    # « 60 sujets » dès qu'il y en a davantage, et le chiffre plafonnerait sans
+    # que rien ne le dise.
+    total = len(subjects)
     subjects = subjects[:limit]
 
     # Une frise miniature par sujet : les dates de prise de parole, groupées par
@@ -133,7 +137,7 @@ async def list_subjects(
     )
 
     return {
-        "total": len(subjects),
+        "total": total,
         "themes": themes,
         "items": [
             {

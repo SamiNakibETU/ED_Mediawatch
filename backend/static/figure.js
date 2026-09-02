@@ -9,7 +9,6 @@
 // Helpers (common.js) : $, fetchJSON, escapeHtml, fmtNum, asDate, exactDate,
 // themeLabel, themeVar, kicker, duree, periode, ico, mandat.
 
-const GROUP_VAR = { RN: "--grp-rn", UDR: "--grp-udr", FIGURE: "--grp-figure" };
 const TYPE_LABEL = {
   normatif: "position", factuel_quantitatif: "chiffre", factuel_qualitatif: "fait",
   predictif: "prédiction", attributif: "imputation",
@@ -210,7 +209,6 @@ async function loadMore() {
 
 function render(d) {
   const f = d.figure, s = d.stats;
-  const color = `var(${GROUP_VAR[f.group_code] || "--muted"})`;
   const months = s.first_seen && s.last_seen
     ? Math.max(1, Math.round((asDate(s.last_seen) - asDate(s.first_seen)) / (1000 * 60 * 60 * 24 * 30)))
     : 0;
@@ -225,7 +223,7 @@ function render(d) {
         <p class="overline">${ico("locuteurs")} Fiche</p>
         <h1 class="hero-title profil__nom">${escapeHtml(f.full_name)}</h1>
         <div class="entry__foot">
-          <span class="tag tag--group" style="--grp-color:${color}">${escapeHtml(f.group_code)}</span>
+          <span class="tag">${escapeHtml(f.group_code)}</span>
           ${f.famille && f.famille.toLowerCase() !== (f.group_code || "").toLowerCase()
             ? `<span class="tag">${escapeHtml(f.famille)}</span>` : ""}
           ${f.role ? `<span class="tag">${escapeHtml(f.role)}</span>` : ""}

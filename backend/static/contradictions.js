@@ -9,11 +9,6 @@ const TYPE = {
   5: "Contradiction avec un fait vérifié",
   6: "Variance numérique",
 };
-const PARTY_VAR = { RN: "--grp-rn", UDR: "--grp-udr", "Reconquête": "--grp-figure" };
-const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
-
-const state = { type: null };
-
 function claim(c) {
   const who = c.speaker_name || c.party || "source non attribuée";
   const date = c.published_at ? new Date(c.published_at).toLocaleDateString("fr-FR") : "date inconnue";
@@ -21,7 +16,7 @@ function claim(c) {
   const value = c.qty_value != null ? `${c.qty_value}${c.qty_unit ? " " + c.qty_unit : ""}` : "";
 
   return `<div class="claim">
-    ${value ? `<p class="claim__value" style="color:${css(PARTY_VAR[c.party] || "--ink")}">${escapeHtml(value)}</p>` : ""}
+    ${value ? `<p class="claim__value">${escapeHtml(value)}</p>` : ""}
     <p class="entry__head"><span class="speaker">${escapeHtml(who)}</span>
       <span class="stamp">${date}</span><span class="tag">${escapeHtml(platform)}</span></p>
     <p class="claim__text">« ${escapeHtml((c.canonical || c.verbatim || "").slice(0, 220))} »</p>

@@ -16,18 +16,18 @@ const SOURCES = [
 
 const GROUPS = {
   ALL: { label: "Toutes", color: "var(--muted)" },
-  RN: { label: "RN", color: "var(--grp-rn)" },
-  UDR: { label: "UDR", color: "var(--grp-udr)" },
-  FIGURE: { label: "Figures", color: "var(--grp-figure)" },
+  RN: { label: "RN" },
+  UDR: { label: "UDR" },
+  FIGURE: { label: "Figures" },
 };
 
 const LEANINGS = [
   { key: null, label: "Tous les médias", color: "var(--muted)" },
   { key: "far_right", label: "Extrême droite", color: "var(--alert)" },
-  { key: "right", label: "Droite", color: "var(--grp-udr)" },
+  { key: "right", label: "Droite" },
   { key: "center", label: "Centre", color: "var(--muted)" },
-  { key: "left", label: "Gauche", color: "var(--grp-rn)" },
-  { key: "far_left", label: "Gauche radicale", color: "var(--grp-figure)" },
+  { key: "left", label: "Gauche" },
+  { key: "far_left", label: "Gauche radicale" },
 ];
 const LEAN = Object.fromEntries(LEANINGS.map((l) => [l.key, l]));
 
@@ -67,7 +67,7 @@ function linkify(s) {
 
 function tags(it, p) {
   const g = GROUPS[p.group_code] || GROUPS.ALL;
-  const out = [`<span class="tag tag--group" style="--grp-color:${g.color}">${g.label}</span>`];
+  const out = [`<span class="tag">${g.label}</span>`];
   const fam = (p.famille || "").trim();
   if (fam && !["", g.label.toLowerCase(), "officiel", "groupe"].includes(fam.toLowerCase())) {
     out.push(`<span class="tag">${escapeHtml(fam)}</span>`);
@@ -140,8 +140,8 @@ function articleRow(a) {
 
   return `<article class="article enter" data-id="${a.id}">
     <div class="article__head">
-      <span class="outlet" style="color:${lean.color}">${escapeHtml(a.source_name || a.media_source_id)}</span>
-      <span class="tag" style="--grp-color:${lean.color}">${lean.label}</span>
+      <span class="outlet">${escapeHtml(a.source_name || a.media_source_id)}</span>
+      <span class="tag">${lean.label}</span>
       ${nature}
       ${a.theme ? `<span class="tag tag--theme">${escapeHtml(themeLabel(a.theme))}</span>` : ""}
       <span class="spacer"></span>
@@ -175,7 +175,7 @@ async function openArticle(id) {
     const a = await fetchJSON(`/articles/${id}`);
     const lean = LEAN[a.leaning] || LEAN[null];
     $("#readerMeta").innerHTML =
-      `<span style="color:${lean.color}">${escapeHtml(a.source_name || a.media_source_id)}</span> · ${lean.label}`;
+      `${escapeHtml(a.source_name || a.media_source_id)} · ${lean.label}`;
     $("#readerTitle").textContent = a.title;
     $("#readerSub").textContent = [
       a.author ? `par ${a.author}` : "", exactDate(a.published_at), `${fmtNum(a.word_count || 0)} mots`,
