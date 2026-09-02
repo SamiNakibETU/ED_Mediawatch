@@ -39,7 +39,7 @@ def _span_days(s: Subject) -> int:
 async def list_subjects(
     q: str | None = Query(None, description="Filtre sur le libellé"),
     theme: str | None = Query(None),
-    confrontable: bool = Query(False, description="Au moins deux locuteurs"),
+    confrontable: bool = Query(False, description="Nommé, et au moins deux locuteurs"),
     limit: int = Query(60, ge=1, le=200),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
@@ -49,7 +49,12 @@ async def list_subjects(
     if theme:
         stmt = stmt.where(Subject.theme == theme)
     if confrontable:
-        stmt = stmt.where(Subject.n_speakers >= 2)
+        # Deux locuteurs ET un nom. Un regroupement qui n'a pas encore été nommé
+        # porte les mots-clés qui l'ont produit — « davantage deputes designe
+        # gagner » — et on ne peut pas dire de quoi il parle : rien n'y est
+        # comparable, quel que soit le nombre de voix. Ce n'est pas un sujet,
+        # c'est un candidat, et il se lit dans « tous les sujets ».
+        stmt = stmt.where(Subject.n_speakers >= 2, Subject.status != "auto")
     subjects = list((await db.execute(stmt)).scalars().all())
 
     # Ordre du sommaire. Un sujet est EXPLOITABLE quand plusieurs voix s'y
@@ -57,7 +62,8 @@ async def list_subjects(
     # un revirement peut exister. Un rassemblement de deux jours à quatre
     # locuteurs n'a rien à révéler ; un débat fiscal sur seize mois, si.
     subjects.sort(key=lambda s: (
-        not (s.n_speakers >= 2 and _span_days(s) >= MIN_SPAN_DAYS),  # exploitables d'abord
+        not (s.n_speakers >= 2 and s.status != "auto"
+             and _span_days(s) >= MIN_SPAN_DAYS),  # exploitables d'abord
         -(s.n_speakers or 0), -_span_days(s), -(s.n_claims or 0),
     ))
     subjects = subjects[:limit]

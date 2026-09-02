@@ -125,7 +125,9 @@ async def figure_detail(
             "n_speakers": sub.n_speakers or 1,
             # Un sujet à une seule voix n'a rien à confronter : le dire évite de
             # laisser croire qu'un silence adverse est un accord.
-            "confrontable": (sub.n_speakers or 1) >= 2,
+            # Nommé ET à deux voix : sans nom, on ne sait pas sur QUOI la
+            # confrontation porterait.
+            "confrontable": (sub.n_speakers or 1) >= 2 and sub.status != "auto",
         }
         for sub, n, lo, hi in rows
     ]
