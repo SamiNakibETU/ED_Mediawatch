@@ -720,6 +720,15 @@ p.stamp { white-space: normal; }
   max-width: var(--measure-ui);
 }
 
+/* Une réserve posée AU-DESSUS des chiffres qu'elle nuance, pas en note de bas
+ * de page : un taux qu'on lit avant la réserve est un taux déjà retenu. */
+.rationale--warn { border-top: 0; padding-top: 0; color: var(--pending); }
+
+/* Le choix « aucun topique » n'est pas un bouton de plus dans la liste : c'est
+ * une décision d'une autre nature, et la ranger parmi les vingt-et-un
+ * inviterait à la prendre par défaut quand aucun ne colle. */
+.filter--hors { border-style: dashed; margin-left: auto; }
+
 .status { font-family: var(--font-mono); font-size: var(--t-micro); letter-spacing: 0.04em; text-transform: uppercase; }
 .status--ok { color: var(--ok); }
 .status--pending { color: var(--pending); }
@@ -798,8 +807,15 @@ p.stamp { white-space: normal; }
   font-size: var(--t-small);
   color: var(--muted);
 }
-.state__title { font-family: var(--font-ui); font-size: var(--t-title); color: var(--ink); margin-bottom: var(--s2); }
-.state__hint { max-width: 28rem; margin: 0 auto; }
+/* `display: block` : ce sont des <span> dans un <p>, et sans ça le titre et
+ * l'explication se suivaient sur une même ligne — un état vide qui a l'air
+ * cassé donne l'impression d'une page cassée. */
+.state__title {
+  display: block;
+  font-family: var(--font-ui); font-size: var(--t-title);
+  color: var(--ink); margin-bottom: var(--s2);
+}
+.state__hint { display: block; max-width: 28rem; margin: 0 auto; }
 .state--error { color: var(--alert); }
 /* Vide à l'intérieur d'un bloc : pas les quatre rem d'une page vide. */
 .state--inline { padding: var(--s5) 0; text-align: left; }

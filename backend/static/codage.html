@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Codage — ED Mediawatch</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=IBM+Plex+Mono:wght@400;500&display=swap" />
+  <link rel="stylesheet" href="design.css" />
+  <script>
+    try { const t = localStorage.getItem("theme"); if (t) document.documentElement.dataset.theme = t; } catch {}
+  </script>
+</head>
+<body data-page="atelier" data-tagline="Coder à la main, pour savoir ce que vaut la machine">
+  <header id="masthead"></header>
+
+  <div class="wrap page">
+    <p class="stamp mb-5"><a class="source-link" href="atelier.html">← l’atelier</a></p>
+
+    <p class="dek lede-first">
+      La répartition thématique n’est pas publiable&nbsp;: <strong>α = 0,599</strong>, sous le
+      seuil de 0,67, mesurée sur cinquante unités par un seul annotateur. Ce n’est pas la
+      consigne du modèle qui est en cause — les désaccords restants sont dispersés, signe
+      d’une ambiguïté d’annotation. Ce qui débloque, et que seul un humain peut faire&nbsp;:
+      coder davantage d’unités, et qu’un <strong>second codeur indépendant</strong> le fasse aussi.
+    </p>
+
+    <p class="caveat">Le code de la machine ne s’affiche pas avant ta décision. Le voir ferait
+      de toi un relecteur, l’accord mesuré ne serait plus indépendant, et l’alpha ne vaudrait
+      plus rien.</p>
+
+    <div class="controls flush mt-6">
+      <label class="sr-only" for="coder">Ton identifiant de codeur</label>
+      <input id="coder" class="field field--inline" placeholder="ton identifiant de codeur…" />
+      <span class="stamp" id="faites"></span>
+    </div>
+
+    <div class="band"><h2>À coder</h2><span class="spacer"></span><p id="etat"></p></div>
+    <div id="unite"></div>
+
+    <div class="band"><h2>Fiabilité</h2><span class="spacer"></span>
+      <p>Alpha de Krippendorff entre codeurs.</p></div>
+    <div class="card" id="fiabilite"></div>
+  </div>
+
+  <script src="common.js"></script>
+  <script src="codage.js"></script>
+</body>
+</html>

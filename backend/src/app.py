@@ -27,6 +27,7 @@ from src.routers import (
     personalities,
     pipeline_status,
     posts,
+    coding,
     pledges,
     referentiel,
     reviews,
@@ -89,6 +90,7 @@ app.include_router(contradictions.router)
 app.include_router(subjects.router)
 app.include_router(reviews.router)
 app.include_router(pledges.router)
+app.include_router(coding.router)
 app.include_router(figure.router)
 app.include_router(pipeline_status.router)
 app.include_router(llm_costs.router)

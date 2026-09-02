@@ -280,11 +280,12 @@ function renderThemes(d) {
   // qu'un journaliste reprend.
   const f = d.reliability;
   const alerte = f && f.alpha < 0.67
-    ? `<p class="rationale" style="border-top:none;padding-top:0;color:var(--pending)">
+    ? `<p class="rationale rationale--warn">
          <strong>Mesure indicative.</strong> Accord codeur humain / modèle :
          α = ${String(f.alpha).replace(".", ",")} sur ${f.n_units} déclarations
          (${f.n_coders} annotateur). Le seuil de fiabilité de l'analyse de contenu
-         est 0,67 — cette répartition oriente, elle ne se publie pas comme une mesure.</p>`
+         est 0,67 — cette répartition oriente, elle ne se publie pas comme une mesure.
+         <a class="source-link" href="codage.html">coder des unités à la main</a></p>`
     : "";
 
   host.innerHTML = alerte + `<div class="kv">${rows.map((r) => `
@@ -297,7 +298,7 @@ function renderThemes(d) {
           style="width:${((r.part / max) * 100).toFixed(1)}%"></div></div>
       </div>
     </div>`).join("")}</div>
-    <p class="stamp" style="margin-top:var(--s3)">Grille ${escapeHtml(d.version || "")}
+    <p class="stamp mt-3">Grille ${escapeHtml(d.version || "")}
       · Comparative Agendas Project</p>`;
 }
 
