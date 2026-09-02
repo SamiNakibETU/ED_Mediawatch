@@ -63,7 +63,7 @@ function subjectRow(x) {
       <span class="ranked__t">${nomSujet(x)}</span>
       <span class="ranked__m">${escapeHtml(themeLabel(x.theme) || "sans thème")}
         · ${duree(x.span_days)} · ${x.confrontable
-          ? `${x.n_speakers} voix — confrontable`
+          ? `${x.n_speakers} voix`
           : "une seule voix"}</span>
     </span>
   </a>`;
@@ -232,7 +232,7 @@ function render(d) {
           ${f.handle ? `<a class="handle" href="https://x.com/${f.handle}" target="_blank" rel="noopener">@${escapeHtml(f.handle)}</a>` : ""}
         </div>
         <div class="statbar">
-          <span class="statbar__item"><span class="statbar__n">${fmtNum(s.n_claims)}</span> propos consignés</span>
+          <span class="statbar__item"><span class="statbar__n">${fmtNum(s.n_claims)}</span> déclarations</span>
           <span class="statbar__item"><span class="statbar__n statbar__n--accent">${fmtNum(conf)}</span>
             sujets à plusieurs voix</span>
           <span class="statbar__item"><span class="statbar__n">${months}</span> mois de suivi</span>
@@ -250,9 +250,9 @@ function render(d) {
         <p>Produite par ${escapeHtml(d.dossier.model || "—")}, à relire.</p></div>
       <p class="prose">${escapeHtml(d.dossier.summary)}</p>` : ""}
 
-    <div class="band"><h2>Les sujets que porte ${escapeHtml(f.full_name)}</h2>
+    <div class="band"><h2>Ce dont parle ${escapeHtml(f.full_name)}</h2>
       <span class="spacer"></span>
-      <p>Par sujet, du plus investi au moins. Cliquer ouvre la confrontation.</p></div>
+      <p>Du plus investi au moins. Clique pour voir qui a dit quoi.</p></div>
     <div id="subjects"></div>
 
     ${d.contradictions?.length ? `

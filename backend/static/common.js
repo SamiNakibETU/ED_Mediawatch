@@ -191,7 +191,12 @@ async function liveIndicator() {
       : h < 1 ? "collecte à l’instant"
       : h < 48 ? `collecte il y a ${Math.round(h)} h`
       : `collecte il y a ${Math.round(h / 24)} j`;
-    el.innerHTML = `<span class="dot dot--${cls}${cls === "ok" ? " dot--live" : ""}"></span>${quand}`;
+    // Le texte s'efface quand la fenêtre se resserre, le point reste : savoir
+    // que la collecte tourne encore tient dans une pastille, et la place
+    // appartient aux rubriques. La mention reste lisible au survol.
+    el.title = quand;
+    el.innerHTML = `<span class="dot dot--${cls}${cls === "ok" ? " dot--live" : ""}"></span>`
+      + `<span class="live__quand">${quand}</span>`;
   } catch {
     el.hidden = true;   // muet plutôt que menteur
   }
@@ -201,22 +206,21 @@ function mountMasthead() {
   const host = $("#masthead");
   if (!host) return;
   const current = document.body.dataset.page;
-  // Les rubriques, sans pictogramme. Huit icônes alignées au-dessus d'un titre
-  // de publication donnaient une barre d'outils d'application ; un ours de
-  // journal nomme ses sections, il ne les illustre pas.
+  // Une seule ligne : nom, rubriques, état. L'accroche de page a été retirée —
+  // elle répétait en une phrase ce que le titre de la page dit déjà, sur la
+  // ligne même où le regard entre.
   const nav = PAGES.map(([href, key, label]) =>
     `<a href="${href}"${key === current ? ' aria-current="page"' : ""}>${label}</a>`).join("");
 
   host.className = "masthead";
   host.innerHTML = `<div class="masthead__inner">
-    <a class="wordmark" href="index.html">ED <span>Mediawatch</span></a>
-    <p class="masthead__tagline">${escapeHtml(document.body.dataset.tagline || "")}</p>
+    <a class="wordmark" href="index.html">ED<span>&nbsp;Mediawatch</span></a>
+    <nav class="nav" aria-label="Sections">${nav}</nav>
     <div class="spacer"></div>
     <p class="chip" id="live"></p>
     <p class="masthead__meta" id="stats"></p>
     <button class="btn btn--ghost btn--sm" id="themeToggle" aria-label="Basculer le thème"></button>
-  </div>
-  <div class="masthead__nav"><nav class="nav" aria-label="Sections">${nav}</nav></div>`;
+  </div>`;
 
   liveIndicator();
 

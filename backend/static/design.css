@@ -34,33 +34,32 @@
 /* ── Tokens ──────────────────────────────────────────────────────────── */
 
 :root {
-  /* Palette relevée sur La Grande Conversation, la revue de Terra Nova : un
-   * noir presque pur sur une crème chaude, et un orange en signature. Le carmin
-   * qu'on employait vient du site institutionnel ; la revue, elle, est en noir
-   * et orange — le registre d'un magazine plutôt que d'une plaquette.
+  /* Blanc et noir, et une seule touche.
    *
-   * NOIR ET BLANC, PUIS UNE TOUCHE. L'accent ne sert qu'à trois choses : la
-   * rubrique où l'on se trouve, un lien de contenu, le point qui bat quand la
-   * collecte tourne. Partout ailleurs, du gris. Une interface qui emploie sa
-   * couleur d'accent pour décorer n'a plus de moyen de désigner. */
-  --paper:        #F4EEE9;
-  --surface:      #FBF8F5;
-  --surface-sunk: #E8DFD8;
-  --ink:          #060606;
-  --ink-soft:     #2E2A28;
-  --muted:        #6B625C;
-  --faint:        #8C8177;
+   * La crème essayée avant venait de La Grande Conversation ; à l'écran, sur
+   * des pages de données, elle tirait vers le beige et datait la page. On garde
+   * de la revue ce qui compte — le noir presque pur et l'orange — et on pose le
+   * reste sur du blanc, avec une échelle de gris neutres.
+   *
+   * L'orange ne sert qu'à trois choses : la rubrique où l'on se trouve, un lien
+   * de contenu, le point qui bat quand la collecte tourne. Une interface qui
+   * emploie son accent pour décorer n'a plus de moyen de désigner. */
+  --paper:        #FFFFFF;
+  --surface:      #FFFFFF;
+  --surface-sunk: #F4F4F5;   /* survol, champ, état sélectionné */
+  --ink:          #0A0A0A;
+  --ink-soft:     #27272A;
+  --muted:        #71717A;
+  --faint:        #A1A1AA;
 
-  /* Le filet se voit à peine : il sépare deux lignes d'une liste, il n'encadre
-   * rien. Un trait qu'on remarque prend la place du contenu. */
-  --rule:         #E2D8CF;
-  --rule-strong:  #CBBEB3;
+  --rule:         #ECECEE;
+  --rule-strong:  #D8D8DC;
 
-  --accent:       #FF6437;
-  --accent-hot:   #E5511F;
-  --accent-soft:  #FDE8E0;
-  --accent-line:  #F5C9B8;
-  --live:         #FF6437;
+  --accent:       #FF5A1F;
+  --accent-hot:   #E5491A;
+  --accent-soft:  #FFF1EB;
+  --accent-line:  #FFD3C2;
+  --live:         #FF5A1F;
 
   /* Sémantique — statut, pas décoration. */
   --ok:      #2F6B45;
@@ -84,8 +83,8 @@
    * déjà « ÉCONOMIE » n'apprend rien, et six teintes dans une page qui n'en veut
    * qu'une sont six occasions de ne plus savoir ce que l'accent désigne. Une
    * seule valeur de gris : le carré ouvre un surtitre, il ne code plus rien. */
-  --th-eco: #8C8177; --th-secu: #8C8177; --th-intl: #8C8177;
-  --th-social: #8C8177; --th-envt: #8C8177; --th-inst: #8C8177;
+  --th-eco: #A1A1AA; --th-secu: #A1A1AA; --th-intl: #A1A1AA;
+  --th-social: #A1A1AA; --th-envt: #A1A1AA; --th-inst: #A1A1AA;
 
   /* Échelle typographique — quarte (1.333), pas de valeur hors échelle. Les
    * deux tailles d'affichage sont fluides : un titre reste un titre du
@@ -162,15 +161,15 @@
 }
 
 :root[data-theme="dark"] {
-  --paper:        #121110;
-  --surface:      #191716;
-  --surface-sunk: #221F1D;
-  --ink:          #F5F0EB;
-  --ink-soft:     #DCD5CE;
-  --muted:        #A79D95;
-  --faint:        #857C75;
-  --rule:         #2B2724;
-  --rule-strong:  #3D3833;
+  --paper:        #0A0A0B;
+  --surface:      #0A0A0B;
+  --surface-sunk: #18181B;
+  --ink:          #FAFAFA;
+  --ink-soft:     #E4E4E7;
+  --muted:        #A1A1AA;
+  --faint:        #71717A;
+  --rule:         #1F1F23;
+  --rule-strong:  #34343A;
 
   --accent:       #FF7A52;
   --accent-hot:   #FF9370;
@@ -182,8 +181,8 @@
   --pending: #C9A253;
   --alert:   #F1566F;
 
-  --th-eco: #857C75; --th-secu: #857C75; --th-intl: #857C75;
-  --th-social: #857C75; --th-envt: #857C75; --th-inst: #857C75;
+  --th-eco: #71717A; --th-secu: #71717A; --th-intl: #71717A;
+  --th-social: #71717A; --th-envt: #71717A; --th-inst: #71717A;
 
   --shadow-card: none;
   --shadow-lift: none;
@@ -266,84 +265,74 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--rule-strong); border: 4px solid var(--paper); border-radius: 8px; }
 
-/* ── Masthead — un journal a un titre, pas un logo dans un carré ────── */
+/* ── Bandeau ────────────────────────────────────────────────────────────
+ *
+ * UNE SEULE LIGNE. Il en tenait trois : le titre avec son accroche, puis les
+ * rubriques, puis le fil des sujets suivis. Trois bandes empilées avant la
+ * première ligne de contenu, c'est un en-tête de site institutionnel — les
+ * outils qu'on consulte tous les jours (Cursor, Linear, la console d'OpenAI)
+ * tiennent en 52 px : un nom court, les rubriques, l'état à droite.
+ *
+ * L'accroche est retirée : elle répétait en une phrase ce que le titre de la
+ * page dit déjà, et occupait la ligne où le regard entre. */
 
 .masthead {
   position: sticky; top: 0; z-index: 20;
-  background: var(--surface);
+  background: var(--paper);
   border-bottom: 1px solid var(--rule);
 }
 
 .masthead__inner {
   max-width: var(--page-w); margin: 0 auto;
-  padding: var(--s3) var(--s4);
-  display: flex; align-items: baseline; gap: var(--s5);
+  padding: 0 var(--s4);
+  height: 52px;
+  display: flex; align-items: center; gap: var(--s5);
 }
 
-/* Un titre de publication se voit. Il était à la taille d'un libellé de
- * navigation : à côté de « Sujets » et « Archive », rien ne disait qu'on
- * lisait un journal plutôt qu'un tableau de bord. */
-/* Le nom du site, réduit à ce qu'il est : une mention en haut à gauche. Il
- * était composé en sérif d'affichage à 28 px — le logotype d'un journal, alors
- * que la page est un outil qu'on consulte. Cursor et OpenAI posent leur nom en
- * petit et n'y reviennent plus ; la première ligne du regard appartient au
- * contenu. */
 .wordmark {
   font-family: var(--font-label);
-  font-size: var(--t-small); font-weight: 600;
-  letter-spacing: 0.06em; text-transform: uppercase;
-  line-height: 1; white-space: nowrap; color: var(--ink);
+  font-size: var(--t-small); font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--ink); white-space: nowrap;
 }
-.wordmark span { color: var(--faint); font-weight: 400; }
+.wordmark span { color: var(--faint); font-weight: 500; }
 
-/* L'accroche est une phrase, pas une étiquette : en capitales monospacées elle
- * se lisait comme un code de rubrique. */
-.masthead__tagline {
-  font-family: var(--font-ui);
-  font-size: var(--t-small);
-  line-height: 1.25;
-  color: var(--muted);
-  max-width: 15rem;
-  white-space: normal;
-}
-
-/* La navigation prend sa propre ligne, sous le titre. Sur une seule ligne, à
- * sept sections, « Réseaux sociaux » et « Le Compteur » se coupaient en deux —
- * une nav qui se casse en morceaux ne se lit plus comme une nav. C'est aussi la
- * structure d'un vrai bandeau de journal : titre, puis rubriques. */
-.masthead__nav {
-  border-top: 1px solid var(--rule);
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-.masthead__nav::-webkit-scrollbar { display: none; }
-.masthead__nav .nav {
-  max-width: var(--page-w); margin: 0 auto;
-  padding: var(--s2) var(--s4);
-}
-
-/* Navigation : rubriques en capitales serrées, soulignées à l'actif. Les
- * icônes ont sauté — huit pictogrammes en enfilade au-dessus d'un titre de
- * publication, c'est une barre d'outils, pas un ours de journal. */
-.nav { display: flex; gap: var(--s5); align-items: baseline; }
-.nav a, .nav span { white-space: nowrap; }
+/* Les rubriques dans la même ligne, à la manière d'un jeu d'onglets. L'état
+ * actif se marque par un fond, pas par un soulignement : un trait sous un mot
+ * dans une barre déjà bordée en bas fait deux traits parallèles à 6 px. */
+/* La nav ne cède pas : elle passe avant tout le reste du bandeau. Deux
+ * rubriques sorties du cadre parce qu'un compteur occupait la place, c'est deux
+ * pages qu'on n'atteint plus — et le compteur est repris en tête de page. */
+.nav { display: flex; gap: var(--s1); align-items: center;
+       flex: 0 1 auto; min-width: 0;
+       overflow-x: auto; scrollbar-width: none; }
+.nav::-webkit-scrollbar { display: none; }
 .nav a, .nav span {
-  display: inline-flex; align-items: center; gap: var(--s2);
+  display: inline-flex; align-items: center;
   font-family: var(--font-label);
-  font-size: var(--t-small);
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font-size: var(--t-small); font-weight: 500;
   color: var(--muted);
-  padding-bottom: 5px;
-  border-bottom: 2px solid transparent;
-  transition: color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
+  padding: var(--s1) var(--s3);
+  border-radius: var(--r-sm);
+  white-space: nowrap;
+  transition: color var(--dur-fast) var(--ease),
+              background var(--dur-fast) var(--ease);
 }
-.nav a:hover { color: var(--ink); }
-.nav a[aria-current="page"] { color: var(--ink); border-bottom-color: var(--accent); font-weight: 500; }
+.nav a:hover { color: var(--ink); background: var(--surface-sunk); }
+.nav a[aria-current="page"] { color: var(--ink); background: var(--surface-sunk); font-weight: 600; }
 .nav span[aria-disabled] { color: var(--faint); cursor: default; }
 
 .spacer { flex: 1 1 auto; }
+
+/* Le relevé chiffré cède la place dès que la fenêtre se resserre : il est
+ * repris en tête de page, la navigation ne l'est pas. */
+/* Le relevé chiffré n'apparaît que sur les très grands écrans : il est repris
+ * en tête de chaque page, alors que deux rubriques hors cadre sont deux pages
+ * qu'on n'atteint plus. */
+@media (max-width: 1440px) {
+  .masthead__meta, .live__quand { display: none; }
+  #live { padding: 0; }
+}
 
 .masthead__meta {
   font-family: var(--font-mono);
@@ -354,34 +343,12 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 }
 .masthead__meta strong { color: var(--ink); font-weight: 600; }
 
-
-/* Sur un téléphone, le bandeau tenait 789 px dans une fenêtre de 390 : titre,
- * accroche, compteur et bascule sur une seule ligne insécable. C'était la seule
- * cause du débordement horizontal — sur les sept pages, le corps était juste.
- *
- * L'accroche cède la première : elle situe le propos, elle ne le porte pas.
- * Le relevé chiffré passe à la ligne plutôt que de disparaître — c'est une
- * donnée, pas une décoration. */
+/* Sur téléphone, seules les rubriques comptent : le relevé chiffré est repris
+ * en tête de page, la bascule de thème reste. */
 @media (max-width: 900px) {
-  .masthead__inner { flex-wrap: wrap; gap: var(--s3); row-gap: var(--s2); }
-  /* Sept rubriques ne tiennent dans aucun telephone : la nav defile, et le
-   * degrade le dit. Au dessus de 900 px elle tient, donc pas de degrade. */
-  .masthead__nav { mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent); }
-  /* Une rubrique haute de 26 px se rate au doigt une fois sur trois. Le pouce
-   * demande 44 px ; la souris s'en accommode, d'ou la regle au telephone
-   * seulement — sur grand ecran, 44 px de haut feraient une barre d'outils. */
-  .nav a, .nav span { min-height: 44px; padding-bottom: 0; align-items: center; }
-  .nav a[aria-current="page"] { box-shadow: inset 0 -2px 0 var(--accent); border-bottom-color: transparent; }
-  /* Une action se vise au pouce : 44 px. Un lien dans une bande dense se
-   * contente du plancher de 24 px — porter sept liens a 44 px triplerait la
-   * hauteur de la bande pour la rendre moins lisible, pas plus. */
-  .btn, .btn--sm { min-height: 44px; }
-  .now a, a.statbar__item, a.wordmark { padding-block: var(--s2); }
-  .masthead__tagline { display: none; }
-  /* Ligne 1 : le titre et la bascule. Ligne 2 : les indicateurs, ensemble —
-   * séparés, ils occupaient trois lignes pour deux informations. */
-  #themeToggle { order: 2; }
-  #live, .masthead__meta { order: 3; white-space: normal; }
+  .masthead__inner { gap: var(--s3); }
+  .masthead__meta, #live { display: none; }
+  .nav a, .nav span { min-height: 44px; }
 }
 
 /* ── Barre de contrôle ───────────────────────────────────────────────── */
@@ -500,13 +467,14 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   font-size: var(--t-small);
   color: var(--ink-soft);
   border-radius: var(--r-sm);
-  border-left: 2px solid transparent;
   transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
 }
 .tree button:hover { background: var(--surface-sunk); color: var(--ink); }
+/* Sélectionné : un fond, rien d'autre. Le filet d'accent collé au bord gauche
+ * est la signature d'un panneau latéral de tableau de bord — et il ajoutait un
+ * trait vertical à une colonne qui en avait déjà un. */
 .tree button[aria-pressed="true"] {
-  color: var(--ink); font-weight: 500;
-  border-left-color: var(--accent);
+  color: var(--ink); font-weight: 600;
   background: var(--surface-sunk);
 }
 .tree .label { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -741,7 +709,8 @@ p.stamp { white-space: normal; }
   transition: background var(--dur-fast) var(--ease);
 }
 .referent:hover { background: var(--surface-sunk); }
-.referent[aria-pressed="true"] { background: var(--surface-sunk); border-left-color: var(--accent); }
+.referent[aria-pressed="true"] { background: var(--surface-sunk); }
+.referent[aria-pressed="true"] .referent__label { color: var(--ink); font-weight: 600; }
 /* Deux blocs, pas deux fragments de phrase : le libellé et le relevé chiffré
  * coulaient sur la même ligne et se coupaient n'importe où. */
 .referent__label { display: block; font-size: var(--t-small); font-weight: 500; color: var(--ink); }
