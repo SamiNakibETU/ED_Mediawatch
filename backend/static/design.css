@@ -1,22 +1,29 @@
 /* ED Mediawatch — système visuel.
  *
  * Le produit consigne des propos datés, attribués, sourcés, et les met en
- * regard dans la durée. La forme doit servir cette lecture : trouver un sujet,
- * voir qui s'y exprime, remonter à la source.
+ * regard dans la durée. La forme sert cette lecture et rien d'autre.
  *
- * Deux plans, et un seul. Le fond de page est un gris chaud ; ce qu'on lit est
- * posé dessus en blanc. C'est la grammaire de Bloomberg et de Cursor, et elle
- * règle un défaut de la version précédente : tout était blanc sur blanc, séparé
- * par des filets, et vingt filets de même valeur ne hiérarchisent plus rien.
- * Une surface se pose maintenant ; elle ne se découpe plus.
+ * UN SEUL PLAN. Pas de cartes, pas d'ombres, pas de coins arrondis sur les
+ * blocs de contenu. La page est une surface continue ; ce qui sépare, c'est le
+ * blanc, et à défaut un filet à 7 % d'opacité. La version précédente empilait
+ * des cadres, des barres de section à 3 px et des filets d'accent à gauche de
+ * chaque bloc — six traits pour trois niveaux de hiérarchie, ce qui n'en fait
+ * plus aucun. La hiérarchie vient de la taille, de la graisse et de l'espace.
  *
- * Trois familles, trois rôles stricts — et pas quatre :
- *   Archivo         titres, navigation, interface. Une grotesque étroite et
- *                   contrastée : c'est elle qui date la page. Le sérif en
- *                   titre lisait « ouvrage ancien » là où on veut « rédaction ».
- *   Source Serif 4  RÉSERVÉ aux propos cités. Le sérif garde une fonction :
- *                   signaler que ces mots-là sont ceux de quelqu'un d'autre.
- *   IBM Plex Mono   les données : dates, compteurs, scores (chasse tabulaire).
+ * QUATRE FAMILLES, TOUTES LOCALES. Aucune fonte distante : le texte s'affiche
+ * au premier octet, sans requête tierce ni saut de rendu.
+ *   Sitka Banner    les titres. Le sérif de Matthew Carter dessiné pour l'écran,
+ *                   en taille optique d'affichage — resserré, contrasté. C'est
+ *                   lui qui donne une voix à la page, comme le sérif de titrage
+ *                   de ProPublica ou de Bloomberg.
+ *   Sitka Text      les propos CITÉS. Même famille, taille optique de lecture :
+ *                   la citation reste de la même main que le titre, mais on
+ *                   voit qu'on change de registre.
+ *   Segoe UI Var.   l'interface. Text pour le corps, Small pour les
+ *                   micro-libellés — deux dessins distincts, pas deux tailles
+ *                   du même. C'est la fonte de l'OS : elle ne se remarque pas,
+ *                   ce qui est exactement sa fonction.
+ *   Consolas        les données : dates, compteurs, scores (chasse tabulaire).
  *
  * Une seule couleur d'accent, le carmin de Terra Nova. Les couleurs sémantiques
  * (validé / en attente / contradiction), les familles politiques et les six
@@ -30,9 +37,13 @@
   /* Charte Terra Nova, relevée sur tnova.fr : carmin #A41B30 en surtitre et
    * signature, prune #53414A pour les aplats, encre #333. Ce produit paraît
    * sous ce nom ; il ne peut pas avoir sa propre couleur. */
-  --paper:        #F4F3F1;   /* le fond : ce qui porte, jamais ce qu'on lit */
-  --surface:      #FFFFFF;   /* ce qu'on lit : posé sur le fond */
-  --surface-sunk: #EAE8E5;   /* creux : survol, champ, piste de jauge */
+  /* Un seul plan : le fond de page EST la surface de lecture. Le blanc cassé
+   * plutôt que le blanc pur — sur un écran, #FFF vibre. `--surface` existe
+   * encore pour les rares creux (bandeau, panneau de lecture) ; ce n'est plus
+   * un second plan sur lequel poser des cartes. */
+  --paper:        #FBFAF9;
+  --surface:      #FFFFFF;
+  --surface-sunk: #F1EFED;   /* survol, champ, piste de jauge */
   --ink:          #17161A;
   --ink-soft:     #333333;
   --muted:        #53414A;   /* prune Terra Nova */
@@ -40,10 +51,11 @@
    * le seuil de contraste et les micro-libellés devenaient une texture. */
   --faint:        #6E656C;
 
-  /* Deux valeurs de filet, pas quatre : séparer, ou ouvrir une section. Un
-   * troisième trait n'ajoute pas de niveau, il brouille les deux autres. */
-  --rule:         #E3E0DC;
-  --rule-strong:  #C6C1BC;
+  /* Le filet se voit à peine, et c'est voulu : il sépare deux lignes d'une
+   * liste, il n'encadre rien. Un trait qu'on remarque est un trait qui prend
+   * la place du contenu. */
+  --rule:         #ECE9E5;
+  --rule-strong:  #D8D4CF;
 
   /* Accent unique : le carmin. Pour ce qui EST de l'accent — surtitre, lien
    * actif, appel à l'action — jamais pour décorer une surface. */
@@ -118,19 +130,26 @@
   --r-md:   10px;
   --r-full: 999px;
 
-  /* La profondeur vient de l'ombre, la structure du filet. Une bordure posée
-   * pour simuler un relief additionne des traits sans rien séparer. */
-  --shadow-card:  0 1px 2px rgb(23 22 26 / 0.05);
-  --shadow-lift:  0 4px 14px rgb(23 22 26 / 0.08);
+  /* Aucune ombre. Rien ne flotte au-dessus de rien : la page est plate, et la
+   * profondeur qu'on croyait gagner en relief se paie en bruit. */
+  --shadow-card:  none;
+  --shadow-lift:  none;
 
   --dur-fast: 120ms;
   --dur-base: 200ms;
   --ease: cubic-bezier(0.2, 0, 0.13, 1);
 
-  --font-display: Archivo, "Helvetica Neue", system-ui, sans-serif;
-  --font-ui: Archivo, system-ui, -apple-system, sans-serif;
-  --font-serif: "Source Serif 4", "Source Serif Pro", Georgia, serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  /* Tailles optiques, pas variantes de graisse : Sitka Banner est un dessin
+   * plus resserré et plus contrasté que Sitka Text, pas le même en plus gros.
+   * Idem pour Segoe UI Variable Text et Small. Utiliser la bonne coupe à la
+   * bonne taille est ce qui sépare une page composée d'une page mise en page. */
+  --font-display: "Sitka Banner", "Sitka Heading", Sitka, Georgia, serif;
+  --font-serif:   "Sitka Text", Sitka, Georgia, serif;
+  --font-ui:      "Segoe UI Variable Text", "Segoe UI Variable", "Segoe UI",
+                  system-ui, -apple-system, sans-serif;
+  --font-label:   "Segoe UI Variable Small", "Segoe UI Variable", "Segoe UI",
+                  system-ui, -apple-system, sans-serif;
+  --font-mono:    Consolas, "Cascadia Mono", ui-monospace, "SF Mono", Menlo, monospace;
 
   color-scheme: light;
 }
@@ -143,15 +162,15 @@
 }
 
 :root[data-theme="dark"] {
-  --paper:        #141317;
-  --surface:      #1D1B21;
-  --surface-sunk: #26232B;
+  --paper:        #131216;
+  --surface:      #1A181D;
+  --surface-sunk: #221F26;
   --ink:          #F4F1F3;
   --ink-soft:     #D6CFD4;
   --muted:        #A99EA6;
   --faint:        #857B83;
-  --rule:         #2E2A33;
-  --rule-strong:  #453F4A;
+  --rule:         #2A272E;
+  --rule-strong:  #3E3944;
 
   --accent:       #F1566F;
   --accent-hot:   #FF6B87;
@@ -170,8 +189,8 @@
   --th-eco: #B7A6AF; --th-secu: #F1566F; --th-intl: #7FB3C4;
   --th-social: #C9A253; --th-envt: #7FB394; --th-inst: #B294C4;
 
-  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.3);
-  --shadow-lift: 0 4px 14px rgb(0 0 0 / 0.4);
+  --shadow-card: none;
+  --shadow-lift: none;
 
   color-scheme: dark;
 }
@@ -208,40 +227,21 @@ h1, h2, h3, h4 {
   margin: 0;
 }
 
-/* ── La carte : ce qu'on lit, posé sur le fond ─────────────────────────────
+/* ── Ce qui a été retiré, et pourquoi ─────────────────────────────────────
  *
- * Le seul composant ajouté par la refonte, et celui qui la porte. Une surface
- * blanche sur le gris de la page se détache sans qu'on ait à la cerner de
- * traits ; le filet qui l'entoure ne sert plus qu'à tenir son bord, et l'ombre
- * fait le relief. C'est ce qui remplace les vingt hairlines de même valeur qui
- * découpaient l'ancienne page sans jamais la hiérarchiser. */
+ * Il y avait ici une carte : surface blanche, filet de 1 px, coins à 10 px,
+ * ombre portée. Posée sur un fond gris, elle séparait — puis on l'a employée
+ * partout, et onze pages de rectangles encadrés se lisent comme un tableau de
+ * bord, pas comme une page qu'on lit.
+ *
+ * `.card` reste comme accroche de structure (les JS l'émettent) mais ne dessine
+ * plus rien : elle réserve un intervalle, c'est tout. Ce qui sépare désormais,
+ * dans l'ordre : le blanc, puis un filet à peine visible entre deux lignes
+ * d'une même liste. Rien d'autre.
+ */
 
-.card {
-  background: var(--surface);
-  border: 1px solid var(--rule);
-  border-radius: var(--r-md);
-  box-shadow: var(--shadow-card);
-  padding: var(--s5);
-  min-width: 0;
-}
-
-/* Une liste a filets posee dans une carte : ses separations internes restent,
- * mais son trait d'ouverture et le filet de sa derniere ligne feraient doublon
- * avec le bord de la carte — deux traits a 2 px l'un de l'autre. */
-.card > :where(.register, .funnel, .kv) { border-top: 0; }
-.card > :where(.register, .funnel, .kv) > :first-child { padding-top: 0; }
-.card > :where(.register, .funnel, .kv) > :last-child {
-  border-bottom: 0; padding-bottom: 0;
-}
-
-/* Une carte cliquable se soulève ; une carte de lecture ne bouge pas. Le
- * mouvement est une réponse à une intention, pas une décoration. */
-a.card, button.card { display: block; text-align: left; width: 100%;
-  transition: box-shadow var(--dur-base) var(--ease),
-              border-color var(--dur-base) var(--ease); }
-a.card:hover, button.card:hover {
-  box-shadow: var(--shadow-lift); border-color: var(--rule-strong);
-}
+.card { min-width: 0; }
+a.card, button.card { display: block; text-align: left; width: 100%; }
 
 a { color: inherit; text-decoration: none; }
 
@@ -330,6 +330,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 .nav a, .nav span { white-space: nowrap; }
 .nav a, .nav span {
   display: inline-flex; align-items: center; gap: var(--s2);
+  font-family: var(--font-label);
   font-size: var(--t-small);
   font-weight: 600;
   letter-spacing: 0.04em;
@@ -409,9 +410,9 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   color: var(--ink-soft);
   padding: var(--s1) var(--s3);
   min-height: 32px;
-  background: var(--surface);
+  background: var(--surface-sunk);
   border-radius: var(--r-full);
-  border: 1px solid var(--rule);
+  border: 1px solid transparent;
   transition: color var(--dur-fast) var(--ease),
               background var(--dur-fast) var(--ease),
               border-color var(--dur-fast) var(--ease);
@@ -422,7 +423,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   content: ""; width: 7px; height: 7px; flex: none; border-radius: 50%;
   background: var(--th, var(--accent));
 }
-.filter:hover { border-color: var(--rule-strong); background: var(--surface-sunk); }
+.filter:hover { background: var(--rule); }
 .filter[aria-pressed="true"] {
   color: var(--surface);
   background: var(--ink);
@@ -438,8 +439,8 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 
 .field {
   width: 100%;
-  background: var(--surface);
-  border: 1px solid var(--rule);
+  background: var(--surface-sunk);
+  border: 1px solid transparent;
   border-radius: var(--r-sm);
   padding: var(--s2) var(--s3);
   min-height: 40px;
@@ -483,7 +484,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 
 .rail__title,
 .section-label {
-  font-family: var(--font-mono);
+  font-family: var(--font-label);
   font-size: var(--t-micro);
   letter-spacing: 0.09em;
   text-transform: uppercase;
@@ -518,7 +519,8 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 
 /* ── Registre : les entrées se séparent, elles ne s'encadrent pas ───── */
 
-.register { border-top: 1px solid var(--rule); }
+/* Le registre n'ouvre pas par un trait : la première ligne suffit. */
+.register > :first-child { border-top: 0; }
 
 .entry {
   --face-size: 2.5rem;
@@ -564,14 +566,14 @@ p.stamp { white-space: normal; }
   font-size: var(--t-micro);
   letter-spacing: 0.02em;
   color: var(--muted);
-  border: 1px solid var(--rule);
+  background: var(--surface-sunk);
   border-radius: var(--r-sm);
   padding: 1px var(--s2);
   white-space: nowrap;
 }
-.tag--group { color: var(--grp-color, var(--muted)); border-color: color-mix(in oklab, var(--grp-color, var(--rule)) 40%, var(--rule)); }
-.tag--theme { color: var(--accent); border-color: var(--accent-line); background: var(--accent-soft); }
-.tag--receipt { color: var(--ok); border-color: color-mix(in oklab, var(--ok) 35%, var(--rule)); }
+.tag--group { color: var(--grp-color, var(--muted)); }
+.tag--theme { color: var(--accent); background: var(--accent-soft); }
+.tag--receipt { color: var(--ok); }
 
 .prose {
   font-family: var(--font-serif);
@@ -684,15 +686,11 @@ p.stamp { white-space: normal; }
 
 /* ── File de validation : ici, le bloc EST l'unité de décision ──────── */
 
-.verdicts { display: flex; flex-direction: column; gap: var(--s5); }
+.verdicts { display: flex; flex-direction: column; gap: var(--s6); }
 
-.verdict {
-  background: var(--surface);
-  border: 1px solid var(--rule);
-  border-radius: var(--r-md);
-  box-shadow: var(--shadow-card);
-  padding: var(--s5);
-}
+/* Le bloc EST l'unité de décision : ce qui le délimite est l'espace qui
+ * l'entoure et le filet qui le sépare du suivant, pas un cadre. */
+.verdict { padding: 0 0 var(--s6); border-bottom: 1px solid var(--rule); }
 .verdict__head { display: flex; align-items: center; gap: var(--s3); flex-wrap: wrap; margin-bottom: var(--s4); }
 .verdict__type { font-size: var(--t-small); font-weight: 600; color: var(--ink); }
 .verdict__actions { display: flex; gap: var(--s2); margin-left: auto; }
@@ -703,7 +701,7 @@ p.stamp { white-space: normal; }
   font-family: var(--font-mono); font-size: var(--t-small);
   color: var(--faint); align-self: center;
 }
-.claim { border-top: 2px solid var(--rule-strong); padding-top: var(--s3); }
+.claim { border-top: 1px solid var(--rule); padding-top: var(--s3); }
 .claim__value {
   font-family: var(--font-mono); font-size: var(--t-title);
   font-variant-numeric: tabular-nums; font-weight: 500; color: var(--ink);
@@ -756,13 +754,7 @@ p.stamp { white-space: normal; }
   line-height: 1.5;
 }
 
-.chart-frame {
-  background: var(--surface);
-  border: 1px solid var(--rule);
-  border-radius: var(--r-md);
-  box-shadow: var(--shadow-card);
-  padding: var(--s5);
-}
+.chart-frame { padding: var(--s5) 0; }
 
 /* Tracé écrit à la main : le graphe est du SVG, stylé ici comme le reste.
  * `var()` dans un attribut de présentation SVG n'est pas honoré partout —
@@ -792,11 +784,11 @@ p.stamp { white-space: normal; }
   margin-top: var(--s5); padding: var(--s3);
   font-family: var(--font-ui); font-size: var(--t-small);
   color: var(--muted);
-  border: 1px solid var(--rule); border-radius: var(--r-sm);
-  background: var(--surface);
-  transition: color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
+  border: 0; border-top: 1px solid var(--rule);
+  background: none;
+  transition: color var(--dur-fast) var(--ease);
 }
-.more:hover { color: var(--ink); border-color: var(--rule-strong); }
+.more:hover { color: var(--ink); }
 .more b { font-family: var(--font-mono); font-weight: 500; color: var(--ink); }
 
 /* ── États ───────────────────────────────────────────────────────────── */
@@ -891,7 +883,7 @@ p.stamp { white-space: normal; }
  * budget, où le rapport à un plafond est réel.
  */
 
-.funnel { border-top: 1px solid var(--rule); }
+.funnel { border-top: 0; }
 
 .funnel__step {
   display: grid;
@@ -961,7 +953,7 @@ p.stamp { white-space: normal; }
 
 /* ── Relevés : couple libellé / valeur, alignés à la ligne ────────────── */
 
-.kv { border-top: 1px solid var(--rule); }
+.kv { border-top: 0; }
 .kv__row {
   display: flex; align-items: baseline; gap: var(--s3);
   padding: var(--s3) 0; border-bottom: 1px solid var(--rule);
@@ -1136,21 +1128,18 @@ p.stamp { white-space: normal; }
 .tiles {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(19rem, 1fr));
-  gap: var(--s4);
+  gap: var(--s6) var(--s6);
 }
+/* Une entrée d'index, pas une boîte. Un filet en tête tient la colonne — c'est
+ * la grille d'un sommaire de presse, celle de ProPublica comme celle de Fast
+ * Company : un trait fin, puis le surtitre, le titre, le chapô. */
 .tile {
   display: flex; flex-direction: column;
-  padding: var(--s5);
-  background: var(--surface);
-  border: 1px solid var(--rule);
-  border-radius: var(--r-md);
-  box-shadow: var(--shadow-card);
+  padding: var(--s4) 0 0;
+  border-top: 1px solid var(--rule-strong);
   text-align: left;
   min-width: 0;
-  transition: box-shadow var(--dur-base) var(--ease),
-              border-color var(--dur-base) var(--ease);
 }
-.tile:hover { box-shadow: var(--shadow-lift); border-color: var(--rule-strong); }
 .tile:hover .card-title { color: var(--accent); }
 .tile__foot {
   margin-top: auto; padding-top: var(--s4);
@@ -1159,14 +1148,8 @@ p.stamp { white-space: normal; }
 
 /* Colonne d'appoint : une carte, comme le reste de la page — un bloc qui
  * flottait sur le fond à côté de surfaces posées se lisait comme un reliquat. */
-.aside-block {
-  background: var(--surface);
-  border: 1px solid var(--rule);
-  border-radius: var(--r-md);
-  box-shadow: var(--shadow-card);
-  padding: var(--s5);
-}
-.aside-block + .aside-block { margin-top: var(--s4); }
+.aside-block { padding: 0; }
+.aside-block + .aside-block { margin-top: var(--s7); }
 .aside-list { margin-top: var(--s3); }
 .aside-item {
   display: block; width: 100%; text-align: left;
@@ -1276,15 +1259,21 @@ p.stamp { white-space: normal; }
  * MIT Technology Review ouvre ses rubriques. Le trait souligné en dessous
  * fermait la section au moment de l'annoncer, et se confondait avec les filets
  * de séparation qui suivaient. */
+/* Une section s'annonce par un libellé et un filet SOUS lui, pas par une barre
+ * de 3 px au-dessus. La barre était empruntée à MIT Technology Review, où elle
+ * ouvre une rubrique tous les deux écrans ; répétée quatre fois par page, elle
+ * hachait la lecture — et en thème sombre, quatre barres blanches en travers
+ * de l'écran. */
 .band {
   display: flex; align-items: baseline; gap: var(--s3); flex-wrap: wrap;
-  border-top: 3px solid var(--th, var(--ink));
-  padding-top: var(--s3); margin: var(--s7) 0 var(--s4);
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: var(--s2); margin: var(--s8) 0 var(--s5);
 }
 .band h2 {
-  font-family: var(--font-display); font-size: var(--t-small);
-  font-weight: 700; margin: 0;
-  letter-spacing: 0.07em; text-transform: uppercase;
+  font-family: var(--font-label); font-size: var(--t-micro);
+  font-weight: 600; margin: 0;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--faint);
 }
 .band p { font-size: var(--t-small); color: var(--muted); margin: 0; }
 
@@ -1337,15 +1326,11 @@ p.stamp { white-space: normal; }
 .story {
   display: grid;
   grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.8fr) minmax(0, 1.05fr);
-  gap: var(--s5);
-  padding: var(--s5);
-  background: var(--surface);
-  border: 1px solid var(--rule);
-  border-radius: var(--r-md);
-  box-shadow: var(--shadow-card);
+  gap: var(--s6);
+  padding: var(--s5) 0;
   align-items: start;
 }
-.story + .story { margin-top: var(--s4); }
+.story + .story { border-top: 1px solid var(--rule); }
 
 /* La une : même bande, plus d'air, et le titre au corps d'affichage. Une
  * hiérarchie se fait par la taille et le blanc, pas par un cadre de couleur. */
@@ -1449,8 +1434,6 @@ a:hover > .story__title, a:hover .story__title { color: var(--accent); }
  * « tenu » ou « rompu » resterait une opinion. */
 .engagement__mesure {
   margin: var(--s3) 0 0;
-  padding-left: var(--s3);
-  border-left: 2px solid var(--accent-line);
   font-size: var(--t-small);
   color: var(--ink-soft);
   max-width: var(--measure-read);
@@ -1471,10 +1454,7 @@ a:hover > .story__title, a:hover .story__title { color: var(--accent); }
   font-size: var(--t-read); line-height: var(--lh-read);
   color: var(--ink); margin: 0;
 }
-.revue__sources {
-  margin-top: var(--s4); padding-left: var(--s4);
-  border-left: 2px solid var(--rule);
-}
+.revue__sources { margin-top: var(--s4); padding-left: var(--s5); }
 .revue__sources .position { border: 0; padding: var(--s3) 0 0; }
 
 /* ── En-tête de fiche : le portrait, puis l'identité ─────────────────────── */
@@ -1490,10 +1470,12 @@ a:hover > .story__title, a:hover .story__title { color: var(--accent); }
 
 /* Une réserve de lecture : ce que le corpus ne permet PAS de conclure. Écrite
  * en clair, à côté des chiffres qu'elle nuance, et pas en note de bas de page. */
+/* Une réserve se lit, elle ne se signale pas par un trait de couleur : le fond
+ * la met à part sans ajouter un sixième filet à la page. */
 .caveat {
   margin: var(--s5) 0 0;
-  padding-left: var(--s3);
-  border-left: 2px solid var(--pending);
+  padding: var(--s3) var(--s4);
+  background: var(--surface-sunk);
   font-size: var(--t-small); color: var(--muted);
   max-width: var(--measure-ui);
 }
@@ -1573,7 +1555,7 @@ a.statbar__item:hover .statbar__n { color: var(--accent); }
 
 /* Micro-étiquette : le métier d'un bloc, au-dessus de son contenu. */
 .overline {
-  font-family: var(--font-mono);
+  font-family: var(--font-label);
   font-size: var(--t-micro);
   letter-spacing: 0.09em;
   text-transform: uppercase;
@@ -1624,8 +1606,8 @@ a.statbar__item:hover .statbar__n { color: var(--accent); }
   padding: var(--s2) var(--s4);
   min-height: 36px;
   border: 1px solid var(--rule-strong);
-  border-radius: var(--r-sm);
-  background: var(--surface);
+  border-radius: var(--r-full);
+  background: transparent;
   color: var(--ink);
   cursor: pointer;
   transition: border-color var(--dur-fast) var(--ease),

@@ -46,15 +46,31 @@ def auto_scope() -> str:
 
 
 async def _analysis_job() -> None:
-    """Passe d'analyse automatique : le corpus avance sans intervention.
+    """L'analyse seule, sur ce qui est déjà en base.
 
-    Toutes les étapes, bornées par le plafond LLM (voir `auto_scope`). Chaque
-    étape est idempotente et reprend où elle s'est arrêtée : une passe qui butte
-    sur le plafond n'est pas perdue, la suivante continue.
+    Séparée de la collecte, et c'est ce qui la rend utile. Enchaînée derrière
+    elle, elle n'arrivait jamais : `collect_x` dure 2 h 20 au rythme du quota X,
+    et toute passe redémarrée repart de la collecte. Résultat mesuré en
+    production : 33 000 publications collectées, 8 400 déclarations extraites,
+    et zéro sujet — la chaîne n'avait jamais dépassé son premier étage.
+
+    Toutes les étapes sont idempotentes et reprennent où elles se sont
+    arrêtées : une passe interrompue n'est pas perdue, la suivante continue.
     """
     from src.pipeline.runner import run_pipeline
+    from src.pipeline.stages import analysis_stages
 
-    await run_pipeline(scope=auto_scope(), trigger="scheduled")
+    await run_pipeline(stages=analysis_stages(), only=True,
+                       scope=auto_scope(), trigger="scheduled")
+
+
+async def _collection_job() -> None:
+    """La collecte seule : lente, bornée par le quota, sans rien derrière."""
+    from src.pipeline.runner import run_pipeline
+    from src.pipeline.stages import COLLECTE
+
+    await run_pipeline(stages=list(COLLECTE), only=True,
+                       scope="free", trigger="scheduled")
 
 
 async def _reap_job() -> None:
@@ -97,13 +113,23 @@ def create_scheduler() -> AsyncIOScheduler:
     # dépasser l'intervalle, et deux extractions concurrentes paieraient deux
     # fois le même texte. `coalesce` : on rattrape une seule fois, pas dix.
     scheduler.add_job(
-        _analysis_job,
+        _collection_job,
         trigger=IntervalTrigger(hours=hours, start_date=_offset(minutes=2)),
+        id="collection",
+        name="Collecte (X et presse)",
+        replace_existing=True, max_instances=1, coalesce=True,
+    )
+
+    # L'analyse tourne PLUS SOUVENT que la collecte, et indépendamment d'elle :
+    # elle travaille sur ce qui est déjà en base, chaque étape par lots bornés.
+    # Une heure suffit à rattraper un arriéré en quelques passes ; l'attacher au
+    # cycle de quatre heures de la collecte le ferait durer quatre fois plus.
+    scheduler.add_job(
+        _analysis_job,
+        trigger=IntervalTrigger(hours=1, start_date=_offset(minutes=4)),
         id="analysis",
-        name=f"Passe complète ({'avec étapes payantes' if scope == 'full' else 'gratuite'})",
-        replace_existing=True,
-        max_instances=1,
-        coalesce=True,
+        name=f"Analyse ({'avec étapes payantes' if scope == 'full' else 'gratuite'})",
+        replace_existing=True, max_instances=1, coalesce=True,
     )
 
     # Faucheur : un run dont le processus a disparu (terminal SSH fermé pendant
@@ -138,8 +164,8 @@ def create_scheduler() -> AsyncIOScheduler:
         )
         logger.info("scheduler.configured", interval_hours=hours, auto_scope=scope,
                     archive_interval_hours=ah,
-                    jobs=["analysis", "reap", "archive_press", "archive_x"])
+                    jobs=["collection", "analysis", "reap", "archive_press", "archive_x"])
     else:
         logger.info("scheduler.configured", interval_hours=hours, auto_scope=scope,
-                    jobs=["analysis", "reap"])
+                    jobs=["collection", "analysis", "reap"])
     return scheduler

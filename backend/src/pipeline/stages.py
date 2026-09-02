@@ -207,6 +207,24 @@ STAGES: tuple[Stage, ...] = (
 
 BY_NAME: dict[str, Stage] = {s.name: s for s in STAGES}
 
+# La collecte tient tout le reste en otage si on l'enchaîne à l'analyse. Mesuré
+# en production : `collect_x` prend 2 h 20 (cadence de politesse imposée par le
+# quota X), et comme le graphe la place en tête, une passe redémarrée — un
+# redéploiement suffit — repart de la collecte et n'atteint jamais le codage,
+# les vecteurs ni les sujets. Trente-trois mille publications collectées, zéro
+# sujet construit : la chaîne tournait sans jamais dépasser son premier étage.
+#
+# Les deux moitiés n'ont ni le même rythme ni la même nature. La collecte est
+# lente et dépend du réseau ; l'analyse est rapide et travaille sur ce qui est
+# DÉJÀ en base. Les séparer permet de faire tourner l'analyse toutes les heures
+# sur le corpus existant, sans attendre la collecte suivante.
+COLLECTE = ("collect_x", "collect_press")
+
+
+def analysis_stages() -> list[str]:
+    """Toutes les étapes sauf la collecte, dans l'ordre du graphe."""
+    return [s.name for s in STAGES if s.name not in COLLECTE]
+
 
 def resolve_order(names: list[str] | None = None) -> list[Stage]:
     """Tri topologique des étapes demandées, dépendances incluses.

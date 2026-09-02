@@ -26,6 +26,10 @@ def _entete(r: Review, sujet: Subject | None) -> dict:
         "id": r.id, "cadence": r.cadence, "period": r.period,
         "subject_id": r.subject_id,
         "subject_label": (sujet.label if sujet else None),
+        # Le statut accompagne le libellé : un sujet resté en « auto » porte les
+        # mots-clés de son regroupement, et la page doit pouvoir le signaler
+        # plutôt que de les présenter comme un nom.
+        "subject_status": (sujet.status if sujet else None),
         "theme": (sujet.theme if sujet else None),
         "title": r.title, "status": r.status,
         "n_paragraphes": len(r.body or []),

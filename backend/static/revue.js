@@ -32,7 +32,7 @@ function carte(r) {
   return `<a class="tile" href="revue.html?id=${r.id}">
     ${kicker(r.theme, semaine(r.period))}
     <h2 class="card-title">${escapeHtml(r.title || "sans titre")}</h2>
-    <p class="dek">${escapeHtml(r.subject_label || "sujet sans nom")}</p>
+    <p class="dek">${nomSujet({label: r.subject_label || "sujet sans nom", status: r.subject_status})}</p>
     <p class="tile__foot">
       <span class="stamp">${fmtNum(r.n_paragraphes)} paragraphes ·
         ${fmtNum(r.n_sources)} déclarations citées</span>
@@ -50,11 +50,9 @@ function renderSommaire(d) {
 
   host.innerHTML = `
     <p class="dek lede-first">
-      Chaque semaine close, l’observatoire écrit ce qui s’est dit sur les sujets où
-      plusieurs voix se sont exprimées. <strong>Chaque paragraphe cite les déclarations
-      qu’il rapporte</strong>&nbsp;: une phrase sans source n’est pas publiée, elle est
-      retirée avant l’enregistrement. Les revues restent des brouillons tant qu’un
-      humain ne les a pas relues.
+      Chaque semaine close, ce qui s’est dit sujet par sujet.
+      <strong>Chaque paragraphe cite les déclarations qu’il rapporte</strong>&nbsp;;
+      les revues restent des brouillons tant qu’un humain ne les a pas relues.
     </p>
 
     <div class="filters mt-6" role="group" aria-label="Semaine">
