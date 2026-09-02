@@ -58,9 +58,15 @@ const THEME_FAMILY = {
 const themeVar = (t) => `var(--th-${THEME_FAMILY[t] || "eco"})`;
 
 // Surtitre : la famille colorée, puis le libellé du thème.
-const kicker = (theme, extra = "") =>
-  `<p class="kicker" style="--th:${themeVar(theme)}">${escapeHtml(themeLabel(theme) || "sans thème")}${
+// « SANS THÈME » en surtitre se lit comme un défaut du site alors que c'est une
+// information sur la déclaration. Quand le thème manque, le surtitre ne porte
+// que le complément — la date, le nombre de voix — et rien d'autre.
+const kicker = (theme, extra = "") => {
+  const nom = themeLabel(theme);
+  if (!nom) return extra ? `<p class="kicker kicker--nu">${extra}</p>` : "";
+  return `<p class="kicker">${escapeHtml(nom)}${
     extra ? `<span class="kicker__sep">${extra}</span>` : ""}</p>`;
+};
 
 // Durée en clair. « 638 j » demande un calcul mental ; « 21 mois » se lit.
 function duree(days) {

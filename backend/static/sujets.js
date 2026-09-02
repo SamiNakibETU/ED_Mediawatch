@@ -9,7 +9,7 @@
 // kicker, duree.
 
 const SCOPES = [
-  { key: "conf", label: "Exploitables", conf: true },
+  { key: "conf", label: "À plusieurs voix", conf: true },
   { key: "all", label: "Tous les sujets", conf: false },
 ];
 

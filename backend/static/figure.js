@@ -77,7 +77,7 @@ function renderSubjects() {
   $("#subjects").innerHTML = `
     <div class="filters filters--head">
       <button class="filter" data-conf="1" aria-pressed="${state.onlyConf}">
-        Confrontables<span class="count">${conf.length}</span></button>
+        À plusieurs voix<span class="count">${conf.length}</span></button>
       <button class="filter" data-conf="0" aria-pressed="${!state.onlyConf}">
         Tous les sujets<span class="count">${all.length}</span></button>
     </div>
@@ -234,8 +234,8 @@ function render(d) {
         <div class="statbar">
           <span class="statbar__item"><span class="statbar__n">${fmtNum(s.n_claims)}</span> propos consignés</span>
           <span class="statbar__item"><span class="statbar__n statbar__n--accent">${fmtNum(conf)}</span>
-            sujets confrontables</span>
-          <span class="statbar__item"><span class="statbar__n">${months}</span> mois de recul</span>
+            sujets à plusieurs voix</span>
+          <span class="statbar__item"><span class="statbar__n">${months}</span> mois de suivi</span>
           <span class="statbar__item">${escapeHtml(periode(s.first_seen, s.last_seen))}</span>
         </div>
       </div>

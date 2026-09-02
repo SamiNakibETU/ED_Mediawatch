@@ -47,9 +47,9 @@ function renderFonds(f, nSubjects, nPending) {
     <span class="statbar__item"><span class="statbar__n">${fmtNum(n("collecte"))}</span>
       publications conservées</span>
     <span class="statbar__item"><span class="statbar__n statbar__n--accent">${fmtNum(attribues)}</span>
-      propos attribués <span class="statbar__of">/ ${fmtNum(n("extraction"))} extraits</span></span>
+      déclarations avec un auteur <span class="statbar__of">/ ${fmtNum(n("extraction"))} au total</span></span>
     <span class="statbar__item"><span class="statbar__n">${fmtNum(nSubjects)}</span>
-      sujets exploitables</span>
+      sujets à plusieurs voix</span>
     <a class="statbar__item" href="contradictions.html">
       <span class="statbar__n">${fmtNum(nPending)}</span> à relire ${ico("source")}</a>
   </div>`;
@@ -96,8 +96,7 @@ function renderPending(items) {
           <span class="ranked__n">${i + 1}</span>
           <span>
             <span class="ranked__t">${escapeHtml(e.claim_a?.speaker_name || "locuteur non établi")}</span>
-            <span class="ranked__m"><span class="nowrap">${escapeHtml(relTime(e.detected_at))}</span>
-              · <span class="nowrap">score ${e.score}</span></span>
+            <span class="ranked__m"><span class="nowrap">${escapeHtml(relTime(e.detected_at))}</span></span>
           </span>
         </a>`).join("")}</div>
        <p class="mt-4"><a class="btn btn--sm" href="contradictions.html">
@@ -159,7 +158,7 @@ async function load() {
       $("#une").innerHTML = story(items[0], true);
       $("#grid").innerHTML = items.slice(1, 9).map((s) => story(s)).join("");
     }
-    $("#stats").innerHTML = `<strong>${fmtNum(total)}</strong> sujets exploitables`;
+    $("#stats").innerHTML = `<strong>${fmtNum(total)}</strong> sujets à plusieurs voix`;
   } catch (e) {
     $("#une").innerHTML =
       `<p class="state state--error">Les sujets n’ont pas pu être chargés (${escapeHtml(e.message)}).</p>`;

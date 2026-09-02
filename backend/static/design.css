@@ -34,38 +34,33 @@
 /* ── Tokens ──────────────────────────────────────────────────────────── */
 
 :root {
-  /* Charte Terra Nova, relevée sur tnova.fr : carmin #A41B30 en surtitre et
-   * signature, prune #53414A pour les aplats, encre #333. Ce produit paraît
-   * sous ce nom ; il ne peut pas avoir sa propre couleur. */
-  /* Un seul plan : le fond de page EST la surface de lecture. Le blanc cassé
-   * plutôt que le blanc pur — sur un écran, #FFF vibre. `--surface` existe
-   * encore pour les rares creux (bandeau, panneau de lecture) ; ce n'est plus
-   * un second plan sur lequel poser des cartes. */
-  --paper:        #FBFAF9;
-  --surface:      #FFFFFF;
-  --surface-sunk: #F1EFED;   /* survol, champ, piste de jauge */
-  --ink:          #17161A;
-  --ink-soft:     #333333;
-  --muted:        #53414A;   /* prune Terra Nova */
-  /* Assombri depuis #8A8189 : à 11 px sur le fond, l'ancien ton passait sous
-   * le seuil de contraste et les micro-libellés devenaient une texture. */
-  --faint:        #6E656C;
+  /* Palette relevée sur La Grande Conversation, la revue de Terra Nova : un
+   * noir presque pur sur une crème chaude, et un orange en signature. Le carmin
+   * qu'on employait vient du site institutionnel ; la revue, elle, est en noir
+   * et orange — le registre d'un magazine plutôt que d'une plaquette.
+   *
+   * NOIR ET BLANC, PUIS UNE TOUCHE. L'accent ne sert qu'à trois choses : la
+   * rubrique où l'on se trouve, un lien de contenu, le point qui bat quand la
+   * collecte tourne. Partout ailleurs, du gris. Une interface qui emploie sa
+   * couleur d'accent pour décorer n'a plus de moyen de désigner. */
+  --paper:        #F4EEE9;
+  --surface:      #FBF8F5;
+  --surface-sunk: #E8DFD8;
+  --ink:          #060606;
+  --ink-soft:     #2E2A28;
+  --muted:        #6B625C;
+  --faint:        #8C8177;
 
-  /* Le filet se voit à peine, et c'est voulu : il sépare deux lignes d'une
-   * liste, il n'encadre rien. Un trait qu'on remarque est un trait qui prend
-   * la place du contenu. */
-  --rule:         #ECE9E5;
-  --rule-strong:  #D8D4CF;
+  /* Le filet se voit à peine : il sépare deux lignes d'une liste, il n'encadre
+   * rien. Un trait qu'on remarque prend la place du contenu. */
+  --rule:         #E2D8CF;
+  --rule-strong:  #CBBEB3;
 
-  /* Accent unique : le carmin. Pour ce qui EST de l'accent — surtitre, lien
-   * actif, appel à l'action — jamais pour décorer une surface. */
-  --accent:       #A41B30;
-  --accent-hot:   #C42132;
-  --accent-soft:  #FBF0F2;
-  --accent-line:  #E7CDD3;
-  /* Le rouge du direct, distinct du carmin de marque : un point qui bat ne dit
-   * pas la même chose qu'un titre de rubrique. */
-  --live:         #C42132;
+  --accent:       #FF6437;
+  --accent-hot:   #E5511F;
+  --accent-soft:  #FDE8E0;
+  --accent-line:  #F5C9B8;
+  --live:         #FF6437;
 
   /* Sémantique — statut, pas décoration. */
   --ok:      #2F6B45;
@@ -85,16 +80,12 @@
   /* Familles thématiques : déclinées de la charte, pas d'un nuancier arbitraire.
    * Six familles et non quinze couleurs — un arc-en-ciel ne se mémorise pas ;
    * six familles disent qu'un locuteur ne parle que de sécurité. */
-  /* Six teintes réparties sur le cercle, à chroma et clarté voisins : elles se
-   * distinguent l'une de l'autre sans qu'aucune ne crie. La sécurité n'est plus
-   * au carmin exact de la marque — un carré qui a la couleur d'un lien se lit
-   * comme un lien. */
-  --th-eco:    #4A5480;   /* économie, pouvoir d'achat */
-  --th-secu:   #B4442A;   /* immigration, sécurité, justice */
-  --th-intl:   #24697A;   /* international */
-  --th-social: #8A6A1F;   /* social, santé, logement, éducation */
-  --th-envt:   #2F6B45;   /* écologie, énergie, agriculture */
-  --th-inst:   #7A4A6B;   /* institutions, culture et identité */
+  /* Elles ne sont plus six couleurs. Un carré teinté devant un libellé qui dit
+   * déjà « ÉCONOMIE » n'apprend rien, et six teintes dans une page qui n'en veut
+   * qu'une sont six occasions de ne plus savoir ce que l'accent désigne. Une
+   * seule valeur de gris : le carré ouvre un surtitre, il ne code plus rien. */
+  --th-eco: #8C8177; --th-secu: #8C8177; --th-intl: #8C8177;
+  --th-social: #8C8177; --th-envt: #8C8177; --th-inst: #8C8177;
 
   /* Échelle typographique — quarte (1.333), pas de valeur hors échelle. Les
    * deux tailles d'affichage sont fluides : un titre reste un titre du
@@ -171,28 +162,28 @@
 }
 
 :root[data-theme="dark"] {
-  --paper:        #131216;
-  --surface:      #1A181D;
-  --surface-sunk: #221F26;
-  --ink:          #F4F1F3;
-  --ink-soft:     #D6CFD4;
-  --muted:        #A99EA6;
-  --faint:        #857B83;
-  --rule:         #2A272E;
-  --rule-strong:  #3E3944;
+  --paper:        #121110;
+  --surface:      #191716;
+  --surface-sunk: #221F1D;
+  --ink:          #F5F0EB;
+  --ink-soft:     #DCD5CE;
+  --muted:        #A79D95;
+  --faint:        #857C75;
+  --rule:         #2B2724;
+  --rule-strong:  #3D3833;
 
-  --accent:       #F1566F;
-  --accent-hot:   #FF6B87;
-  --accent-soft:  #2A1620;
-  --accent-line:  #5A2F3C;
-  --live:         #FF5A6E;
+  --accent:       #FF7A52;
+  --accent-hot:   #FF9370;
+  --accent-soft:  #2A1710;
+  --accent-line:  #5A3324;
+  --live:         #FF7A52;
 
   --ok:      #6FA985;
   --pending: #C9A253;
   --alert:   #F1566F;
 
-  --th-eco: #9AA6D8; --th-secu: #E8836A; --th-intl: #6FB2C6;
-  --th-social: #D4B268; --th-envt: #7FBF9C; --th-inst: #C79BBC;
+  --th-eco: #857C75; --th-secu: #857C75; --th-intl: #857C75;
+  --th-social: #857C75; --th-envt: #857C75; --th-inst: #857C75;
 
   --shadow-card: none;
   --shadow-lift: none;
@@ -292,15 +283,18 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 /* Un titre de publication se voit. Il était à la taille d'un libellé de
  * navigation : à côté de « Sujets » et « Archive », rien ne disait qu'on
  * lisait un journal plutôt qu'un tableau de bord. */
+/* Le nom du site, réduit à ce qu'il est : une mention en haut à gauche. Il
+ * était composé en sérif d'affichage à 28 px — le logotype d'un journal, alors
+ * que la page est un outil qu'on consulte. Cursor et OpenAI posent leur nom en
+ * petit et n'y reviennent plus ; la première ligne du regard appartient au
+ * contenu. */
 .wordmark {
-  font-family: var(--font-display);
-  font-size: clamp(1.375rem, 2.2vw, 1.75rem);
-  font-weight: 800;
-  letter-spacing: -0.035em;
-  line-height: 1;
-  white-space: nowrap;
+  font-family: var(--font-label);
+  font-size: var(--t-small); font-weight: 600;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  line-height: 1; white-space: nowrap; color: var(--ink);
 }
-.wordmark span { color: var(--muted); font-weight: 500; }
+.wordmark span { color: var(--faint); font-weight: 400; }
 
 /* L'accroche est une phrase, pas une étiquette : en capitales monospacées elle
  * se lisait comme un code de rubrique. */
@@ -520,7 +514,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   font-family: var(--font-mono); font-size: var(--t-micro);
   font-variant-numeric: tabular-nums; color: var(--faint);
 }
-.tree .sub { margin-left: var(--s3); padding-left: var(--s2); border-left: 1px solid var(--rule); }
+.tree .sub { margin-left: var(--s4); }
 
 /* ── Registre : les entrées se séparent, elles ne s'encadrent pas ───── */
 
@@ -594,8 +588,8 @@ p.stamp { white-space: normal; }
 
 .quoted {
   margin: var(--s3) 0 0;
-  padding-left: var(--s3);
-  border-left: 1px solid var(--rule-strong);
+  padding-left: var(--s4);
+  border-left: 1px solid var(--rule);
   font-family: var(--font-serif);
   font-size: var(--t-small);
   font-style: italic;
@@ -943,7 +937,9 @@ p.stamp { white-space: normal; }
 /* L'étage qui bloque est le seul fait actionnable de la page : il porte un
  * filet d'encre à gauche. Ceux qui suivent sont en attente, pas en panne —
  * les griser dit qu'il n'y a rien à y chercher pour l'instant. */
-.funnel__step--blocked { border-left: 2px solid var(--alert); padding-left: var(--s3); }
+/* L'étage qui bloque se signale par son texte en couleur d'alerte : un
+ * filet de plus sur le bord n'ajoute aucune information. */
+.funnel__step--blocked .funnel__label { color: var(--alert); }
 .funnel__step--blocked .funnel__ord { color: var(--alert); }
 .funnel__step--waiting { opacity: 0.5; }
 
@@ -1080,13 +1076,19 @@ p.stamp { white-space: normal; }
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--th, var(--accent));
+  color: var(--muted);
 }
+/* Le carré ouvre le surtitre ; il ne code plus un thème — le thème est écrit
+ * juste après. Douze surtitres colorés sur une page font douze accents, donc
+ * aucun. */
 .kicker::before {
-  content: ""; width: 8px; height: 8px; flex: none;
-  background: var(--th, var(--accent));
+  content: ""; width: 6px; height: 6px; flex: none;
+  background: var(--ink);
 }
 .kicker__sep { color: var(--faint); font-weight: 400; letter-spacing: 0.04em; }
+/* Sans thème, pas de carré : le surtitre porte alors la seule mention. */
+.kicker--nu::before { display: none; }
+.kicker--nu { color: var(--faint); }
 
 /* ── Titres ─────────────────────────────────────────────────────────────── */
 
@@ -1254,7 +1256,6 @@ p.stamp { white-space: normal; }
 /* Extrait appelé par un repère de la frise. */
 .peek {
   margin-top: var(--s4); padding: var(--s4);
-  border-left: 2px solid var(--th, var(--accent));
   background: var(--surface);
 }
 .peek[hidden] { display: none; }
@@ -1372,14 +1373,13 @@ p.stamp { white-space: normal; }
 }
 .story--lead .story__aside { padding-left: var(--s6); }
 
-.story__aside {
-  border-left: 1px solid var(--rule);
-  padding-left: var(--s5);
-  align-self: stretch;
-}
+/* La colonne de droite n'a plus de filet : l'espace qui la précède suffit à la
+ * détacher, et un trait vertical de plus par bande faisait six traits sur la
+ * une. */
+.story__aside { padding-left: var(--s5); }
 @media (max-width: 900px) {
   .story, .story--lead { grid-template-columns: 1fr; gap: var(--s4); padding: var(--s5); }
-  .story__aside { border-left: none; padding-left: 0; border-top: 1px solid var(--rule); padding-top: var(--s3); }
+  .story__aside { padding-left: 0; }
   .story--lead .story__aside { padding-left: 0; }
 }
 
