@@ -149,11 +149,21 @@ async function load() {
     renderNow(items);
 
     if (!items.length) {
+      // Une page vide doit dire LEQUEL des deux étages manque : le regroupement
+      // ou le nommage. « Il n'y a rien » et « il y a huit cents groupes qui
+      // attendent un nom » demandent deux gestes différents.
+      const attente = subj.en_attente_de_nom || 0;
       $("#une").innerHTML = `<p class="state">
-        <span class="state__title">Aucun sujet exploitable pour l’instant</span>
-        <span class="state__hint">Un sujet le devient quand deux locuteurs au moins s’y expriment.
-        Le regroupement tourne à chaque passe — voir
-        <a class="source-link" href="atelier.html">l’atelier</a>.</span></p>`;
+        <span class="state__title">${attente
+          ? "Aucun sujet n’a encore de nom"
+          : "Aucun sujet à plusieurs voix pour l’instant"}</span>
+        <span class="state__hint">${attente
+          ? `${fmtNum(attente)} regroupements à plusieurs voix attendent d’être nommés.
+             Le nommage demande un modèle de langue&nbsp;; voir
+             <a class="source-link" href="atelier.html">l’atelier</a> pour savoir où il bloque.`
+          : `Un sujet le devient quand deux locuteurs au moins s’y expriment.
+             Le regroupement tourne à chaque passe — voir
+             <a class="source-link" href="atelier.html">l’atelier</a>.`}</span></p>`;
     } else {
       $("#une").innerHTML = story(items[0], true);
       $("#grid").innerHTML = items.slice(1, 9).map((s) => story(s)).join("");

@@ -70,6 +70,15 @@ async def list_subjects(
     # « 60 sujets » dès qu'il y en a davantage, et le chiffre plafonnerait sans
     # que rien ne le dise.
     total = len(subjects)
+
+    # Combien de regroupements attendent encore un nom. Sans ce compte, une
+    # page vide se lit « il n'y a rien » alors que le corpus en contient huit
+    # cents — c'est le nommage qui est arrêté, pas le regroupement, et les deux
+    # ne se réparent pas au même endroit.
+    en_attente = await db.scalar(
+        select(func.count()).select_from(Subject)
+        .where(Subject.status == "auto", Subject.n_speakers >= 2)) or 0
+
     subjects = subjects[:limit]
 
     # Une frise miniature par sujet : les dates de prise de parole, groupées par
@@ -138,6 +147,7 @@ async def list_subjects(
 
     return {
         "total": total,
+        "en_attente_de_nom": en_attente,
         "themes": themes,
         "items": [
             {
