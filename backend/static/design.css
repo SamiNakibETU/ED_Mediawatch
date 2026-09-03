@@ -1004,6 +1004,7 @@ p.stamp { white-space: normal; }
 .step-chip--failed { color: var(--alert); border-color: color-mix(in oklab, var(--alert) 45%, var(--rule)); }
 .step-chip--budget_exceeded { color: var(--pending); border-color: color-mix(in oklab, var(--pending) 45%, var(--rule)); }
 .step-chip--skipped { color: var(--faint); }
+.step-chip--refused { color: var(--pending); border-color: color-mix(in oklab, var(--pending) 45%, var(--rule)); }
 
 /* Marqueur de rafraîchissement : discret, mais on doit voir que c'est vivant. */
 .live {

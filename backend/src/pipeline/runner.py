@@ -153,15 +153,19 @@ async def run_pipeline(
 
     beat = asyncio.create_task(_beat(run_id))
     try:
-        report, failed, budget_hit = await _run_stages(ordered, run_id)
+        report, failed, budget_hit, refuse = await _run_stages(ordered, run_id)
     finally:
         beat.cancel()
         with contextlib.suppress(asyncio.CancelledError):
             await beat
 
     cost = max(0.0, (await _spent_today()) - cost_before) if scope != "free" else 0.0
+    # « ok » sur une passe où le fournisseur a tout refusé serait le même
+    # mensonge que celui corrigé plus haut : un état qu'on lit comme un
+    # travail terminé.
     overall = ("failed" if failed
                else "budget_exceeded" if budget_hit
+               else "refused" if refuse
                else "ok")
 
     async with factory() as db:
@@ -178,17 +182,20 @@ async def run_pipeline(
             "cost_usd": round(cost, 4), "steps": report}
 
 
-async def _run_stages(ordered: list[Stage], run_id: int) -> tuple[list[dict], set[str], bool]:
-    """Déroule les étapes ; renvoie (rapport, étapes en échec, budget atteint).
+async def _run_stages(
+    ordered: list[Stage], run_id: int,
+) -> tuple[list[dict], set[str], bool, str | None]:
+    """Déroule les étapes ; rend (rapport, échecs, budget atteint, refus).
 
     Extraite de `run_pipeline` pour que le battement de cœur puisse l'encadrer
     dans un `try/finally` : quoi qu'il arrive ici, la tâche de fond s'arrête.
     """
-    from src.services.analysis.llm_usage import BudgetExceeded
+    from src.services.analysis.llm_usage import BudgetExceeded, ProviderRefused
 
     factory = get_session_factory()
     failed: set[str] = set()
     budget_hit = False
+    refus: str | None = None
     report: list[dict] = []
 
     for stage in ordered:
@@ -199,6 +206,8 @@ async def _run_stages(ordered: list[Stage], run_id: int) -> tuple[list[dict], se
             failed.add(stage.name)
         elif budget_hit and stage.cost == PAID:
             outcome = ("skipped", 0.0, None, "budget LLM atteint plus tôt dans ce run")
+        elif refus and stage.cost == PAID:
+            outcome = ("skipped", 0.0, None, refus)
         else:
             t0 = time.monotonic()
             try:
@@ -209,6 +218,17 @@ async def _run_stages(ordered: list[Stage], run_id: int) -> tuple[list[dict], se
                 # gratuites suivantes doivent continuer.
                 budget_hit = True
                 outcome = ("budget_exceeded", time.monotonic() - t0, None, str(exc)[:300])
+            except ProviderRefused as exc:
+                # Pas un échec du code : une ressource extérieure est fermée.
+                # Les étapes PAYANTES suivantes n'ont rien à tenter, mais les
+                # GRATUITES doivent continuer — vectoriser et regrouper ce qui
+                # est déjà en base ne demande aucun modèle. Traité en « failed »,
+                # ce refus emportait toute la chaîne d'aval, y compris ce qui
+                # n'en dépendait que pour la fraîcheur.
+                refus = str(exc)[:300]
+                outcome = ("refused", time.monotonic() - t0, None, refus)
+                logger.warning("pipeline.provider_refused", stage=stage.name,
+                               detail=refus)
             except Exception as exc:  # noqa: BLE001
                 failed.add(stage.name)
                 outcome = ("failed", time.monotonic() - t0, None,
@@ -229,7 +249,7 @@ async def _run_stages(ordered: list[Stage], run_id: int) -> tuple[list[dict], se
         logger.info("pipeline.stage", stage=stage.name, status=status,
                     duration_s=round(duration, 1))
 
-    return report, failed, budget_hit
+    return report, failed, budget_hit, refus
 
 
 async def _embed_refuse() -> str | None:

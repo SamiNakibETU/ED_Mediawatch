@@ -92,6 +92,10 @@ const STATUS_WORD = {
   running: ["pending", "en cours"],
   failed: ["alert", "en échec"],
   budget_exceeded: ["pending", "plafond atteint"],
+  // Le fournisseur a fermé : ce n'est ni un échec du code ni notre plafond,
+  // et ça ne se règle pas ici. Le distinguer évite de chercher la panne du
+  // mauvais côté.
+  refused: ["pending", "fournisseur fermé"],
   interrupted: ["alert", "interrompue"],
 };
 
