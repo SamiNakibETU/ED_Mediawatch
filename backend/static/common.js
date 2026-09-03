@@ -162,17 +162,19 @@ function nomSujet(s) {
 }
 
 
+// Quatre entrées, pas neuf. Le chemin de lecture est unique — aujourd'hui,
+// un sujet, une déclaration, sa source — et tout ce qui sert à FABRIQUER le
+// produit (archive, validation, codage, chiffres, atelier) passe en coulisses.
+// Neuf rubriques de même rang disaient au lecteur qu'il y avait neuf façons
+// d'entrer, donc aucune.
 const PAGES = [
-  ["index.html", "accueil", "L’observatoire", "observatoire"],
+  ["index.html", "accueil", "Aujourd’hui", "observatoire"],
   ["sujets.html", "sujets", "Sujets", "sujets"],
-  ["revue.html", "revue", "Revue", "revue"],
-  ["engagements.html", "engagements", "Engagements", "chiffres"],
   ["figure.html", "figures", "Locuteurs", "locuteurs"],
-  ["compteur.html", "compteur", "Chiffres", "chiffres"],
-  ["archive.html", "archive", "Archive", "archive"],
-  ["contradictions.html", "validation", "Validation", "validation"],
-  ["atelier.html", "atelier", "Atelier", "atelier"],
+  ["atelier.html", "atelier", "Coulisses", "atelier"],
 ];
+// Les pages de coulisses gardent un onglet actif : « Coulisses ».
+const COULISSES = new Set(["archive", "validation", "compteur", "engagements", "revue"]);
 
 
 // Voyant de collecte : un observatoire doit dire s'il regarde encore. Un site
@@ -205,7 +207,7 @@ async function liveIndicator() {
 function mountMasthead() {
   const host = $("#masthead");
   if (!host) return;
-  const current = document.body.dataset.page;
+  const current = COULISSES.has(document.body.dataset.page) ? "atelier" : document.body.dataset.page;
   // Une seule ligne : nom, rubriques, état. L'accroche de page a été retirée —
   // elle répétait en une phrase ce que le titre de la page dit déjà, sur la
   // ligne même où le regard entre.

@@ -1,94 +1,122 @@
-"""Régression du détecteur prise_de_parole / mention (la « confusion de fond »).
+"""Ce qui compte se mesure par locuteur, jamais en brut.
 
-Cas piégeux tirés des invariants documentés dans relevance.py : nom complet
-d'abord, frontière de mot, noms ambigus jamais matchés seuls, direction du verbe.
-On teste contre le **vrai** lexique (data/rn_keywords.json) avec des phrases
-fabriquées — donc le comportement réellement déployé.
+Le produit prenait l'exhaustivité pour la valeur : 8 420 déclarations en
+vitrine, sans qu'aucune vue ne dise ce qui compte. Les signaux étaient en base
+depuis le début — likes, retweets, abonnés, reprise presse, contradiction — et
+personne ne les lisait. La méthode adoptée (CheckThat!) place une étape de
+priorisation entre la détection et le rapprochement ; on l'avait sautée.
+
+La règle qui décide, mesurée sur le corpus : Damien Rieu fait 17 000 likes en
+médiane, Marine Le Pen 2 100, Éric Ciotti 72. Les likes bruts classeraient un
+militant devant la cheffe du parti. Ce qui compte, c'est l'inhabituel POUR CE
+LOCUTEUR.
 """
 
-import pytest
+import math
+from datetime import datetime, timedelta, timezone
 
-from src.services.collection.relevance import build_index
-from src.vocabulary import Nature
-
-
-@pytest.fixture(scope="module")
-def index():
-    # Quelques figures réelles + une figure à patronyme ambigu (collision « Martin »).
-    return build_index(["Jordan Bardella", "Marine Le Pen", "Paul Martin"])
-
-
-# --- Pertinence (concerne le RN / une figure ?) -----------------------------
-
-def test_party_is_relevant(index):
-    assert index.assess("Le RN présente son programme")["relevant"] is True
+from src.services.analysis.relevance import (
+    POIDS,
+    audience_brute,
+    audience_normalisee,
+    portee,
+    pourquoi,
+    recence,
+    score,
+)
 
 
-def test_full_name_is_relevant(index):
-    assert index.assess("Jordan Bardella tient un meeting")["relevant"] is True
+def test_a_modest_tweet_that_is_unusual_for_its_author_beats_a_viral_routine():
+    """Ciotti à 800 likes (médiane 72) est un signal ; Rieu à 17 000 (sa
+    médiane) n'en est pas un. Les likes bruts diraient l'inverse."""
+    ciotti = audience_normalisee(audience_brute(800, 0, 0),
+                                 mediane=audience_brute(72, 0, 0), ecart=0.9)
+    rieu = audience_normalisee(audience_brute(17_000, 0, 0),
+                               mediane=audience_brute(17_458, 0, 0), ecart=0.9)
+    assert ciotti > 1.5
+    assert rieu == 0.0, "la routine d'un compte, même énorme, vaut zéro"
 
 
-def test_unrelated_is_not_relevant(index):
-    v = index.assess("La météo sera belle sur la Bretagne ce week-end")
-    assert v["relevant"] is False
-    assert v["nature"] is None
+def test_audience_is_bounded_so_one_viral_post_cannot_dominate():
+    """Sans borne, un tweet à un million de relais écraserait toute
+    contradiction, toute reprise presse : le score redeviendrait un compteur
+    de likes avec un détour."""
+    z = audience_normalisee(audience_brute(1_800_000, 0, 0),
+                            mediane=audience_brute(2_000, 0, 0), ecart=0.5)
+    assert z == 3.0
 
 
-def test_word_boundary_france_not_ranc(index):
-    # « France » ne doit pas déclencher un patronyme par sous-chaîne.
-    assert index.assess("La France a tranché lors du scrutin")["relevant"] is False
+def test_a_retweet_weighs_two_likes_and_a_quote_three():
+    """Le retweet relaie, la citation prend position : trois gestes, trois
+    intensités. Les additionner à plat effacerait la différence."""
+    assert audience_brute(0, 1, 0) == audience_brute(2, 0, 0)
+    assert audience_brute(0, 0, 1) == audience_brute(3, 0, 0)
 
 
-def test_ambiguous_surname_not_matched_alone(index):
-    # « Martin » (patronyme ambigu) ne matche jamais seul, même si « Paul Martin »
-    # est dans le pool.
-    assert index.assess("Le martin-pêcheur niche au bord de l'eau")["relevant"] is False
+def test_reach_is_logarithmic_and_capped():
+    """Trois millions d'abonnés ne valent pas mille fois trois mille. La portée
+    pèse, elle ne décide pas seule."""
+    assert 0.85 < portee(3_000_000) <= 1.0
+    assert 0.5 < portee(10_000) < 0.6
+    assert portee(None) == 0.0
 
 
-# --- Nature : prise de parole vs mention ------------------------------------
-
-def test_attribution_selon_is_prise_de_parole(index):
-    v = index.assess("Selon Marine Le Pen, l'immigration coûte trop cher")
-    assert v["nature"] == Nature.PRISE_DE_PAROLE
-    assert v["is_statement"] is True
-
-
-def test_subject_directional_verb_is_prise_de_parole(index):
-    # Figure en position sujet juste avant un verbe directionnel.
-    v = index.assess("Le RN dénonce la politique migratoire du gouvernement")
-    assert v["nature"] == Nature.PRISE_DE_PAROLE
+def test_a_detected_contradiction_outweighs_any_single_audience_signal():
+    """Priorité éditoriale : un propos qui en contredit un autre est le
+    matériau même de l'observatoire. Il passe devant un tweet simplement
+    beaucoup relayé."""
+    contredit = score({"contradiction": 1.0, "recence": 1.0})
+    tres_relaye = score({"audience": 2.0, "recence": 1.0})
+    assert contredit > tres_relaye
+    assert POIDS["contradiction"] > POIDS["presse"] > POIDS["audience"]
 
 
-def test_passive_directional_verb_is_mention(index):
-    # Même verbe, mais le RN est l'OBJET (passif) → simple mention.
-    v = index.assess("Le RN est dénoncé par l'ensemble de la majorité")
-    assert v["nature"] == Nature.MENTION
-    assert v["is_statement"] is False
+def test_recency_decays_over_a_month_and_never_goes_negative():
+    now = datetime(2026, 9, 3, tzinfo=timezone.utc)
+    assert recence(now, now) == 1.0
+    assert math.isclose(recence(now - timedelta(days=30), now), math.exp(-1), rel_tol=1e-6)
+    assert recence(None, now) == 0.0
+    assert recence(now + timedelta(days=5), now) == 1.0, "une date future ne remonte pas"
 
 
-def test_strong_verb_near_figure_is_prise_de_parole(index):
-    v = index.assess("Bardella propose une loi sur l'immigration")
-    assert v["nature"] == Nature.PRISE_DE_PAROLE
+def test_the_reasons_are_written_in_plain_french_and_in_order_of_weight():
+    """Le pourquoi est ce que la page affiche. Sans lui le classement est une
+    boîte noire, et un lecteur ne peut pas contester une boîte noire."""
+    raisons = pourquoi({"contradiction": 1.0, "presse": 1.0, "audience": 2.2},
+                       brut_audience=6443, facteur=3.2, confirmee=False)
+    # U+202F : l'espace fine insécable, séparateur de milliers correct en
+    # français — et insécable, pour que « 6 443 » ne se coupe jamais en bout de
+    # ligne dans la page.
+    assert raisons == ["contredit un autre propos", "reprise dans la presse",
+                       "relayée 6 443 fois, 3× sa moyenne"]
+    assert pourquoi({"audience": 0.4}, brut_audience=50, facteur=1.1, confirmee=False) == [], \
+        "une audience de routine ne se mentionne pas"
+    assert "confirmé" in pourquoi({"contradiction": 1.5}, brut_audience=0,
+                                  facteur=0, confirmee=True)[0]
 
 
-def test_interview_marker_is_prise_de_parole(index):
-    v = index.assess("Marine Le Pen, dans un entretien, explique sa position")
-    assert v["nature"] == Nature.PRISE_DE_PAROLE
+# ── Inhabituel n'est pas pertinent ──────────────────────────────────────────
 
 
-def test_mere_coverage_is_mention(index):
-    # Le parti est nommé/couvert, sans parole directe attribuée.
-    v = index.assess("Le RN progresse dans les sondages selon une étude récente")
-    assert v["nature"] == Nature.MENTION
+def test_a_speech_outside_public_policy_is_demoted_whatever_its_audience():
+    """Vu en une : « accueilli mon ami à la mairie de Nice », 16× la moyenne de
+    son auteur. Le codage thématique dit « aucun objet d'action publique » ;
+    ce jugement doit peser plus que l'audience. Un observatoire du discours
+    politique ne met pas l'agenda d'un maire en tête."""
+    from src.services.analysis.relevance import HORS_SUJET_FACTEUR
+
+    signaux = {"audience": 3.0, "portee": 0.8, "recence": 1.0}
+    assert score(signaux, hors_sujet=True) < score(signaux) * 0.5
+    assert HORS_SUJET_FACTEUR < 0.5
 
 
-# --- Attribution des métadonnées --------------------------------------------
+def test_a_tiny_absolute_audience_is_never_unusual():
+    """Un locuteur à 72 de médiane fait « 5× sa moyenne » avec 370 relais, vus
+    par personne. Le z-score mesure l'écart, pas l'ampleur : sous un plancher
+    d'ampleur, il ne dit rien et ne doit rien dire."""
+    from src.services.analysis.relevance import AUDIENCE_PLANCHER
 
-def test_personalities_use_display_name(index):
-    v = index.assess("Selon Marine Le Pen, il faut agir")
-    assert any("Le Pen" in p or "le pen" in p.lower() for p in v["personalities"])
-
-
-def test_keywords_uppercase_sigle(index):
-    v = index.assess("Le RN dénonce cette mesure")
-    assert "RN" in v["keywords"]
+    assert AUDIENCE_PLANCHER >= 300
+    # La fonction de normalisation ne connaît pas le plancher : c'est l'appelant
+    # qui ne la consulte pas en dessous. On garde la constante sous test pour
+    # que baisser le plancher soit un choix et non un accident.

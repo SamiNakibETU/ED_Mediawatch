@@ -1,189 +1,119 @@
-// La une de l'observatoire.
+// Aujourd'hui — ce qui compte, et pourquoi.
 //
-// Ce qui est mis en avant n'est pas « le plus récent » — un observatoire du
-// propos dans la durée qui trierait par date redeviendrait un fil. C'est le
-// sujet le plus EXPLOITABLE : plusieurs voix, sur une longue étendue. C'est là,
-// et seulement là, qu'une confrontation ou un revirement peut exister.
+// Un seul chemin : une déclaration qui compte → son sujet → sa source. La page
+// ne montre ni « le plus récent » (un observatoire du propos dans la durée qui
+// trierait par date redeviendrait un fil) ni « le plus aimé » (les likes bruts
+// classent un militant devant la cheffe du parti). Elle montre l'inhabituel, le
+// repris, le contredit, l'engageant — et le dit, à côté de chaque ligne, pour
+// qu'un lecteur puisse ne pas être d'accord avec le classement.
 //
-// Helpers (common.js) : $, fetchJSON, escapeHtml, fmtNum, asDate, relTime,
-// themeLabel, themeVar, kicker, duree, periode, repartition, ico.
+// Helpers (common.js) : $, fetchJSON, escapeHtml, fmtNum, relTime, exactDate,
+// kicker, duree, periode, repartition, nomSujet, ico.
 
 const lien = (id) => `sujet.html?id=${id}`;
 
-// ── Le fil « en ce moment » ─────────────────────────────────────────────────
-// Ce que l'observatoire suit en ce moment, nommé. Lister ses rubriques n'apprend
-// rien : elles ne changent jamais. Les objets de débat, si.
+// ── Une déclaration qui compte ─────────────────────────────────────────────
+// Le visage, le nom, la date ; le propos dans les mots du locuteur ; puis la
+// raison, en petit et en gris — c'est elle qui justifie la place, et c'est elle
+// qu'on contestera si le classement est faux.
 
-function renderNow(items) {
-  const host = $("#now");
-  if (!items.length) { host.hidden = true; return; }
-  host.hidden = false;
-  host.innerHTML = `<div class="now__inner">
-    <span class="now__label">En ce moment</span>
-    ${items.slice(0, 7).map((s) =>
-      `<a href="${lien(s.id)}" style="--th:${themeVar(s.theme)}">${nomSujet(s)}</a>`).join("")}
-  </div>`;
+function face(d) {
+  const initiales = (d.speaker || "?").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+  const src = d.photo_url || (d.handle ? `https://unavatar.io/x/${d.handle}?fallback=false` : "");
+  const repli = `<span class="face face--txt">${escapeHtml(initiales)}</span>`;
+  return src
+    ? `<img class="face" src="${src}" alt="" loading="lazy" width="28" height="28"
+         onerror="this.outerHTML=this.dataset.fb" data-fb='${repli}' />`
+    : repli;
 }
 
-// ── Le fonds, en chiffres ───────────────────────────────────────────────────
-//
-// Un observatoire qui ne dit pas l'étendue de son corpus demande qu'on le croie
-// sur parole. Mais quatre grosses cartes pour quatre nombres donnent le même
-// poids à des choses qui n'en ont pas : une ligne dense suffit, et se lit d'un
-// seul regard.
-//
-// « Propos attribués » plutôt que « propos extraits » : un propos sans locuteur
-// ne se compare pas — il ne compte donc pas vraiment.
-
-function renderFonds(f, nSubjects, nPending) {
-  // Par CLÉ, jamais par position : l'entonnoir gagne des étages, et un index
-  // figé afficherait le chiffre d'à côté sans que rien ne le signale.
-  const etage = (cle) => (f?.steps || []).find((s) => s.key === cle) || {};
-  const n = (cle) => etage(cle).n ?? 0;
-  const m = (etage("extraction").detail || "").match(/^(\d+)/);
-  const attribues = m ? +m[1] : 0;
-
-  $("#fonds").innerHTML = `<div class="statbar">
-    <span class="statbar__item"><span class="statbar__n">${fmtNum(n("collecte"))}</span>
-      publications conservées</span>
-    <span class="statbar__item"><span class="statbar__n statbar__n--accent">${fmtNum(attribues)}</span>
-      déclarations avec un auteur <span class="statbar__of">/ ${fmtNum(n("extraction"))} au total</span></span>
-    <span class="statbar__item"><span class="statbar__n">${fmtNum(nSubjects)}</span>
-      sujets à plusieurs voix</span>
-    <a class="statbar__item" href="contradictions.html">
-      <span class="statbar__n">${fmtNum(nPending)}</span> à relire ${ico("source")}</a>
-  </div>`;
-}
-
-// ── Une bande par sujet ─────────────────────────────────────────────────────
-// Titre à gauche, forme au centre, dernier état à droite : la structure d'une
-// une de presse, transposée à un objet qui n'a pas d'image mais qui a une forme.
-
-function story(s, big = false) {
-  const l = s.latest;
-  return `<article class="story${big ? " story--lead" : ""}">
-    <div>
-      <a href="${lien(s.id)}">
-        ${kicker(s.theme, `${s.n_speakers} voix · ${duree(s.span_days)}`)}
-        <h${big ? 1 : 2} class="${big ? "hero-title" : "story__title"}">${nomSujet(s)}</h${big ? 1 : 2}>
-      </a>
-      <p class="dek">${fmtNum(s.n_claims)} prises de position, ${periode(s.first_seen, s.last_seen)}.${
-        big ? " C’est le sujet où le corpus permet le mieux de comparer : le plus de voix, sur la plus longue durée." : ""}</p>
-      <p class="mt-4">
-        <a class="btn btn--sm" href="${lien(s.id)}">Voir qui a dit quoi ${ico("source")}</a></p>
-    </div>
-    <div>
-      <p class="overline">${ico("locuteurs")} Qui parle</p>
-      ${repartition(s.frise, s.n_claims)}
-      <p class="stamp mt-4">${escapeHtml(periode(s.first_seen, s.last_seen))}</p>
-    </div>
-    <div class="story__aside">
-      ${l ? `<p class="overline">${ico("temps")} Dernier propos</p>
-        <p class="stamp"><span class="latest__when">${escapeHtml(relTime(l.published_at))}</span>
-          · <span class="nowrap">${escapeHtml(l.speaker || "locuteur non établi")}</span></p>
-        <p class="latest__q">« ${escapeHtml((l.text || "").slice(0, 190))} »</p>`
-        : '<p class="stamp">Aucun propos daté.</p>'}
-    </div>
+function declaration(d) {
+  const sujet = d.subject_id
+    ? `<a class="decl__sujet" href="${lien(d.subject_id)}">${nomSujet({ label: d.subject_label, status: d.subject_status })} ${ico("source")}</a>`
+    : "";
+  return `<article class="decl">
+    <p class="entry__head">
+      ${face(d)}
+      <span class="speaker">${escapeHtml(d.speaker)}</span>
+      ${d.party ? `<span class="tag">${escapeHtml(d.party)}</span>` : ""}
+      <span class="spacer"></span>
+      <span class="stamp">${escapeHtml(exactDate(d.published_at))}</span>
+    </p>
+    <p class="decl__texte">« ${escapeHtml(d.verbatim || d.text || "")} »</p>
+    <p class="decl__pourquoi">${(d.why || []).map(escapeHtml).join(" · ") || "&nbsp;"}</p>
+    <p class="entry__foot">
+      ${sujet}
+      <span class="spacer"></span>
+      ${d.url ? `<a class="source-link" href="${escapeHtml(d.url)}" target="_blank"
+          rel="noopener">vérifier la source ${ico("source")}</a>` : ""}
+    </p>
   </article>`;
 }
 
-// ── Colonne « à relire » ────────────────────────────────────────────────────
-
-function renderPending(items) {
-  $("#pending").innerHTML = items.length
-    ? `<div class="ranked mt-4">${items.slice(0, 5).map((e, i) => `
-        <a class="ranked__item" href="contradictions.html">
-          <span class="ranked__n">${i + 1}</span>
-          <span>
-            <span class="ranked__t">${escapeHtml(e.claim_a?.speaker_name || "locuteur non établi")}</span>
-            <span class="ranked__m"><span class="nowrap">${escapeHtml(relTime(e.detected_at))}</span></span>
-          </span>
-        </a>`).join("")}</div>
-       <p class="mt-4"><a class="btn btn--sm" href="contradictions.html">
-         Tout relire ${ico("source")}</a></p>`
-    : '<p class="state state--inline">Aucun rapprochement en attente.</p>';
+function renderAujourdhui(d) {
+  const items = d.items || [];
+  if (!items.length) {
+    $("#aujourdhui").innerHTML = `<p class="state">
+      <span class="state__title">Rien à signaler sur les ${d.jours} derniers jours</span>
+      <span class="state__hint">Le classement se recalcule à chaque passe — voir
+      <a class="source-link" href="atelier.html">les coulisses</a>.</span></p>`;
+    return;
+  }
+  $("#aujourdhui").innerHTML = items.map(declaration).join("");
 }
 
 // ── La revue de la semaine ──────────────────────────────────────────────────
-//
-// Une base bien tenue ne fait pas une lecture. La revue est l'angle que
-// l'observatoire propose : ce qui s'est dit, sujet par sujet, sur la semaine
-// close — et chaque phrase y cite les déclarations qu'elle rapporte.
 
 function renderRevue(items) {
   const host = $("#revue");
   if (!items.length) { host.hidden = true; return; }
   host.hidden = false;
-  const quand = items[0].period;
   host.innerHTML = `
-    <div class="band"><h2>La revue</h2><span class="spacer"></span>
-      <p>Ce qui s’est dit sur chaque sujet, la semaine close.</p></div>
+    <div class="band"><h2>La revue de la semaine</h2><span class="spacer"></span>
+      <p>Sujet par sujet, chaque paragraphe cite ce qu’il rapporte.</p></div>
     <div class="tiles">${items.slice(0, 3).map((r) => `
       <a class="tile" href="revue.html?id=${r.id}">
         ${kicker(r.theme, r.status === "brouillon" ? "brouillon" : "relue")}
         <h3 class="card-title">${escapeHtml(r.title || "sans titre")}</h3>
-        <p class="dek">${escapeHtml(r.subject_label || "")}</p>
+        <p class="dek">${nomSujet({ label: r.subject_label || "", status: r.subject_status })}</p>
         <p class="tile__foot"><span class="stamp">${fmtNum(r.n_sources)} déclarations citées</span></p>
       </a>`).join("")}</div>
     <p class="mt-4"><a class="btn btn--sm" href="revue.html">Toutes les revues ${ico("source")}</a></p>`;
 }
 
-function renderThemes(themes) {
-  $("#themes").innerHTML = Object.entries(themes || {})
-    .sort((a, b) => b[1] - a[1]).slice(0, 12)
-    .map(([t, n]) => `<a class="filter" href="sujets.html?theme=${encodeURIComponent(t)}"
-        style="--th:${themeVar(t)}">${escapeHtml(themeLabel(t))}<span class="count">${n}</span></a>`).join("");
+// ── Les sujets qui bougent ──────────────────────────────────────────────────
+// Une tuile par sujet : le surtitre, le titre, la répartition de la parole en
+// mots, et le dernier propos. Classés par le score du sujet, pas par sa taille.
+
+function tuile(s) {
+  const l = s.latest;
+  return `<a class="tile" href="${lien(s.id)}">
+    ${kicker(s.theme, `${s.n_speakers} voix · ${duree(s.span_days)}`)}
+    <h3 class="card-title">${nomSujet(s)}</h3>
+    ${repartition(s.frise, s.n_claims)}
+    ${l ? `<p class="stamp mt-3">${escapeHtml(relTime(l.published_at))} · ${escapeHtml(l.speaker || "auteur inconnu")}</p>
+           <p class="latest__q">« ${escapeHtml((l.text || "").slice(0, 160))} »</p>` : ""}
+  </a>`;
 }
 
 // ── Chargement ──────────────────────────────────────────────────────────────
 
 async function load() {
-  let items = [];
-  // Le nombre annoncé est celui du fonds, pas celui de la page chargée.
-  let total = 0;
-  try {
-    const subj = await fetchJSON("/subjects?limit=25&confrontable=true");
-    items = subj.items || [];
-    total = subj.total ?? items.length;
-    renderThemes(subj.themes);
-    renderNow(items);
-
-    if (!items.length) {
-      // Une page vide doit dire LEQUEL des deux étages manque : le regroupement
-      // ou le nommage. « Il n'y a rien » et « il y a huit cents groupes qui
-      // attendent un nom » demandent deux gestes différents.
-      const attente = subj.en_attente_de_nom || 0;
-      $("#une").innerHTML = `<p class="state">
-        <span class="state__title">${attente
-          ? "Aucun sujet n’a encore de nom"
-          : "Aucun sujet à plusieurs voix pour l’instant"}</span>
-        <span class="state__hint">${attente
-          ? `${fmtNum(attente)} regroupements à plusieurs voix attendent d’être nommés.
-             Le nommage demande un modèle de langue&nbsp;; voir
-             <a class="source-link" href="atelier.html">l’atelier</a> pour savoir où il bloque.`
-          : `Un sujet le devient quand deux locuteurs au moins s’y expriment.
-             Le regroupement tourne à chaque passe — voir
-             <a class="source-link" href="atelier.html">l’atelier</a>.`}</span></p>`;
-    } else {
-      $("#une").innerHTML = story(items[0], true);
-      $("#grid").innerHTML = items.slice(1, 9).map((s) => story(s)).join("");
-    }
-    $("#stats").innerHTML = `<strong>${fmtNum(total)}</strong> sujets à plusieurs voix`;
-  } catch (e) {
-    $("#une").innerHTML =
-      `<p class="state state--error">Les sujets n’ont pas pu être chargés (${escapeHtml(e.message)}).</p>`;
-  }
-
-  // Le bento a besoin de deux sources ; ni l'une ni l'autre ne doit empêcher la
-  // une de s'afficher.
-  const [funnel, pending, revues] = await Promise.all([
-    fetchJSON("/pipeline/funnel").catch(() => null),
-    fetchJSON("/contradictions?limit=6").catch(() => null),
+  const [decl, subj, revues] = await Promise.all([
+    fetchJSON("/declarations?jours=7&limit=10").catch((e) => ({ items: [], err: e })),
+    fetchJSON("/subjects?limit=9&confrontable=true").catch(() => ({ items: [] })),
     fetchJSON("/reviews?limit=3").catch(() => null),
   ]);
-  renderFonds(funnel, total, pending?.total ?? 0);
-  renderPending(pending?.items || []);
+  if (decl.err) {
+    $("#aujourdhui").innerHTML =
+      `<p class="state state--error">Le classement n’a pas pu être chargé (${escapeHtml(decl.err.message)}).</p>`;
+  } else {
+    renderAujourdhui(decl);
+  }
   renderRevue(revues?.items || []);
+  $("#grid").innerHTML = (subj.items || []).map(tuile).join("")
+    || `<p class="state">Aucun sujet nommé à plusieurs voix pour l’instant.</p>`;
+  $("#stats").innerHTML = `<strong>${fmtNum(subj.total ?? 0)}</strong> sujets à plusieurs voix`;
 }
 
 load();

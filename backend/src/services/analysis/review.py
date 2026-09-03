@@ -154,6 +154,7 @@ async def build_reviews(*, limit: int = 6, semaines: int = 1) -> dict:
             candidats = list((await db.execute(
                 select(Subject.id).where(Subject.id.in_(assez), Subject.status != "auto",
                                          Subject.status != "incoherent")
+                .order_by(Subject.relevance.desc().nullslast())
                 .limit(limit)
             )).scalars().all()) if assez else []
             if not candidats:

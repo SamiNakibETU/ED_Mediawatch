@@ -28,6 +28,7 @@ from src.routers import (
     pipeline_status,
     posts,
     coding,
+    declarations,
     pledges,
     referentiel,
     reviews,
@@ -91,6 +92,7 @@ app.include_router(subjects.router)
 app.include_router(reviews.router)
 app.include_router(pledges.router)
 app.include_router(coding.router)
+app.include_router(declarations.router)
 app.include_router(figure.router)
 app.include_router(pipeline_status.router)
 app.include_router(llm_costs.router)

@@ -1450,6 +1450,36 @@ a:hover > .story__title, a:hover .story__title { color: var(--accent); }
 }
 .engagement__mesure .overline { display: inline; margin: 0 var(--s2) 0 0; }
 
+/* La première section d'une page n'a pas à s'écarter du bandeau : l'écart de
+ * section (s8) est fait pour séparer deux blocs, pas pour ouvrir la page. */
+.page > .band:first-child { margin-top: var(--s5); }
+
+/* ── Une déclaration qui compte ────────────────────────────────────────────
+ *
+ * La ligne de la une. Le propos dans les mots du locuteur, au sérif de
+ * lecture ; dessous, en petit et en gris, la raison de sa place. C'est cette
+ * raison qui fait la différence entre un classement et une boîte noire : le
+ * lecteur peut la lire, et la contester. */
+
+.decl { padding: var(--s5) 0; border-bottom: 1px solid var(--rule); max-width: var(--measure-read); }
+.decl:first-child { padding-top: var(--s3); }
+.decl__texte {
+  font-family: var(--font-serif); font-size: var(--t-read); line-height: var(--lh-read);
+  color: var(--ink); margin: var(--s3) 0 0;
+  overflow-wrap: anywhere;
+}
+.decl__pourquoi {
+  font-family: var(--font-mono); font-size: var(--t-micro);
+  color: var(--accent); margin: var(--s2) 0 0;
+  letter-spacing: 0.01em;
+}
+.decl__sujet {
+  display: inline-flex; align-items: center; gap: var(--s1);
+  font-family: var(--font-label); font-size: var(--t-small); font-weight: 600;
+  color: var(--ink);
+}
+.decl__sujet:hover { color: var(--accent); }
+
 /* ── La revue : une phrase, et sous elle ce qui la fonde ────────────────────
  *
  * La mise en page porte la règle de fond. Le paragraphe de synthèse est en

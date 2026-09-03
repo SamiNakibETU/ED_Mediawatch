@@ -72,6 +72,13 @@ class Claim(Base, TimestampMixin):
     pledge_version: Mapped[str | None] = mapped_column(String(120))
     pledge_measure: Mapped[str | None] = mapped_column(String(400))
     pledge_status: Mapped[str | None] = mapped_column(String(24), index=True)
+
+    # ── Pertinence (cf. services/analysis/relevance.py) ──────────────────
+    # Dérivé, recalculé à chaque passe. `relevance_why` porte les raisons en
+    # clair : un classement dont on ne peut pas dire le pourquoi est une boîte
+    # noire, et la page doit pouvoir l'écrire à côté de la déclaration.
+    relevance: Mapped[float | None] = mapped_column(Float, index=True)
+    relevance_why: Mapped[list | None] = mapped_column(JSON)
     referent_key: Mapped[str | None] = mapped_column(
         ForeignKey("referents.key", ondelete="SET NULL"), index=True
     )

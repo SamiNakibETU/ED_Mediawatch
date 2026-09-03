@@ -64,7 +64,7 @@ async def list_subjects(
     subjects.sort(key=lambda s: (
         not (s.n_speakers >= 2 and s.status != "auto"
              and _span_days(s) >= MIN_SPAN_DAYS),  # exploitables d'abord
-        -(s.n_speakers or 0), -_span_days(s), -(s.n_claims or 0),
+        -(s.relevance or 0), -(s.n_speakers or 0), -_span_days(s), -(s.n_claims or 0),
     ))
     # Le total AVANT découpe : renvoyer la taille de la page ferait afficher
     # « 60 sujets » dès qu'il y en a davantage, et le chiffre plafonnerait sans
@@ -153,6 +153,7 @@ async def list_subjects(
             {
                 "id": s.id, "label": s.label, "theme": s.theme, "status": s.status,
                 "n_claims": s.n_claims, "n_speakers": s.n_speakers,
+                "relevance": s.relevance,
                 "span_days": _span_days(s),
                 "first_seen": s.first_seen, "last_seen": s.last_seen,
                 "named": s.status == "labelled",

@@ -32,6 +32,8 @@ class Subject(Base, TimestampMixin):
     entities: Mapped[list | None] = mapped_column(JSON)
 
     n_claims: Mapped[int] = mapped_column(Integer, default=0)
+    # Ce que vaut sa déclaration la plus forte, plus un peu par voix. Dérivé.
+    relevance: Mapped[float | None] = mapped_column(Float, index=True)
     n_speakers: Mapped[int] = mapped_column(Integer, default=0)
     # Étendue temporelle : un sujet couvrant deux ans est celui où un revirement
     # peut se lire ; sur trois jours, il n'y a rien à chercher.

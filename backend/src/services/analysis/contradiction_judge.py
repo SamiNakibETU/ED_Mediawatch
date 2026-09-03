@@ -206,6 +206,10 @@ def _drift_potential(pair: tuple[Claim, Claim, float]) -> tuple[int, int, float,
     return (same_speaker, priority, gap, sim)
 
 
+# Les N déclarations les plus pertinentes entrent dans les blocs du juge.
+JUGE_FENETRE = 2000
+
+
 async def run_semantic_judging(max_pairs: int = 60) -> dict:
     """Juge les paires candidates non encore examinées. Idempotent, budgété."""
     llm = get_claim_llm()
@@ -230,6 +234,11 @@ async def run_semantic_judging(max_pairs: int = 60) -> dict:
                         | (Claim.referent_key.isnot(None))
                         | (Claim.speaker_name.isnot(None) & Claim.theme.isnot(None)),
                     )
+                    # Le juge lit le haut du classement, pas la file entière :
+                    # comparer deux banalités de même bloc coûte un appel pour
+                    # un verdict que personne ne lira.
+                    .order_by(Claim.relevance.desc().nullslast())
+                    .limit(JUGE_FENETRE)
                 )
             ).scalars().all()
         )

@@ -3,51 +3,30 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>L’observatoire — ED Mediawatch</title>
+  <title>Aujourd’hui — ED Mediawatch</title>
   <link rel="stylesheet" href="design.css" />
   <script>
     try { const t = localStorage.getItem("theme"); if (t) document.documentElement.dataset.theme = t; } catch {}
   </script>
 </head>
-<body data-page="accueil" data-tagline="Qui a dit quoi, sur quoi, quand">
+<body data-page="accueil" data-tagline="Ce qui compte, et pourquoi">
   <header id="masthead"></header>
-  <div class="now" id="now" hidden></div>
-
   <div class="wrap page">
-    <!-- L'objet du produit, écrit en clair : on ne suit pas des comptes,
-         on suit des sujets, et on regarde comment le propos bouge dessus. -->
-    <p class="dek lede-first">Qui a défendu quoi, sur quel objet précis, à quelle date. En ligne et dans la presse, consigné et sourcé.</p>
-
-    <div id="fonds"></div>
-
-    <div class="band"><h2>La une</h2>
+    <!-- Un seul chemin : ce qui compte cette semaine, puis le sujet, puis la
+         source. La une ne montre ni « le plus récent » ni « le plus aimé » :
+         elle montre l'inhabituel, le repris, le contredit, l'engageant — et
+         dit lequel, à côté de chaque ligne. -->
+    <div class="band band--flush"><h2>Ce qui compte cette semaine</h2>
       <span class="spacer"></span>
-      <p>Le plus discuté, sur la plus longue période.</p></div>
-    <main id="une"><p class="state">Chargement…</p></main>
+      <p id="pourquoi-note">Classé par ce qui est inhabituel, repris, contredit ou engageant.</p></div>
+    <main id="aujourdhui"><p class="state">Chargement…</p></main>
 
-    <!-- La revue passe AVANT la grille de sujets : c'est la lecture qu'on
-         propose, la grille est le sommaire dans lequel on va chercher. -->
     <section id="revue" hidden></section>
 
-    <div class="split mt-7">
-      <div>
-        <div class="band band--flush"><h2>Les sujets suivis</h2>
-          <span class="spacer"></span>
-          <p>Les plus discutés d’abord.</p></div>
-        <div id="grid"></div>
-      </div>
-
-      <aside>
-        <section class="aside-block">
-          <p class="overline">Contradictions à vérifier</p>
-          <div id="pending"></div>
-        </section>
-        <section class="aside-block">
-          <p class="overline">Par thème</p>
-          <div class="filters mt-4" id="themes"></div>
-        </section>
-      </aside>
-    </div>
+    <div class="band"><h2>Les sujets qui bougent</h2>
+      <span class="spacer"></span>
+      <p>Où plusieurs voix se répondent, le plus fort d’abord.</p></div>
+    <div class="tiles" id="grid"></div>
   </div>
 
   <script src="common.js"></script>

@@ -144,6 +144,11 @@ async def _review() -> dict:
     return await build_reviews(limit=6, semaines=2)
 
 
+async def _relevance() -> dict:
+    from src.services.analysis.relevance import compute_relevance
+    return await compute_relevance()
+
+
 async def _judge() -> dict:
     from src.services.analysis.contradiction_judge import run_semantic_judging
     return await run_semantic_judging(max_pairs=60)
@@ -191,12 +196,18 @@ STAGES: tuple[Stage, ...] = (
           depends_on=("embed",), produces="rattachements"),
     Stage("build_subjects", "Regroupement en sujets", FREE, _build_subjects,
           depends_on=("embed",), produces="sujets"),
-    Stage("label_subjects", "Nommage des sujets", PAID, _label_subjects,
-          depends_on=("build_subjects",), produces="libellés"),
     Stage("detect", "Détection déterministe", FREE, _detect,
           depends_on=("enrich_claims",), produces="rapprochements chiffrés"),
+    # La priorisation — l'étape que la méthode place entre la détection et le
+    # rapprochement, et qu'on avait sautée. Gratuite : tous ses signaux sont
+    # en base. Les agents payants qui suivent travaillent sur ce classement,
+    # pas sur la file entière.
+    Stage("relevance", "Ce qui compte", FREE, _relevance,
+          depends_on=("build_subjects", "detect", "pledges"), produces="classement"),
+    Stage("label_subjects", "Nommage des sujets", PAID, _label_subjects,
+          depends_on=("relevance",), produces="libellés"),
     Stage("judge", "Juge sémantique", PAID, _judge,
-          depends_on=("build_subjects",), produces="contradictions à relire"),
+          depends_on=("relevance",), produces="contradictions à relire"),
     # Après le nommage : une revue qui désigne son sujet par « sujet 412 » ne
     # se lit pas. Bornée à six sujets et deux semaines par passe — la revue est
     # le poste le plus cher de la chaîne, et rien ne presse : une semaine close

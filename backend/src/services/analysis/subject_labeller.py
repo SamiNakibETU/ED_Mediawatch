@@ -80,7 +80,11 @@ async def label_subjects(*, limit: int = 60, min_speakers: int = 1) -> dict:
                 await db.execute(
                     select(Subject)
                     .where(Subject.status == "auto", Subject.n_speakers >= min_speakers)
-                    .order_by(Subject.n_claims.desc())
+                    # Le pertinent d'abord, pas le plus gros : un sujet de
+                    # trois déclarations dont une contredit un propos antérieur
+                    # mérite un nom avant un sujet de trente banalités.
+                    .order_by(Subject.relevance.desc().nullslast(),
+                              Subject.n_claims.desc())
                     .limit(limit)
                 )
             ).scalars().all()
