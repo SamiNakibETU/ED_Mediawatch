@@ -261,3 +261,52 @@ def test_coding_runs_before_anything_aggregates_by_topic():
     assert "extract_l0" in BY_NAME["cap_coding"].depends_on
     order = [s.name for s in resolve_order()]
     assert order.index("cap_coding") < order.index("build_subjects")
+
+
+# ── Un échec d'appel n'est pas une décision de codage ───────────────────────
+
+
+def test_a_failed_call_is_not_recorded_as_a_coding_decision():
+    """Vécu le 03/09/2026. `code_cap` rendait None dans deux cas opposés : le
+    modèle répond « aucun objet d'action publique » — une décision — et l'appel
+    échoue. Le codeur enregistrait les deux de la même façon.
+
+    Résultat : pendant que le fournisseur refusait tous les appels, 4 660
+    déclarations sur 4 682 ont été marquées « hors politique publique » et
+    retirées de la file, sans qu'un modèle les ait jamais lues. La répartition
+    thématique affichait 0,3 % pour le premier topique — un chiffre qui a l'air
+    d'un résultat.
+
+    On ne peut pas distinguer les deux après coup : c'est à l'appel de le faire.
+    """
+    import inspect
+
+    from src.services.analysis.claim_llm import ClaimLLM
+
+    source = inspect.getsource(ClaimLLM.code_cap)
+    tete, _, queue = source.rpartition("except Exception")
+    assert "raise" in queue, "un échec doit remonter, pas se déguiser en None"
+    assert "return None" not in queue
+
+
+def test_the_coder_only_marks_what_was_actually_read():
+    """La marque `cap_version` sort une déclaration de la file pour de bon.
+    L'apposer sur un propos que le modèle n'a pas lu est irréversible sans
+    changer de version de protocole."""
+    import inspect
+
+    from src.services.analysis.cap_coder import code_claims
+
+    source = inspect.getsource(code_claims)
+    assert "echecs += 1" in source and "continue" in source
+    assert "ProviderRefused" in source
+
+
+def test_changing_the_protocol_requeues_the_whole_corpus():
+    """C'est à ça que sert le numéro de protocole : le comportement du codeur a
+    changé, donc ce qu'il a produit avant ne vaut plus, et tout doit repasser."""
+    from src.services.analysis.cap import CAP_PROTOCOL, CAP_VERSION
+
+    assert CAP_PROTOCOL == "2q-v2"
+    assert not "cap-major-2019/2q-v1".startswith(CAP_VERSION), (
+        "l'ancien marquage ne doit plus satisfaire le filtre de recodage")

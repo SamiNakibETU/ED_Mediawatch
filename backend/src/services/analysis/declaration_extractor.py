@@ -24,7 +24,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.config import get_settings
 from src.database import get_session_factory
 from src.services.affiliation import all_affiliations, party_of
-from src.services.analysis.llm_usage import BudgetExceeded
+from src.services.analysis.llm_usage import BudgetExceeded, ProviderRefused
 from src.models.article import Article
 from src.models.claim import Claim
 from src.models.personality import Personality
@@ -274,11 +274,20 @@ async def run_declaration_extraction(
                 result = await llm.segment_declarations(
                     text=post.content, speaker=p.full_name
                 )
+            except ProviderRefused:
+                raise      # rien à marquer, et rien à retenter sur cette passe
             except BudgetExceeded as exc:
                 # Non traité : surtout ne pas le marquer, il doit repasser.
                 logger.warning("declarations.budget_exceeded", detail=str(exc))
                 budget_hit = True
                 break
+            # `None` = l'appel n'a pas abouti, pas « rien à extraire ». Marquer
+            # la publication comme traitée la retirerait de la file pour de bon,
+            # et ses déclarations seraient perdues sans trace. Même faute que
+            # celle vue au codage thématique, sur un objet plus précieux.
+            if result is None:
+                skipped += 1
+                continue
             posts_done += 1
             done_posts.append(post.id)
             if result and result.has_declaration:
@@ -360,10 +369,15 @@ async def run_declaration_extraction(
                 result = await llm.segment_declarations(
                     text=text, speaker=None, known=[n for n in mp if n in people],
                 )
+            except ProviderRefused:
+                raise
             except BudgetExceeded as exc:
                 logger.warning("declarations.budget_exceeded", detail=str(exc))
                 budget_hit = True
                 break
+            if result is None:
+                skipped += 1
+                continue
             arts_done += 1
             done_arts.append(art.id)
             if result and result.has_declaration:

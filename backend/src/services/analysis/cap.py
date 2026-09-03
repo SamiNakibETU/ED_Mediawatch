@@ -42,7 +42,11 @@ from __future__ import annotations
 # modification de la consigne ou du modèle doit faire évoluer cette chaîne, ce
 # qui remet automatiquement le corpus en file de recodage.
 CAP_GRID = "cap-major-2019"
-CAP_PROTOCOL = "2q-v1"        # décomposition en deux questions
+CAP_PROTOCOL = "2q-v2"        # décomposition en deux questions
+# v2 : un échec d'appel ne s'enregistre plus comme « aucun thème ». Le
+# changement de version remet tout le corpus en file de recodage — c'est
+# exactement ce à quoi sert ce numéro, et 4 660 déclarations avaient été
+# marquées sans jamais avoir été lues.
 CAP_TEMPERATURE = 0.0
 
 

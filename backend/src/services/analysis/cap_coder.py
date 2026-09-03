@@ -27,7 +27,7 @@ from src.database import get_session_factory
 from src.models.claim import Claim
 from src.services.analysis.cap import CAP_VERSION, coder_signature, is_valid
 from src.services.analysis.claim_llm import get_claim_llm
-from src.services.analysis.llm_usage import BudgetExceeded
+from src.services.analysis.llm_usage import BudgetExceeded, ProviderRefused
 
 logger = structlog.get_logger(__name__)
 
@@ -61,7 +61,7 @@ async def code_claims(*, limit: int = 1500) -> dict:
                 select(func.count()).select_from(Claim).where(_todo_filter())) or 0
         return {"coded": 0, "no_topic": 0, "remaining": reste}
 
-    coded = no_topic = 0
+    coded = no_topic = echecs = 0
     budget_hit = False
     signature = coder_signature(llm._s.claim_tier1_model)
     for claim in batch:
@@ -71,6 +71,18 @@ async def code_claims(*, limit: int = 1500) -> dict:
             logger.warning("cap_coding.budget_exceeded", detail=str(exc))
             budget_hit = True
             break
+        except ProviderRefused:
+            # Le fournisseur est fermé : inutile de lui reposer la question
+            # mille fois, et surtout rien à marquer.
+            raise
+        except Exception as exc:  # noqa: BLE001
+            # Un échec ponctuel ne marque RIEN : la déclaration repassera à la
+            # prochaine passe. La marquer reviendrait à écrire « examiné, aucun
+            # thème » sur un propos que le modèle n'a pas lu.
+            logger.warning("cap_coding.claim_failed", claim_id=claim.id,
+                           error=str(exc)[:120])
+            echecs += 1
+            continue
         async with factory() as db:
             obj = await db.get(Claim, claim.id)
             if obj is None:
@@ -89,7 +101,7 @@ async def code_claims(*, limit: int = 1500) -> dict:
             select(func.count()).select_from(Claim).where(_todo_filter())) or 0
 
     stats = {"coded": coded, "no_topic": no_topic, "remaining": reste,
-             "budget_exceeded": budget_hit, "coder": signature}
+             "echecs": echecs, "budget_exceeded": budget_hit, "coder": signature}
     logger.info("cap_coding.done", **stats)
     return stats
 

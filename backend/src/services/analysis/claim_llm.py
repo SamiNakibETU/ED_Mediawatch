@@ -392,8 +392,15 @@ class ClaimLLM:
         except ProviderRefused:
             raise
         except Exception as exc:  # noqa: BLE001
+            # On NE REND PLUS None ici. None est une décision — « aucun objet
+            # d'action publique » — et la rendre aussi en cas d'échec faisait
+            # enregistrer comme examinés des propos que le modèle n'avait jamais
+            # vus. Mesuré le 03/09/2026 : 4 660 déclarations sur 4 682 marquées
+            # « hors politique publique » pendant que le fournisseur refusait
+            # tous les appels. L'appelant décide quoi faire d'un échec ; il ne
+            # peut pas le faire s'il ne le distingue pas d'une réponse.
             logger.debug("claim_llm.cap_fail", error=str(exc)[:120])
-            return None
+            raise
 
     async def _tier2_anthropic(
         self, prompt: str, *, schema=RefinedClaim, system: str = _SYSTEM,
@@ -585,11 +592,15 @@ class ClaimLLM:
         try:
             q1 = await self._ask_tier1_garde(
                 _Q1, f"Déclaration : {extrait!r}\n\nRéponse :", "engagement_q1")
-        except BudgetExceeded:
+        except (BudgetExceeded, ProviderRefused):
             raise
         except Exception as exc:  # noqa: BLE001
+            # Remonter, pas rendre None : None veut dire « le locuteur ne
+            # s'engage pas », et l'appelant retire alors la déclaration de la
+            # file. Un appel raté qui se déguise en réponse fait perdre
+            # l'engagement pour de bon.
             logger.debug("claim_llm.pledge_q1_fail", error=str(exc)[:120])
-            return None
+            raise
         if "oui" not in q1.lower():
             return None
 

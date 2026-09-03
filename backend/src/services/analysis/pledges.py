@@ -42,7 +42,7 @@ from src.database import get_session_factory
 from src.models.claim import Claim
 from src.services.analysis.claim_llm import get_claim_llm
 from src.services.analysis.declaration_extractor import verbatim_in_source
-from src.services.analysis.llm_usage import BudgetExceeded
+from src.services.analysis.llm_usage import BudgetExceeded, ProviderRefused
 
 logger = structlog.get_logger(__name__)
 
@@ -124,7 +124,7 @@ async def detect_pledges(*, limit: int = 400) -> dict:
         )).scalars().all())
 
     signature = f"{PROTOCOLE}/{llm._s.claim_tier2_model}"
-    retenus = examines = non_verifiables = hors_source = 0
+    retenus = examines = non_verifiables = hors_source = echecs = 0
     budget_hit = False
 
     for c in lot:
@@ -137,6 +137,15 @@ async def detect_pledges(*, limit: int = 400) -> dict:
             logger.warning("engagements.budget_exceeded", detail=str(exc))
             budget_hit = True
             break
+        except ProviderRefused:
+            raise
+        except Exception as exc:  # noqa: BLE001
+            # Rien de marqué : la déclaration repassera. La marquer écrirait
+            # « examiné, aucun engagement » sur un propos jamais lu.
+            logger.warning("engagements.claim_failed", claim_id=c.id,
+                           error=str(exc)[:120])
+            echecs += 1
+            continue
         examines += 1
 
         garde = None
@@ -169,6 +178,7 @@ async def detect_pledges(*, limit: int = 400) -> dict:
 
     stats = {"engagements": retenus, "examines": examines,
              "non_verifiables": non_verifiables, "hors_source": hors_source,
+             "echecs": echecs,
              "remaining": reste, "budget_exceeded": budget_hit}
     logger.info("engagements.done", **stats)
     return stats
