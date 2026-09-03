@@ -33,6 +33,18 @@ class BudgetExceeded(RuntimeError):
     """Plafond de dépense LLM atteint — l'appelant doit dégrader, pas crasher."""
 
 
+class ProviderRefused(RuntimeError):
+    """Le fournisseur refuse : crédits épuisés, clé révoquée, accès retiré.
+
+    Distinct du plafond interne, qu'on choisit, et d'une panne passagère, qui
+    se répare seule. Celui-ci ne se répare que dehors, et rien ne sert de
+    réessayer mille fois — ni de rendre None en silence, ce qui faisait
+    rapporter « 0 sujet nommé » comme s'il n'y avait rien à nommer, sur une
+    chaîne arrêtée. Vécu le 02/09/2026 : quatre cents appels refusés en 402,
+    une passe déclarée « ok », et une une vide.
+    """
+
+
 # Grille $/M tokens (input, output) par sous-chaîne d'identifiant de modèle.
 # Vérifier les prix sur openrouter.ai/models avant tout changement de modèle.
 # La première sous-chaîne qui matche gagne (ordre = du plus spécifique au moins).

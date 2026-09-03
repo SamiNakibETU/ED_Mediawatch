@@ -9,6 +9,14 @@ const TYPE = {
   5: "Contradiction avec un fait vérifié",
   6: "Variance numérique",
 };
+
+const state = { type: null };
+
+// Le type de rapprochement en cours de relecture. La déclaration avait disparu
+// avec le bloc de couleurs par parti, retiré juste au-dessus : la page se
+// chargeait puis restait vide, sans rien afficher de l'erreur.
+
+
 function claim(c) {
   const who = c.speaker_name || c.party || "source non attribuée";
   const date = c.published_at ? new Date(c.published_at).toLocaleDateString("fr-FR") : "date inconnue";

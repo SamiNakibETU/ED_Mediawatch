@@ -21,7 +21,11 @@ import structlog
 from pydantic import BaseModel, Field
 
 from src.config import get_settings
-from src.services.analysis.llm_usage import BudgetExceeded, get_llm_budget
+from src.services.analysis.llm_usage import (
+    BudgetExceeded,
+    ProviderRefused,
+    get_llm_budget,
+)
 
 logger = structlog.get_logger(__name__)
 
@@ -29,6 +33,22 @@ logger = structlog.get_logger(__name__)
 # définit par (modèle, consigne, échantillonnage) — sans ça un taux d'accord
 # n'est pas reproductible.
 from src.services.analysis.cap import CAP_TEMPERATURE
+
+
+# Un refus du fournisseur se reconnaît à son code : 401 la clé, 402 les crédits,
+# 403 l'accès. Aucun des trois ne se répare en réessayant.
+_REFUS = {401: "clé refusée", 402: "crédits épuisés", 403: "accès refusé"}
+
+
+def _refus(exc: Exception) -> str | None:
+    """Le motif, si le fournisseur refuse — sinon None (panne passagère)."""
+    code = getattr(exc, "status_code", None) or getattr(exc, "code", None)
+    try:
+        code = int(code)
+    except (TypeError, ValueError):
+        return None
+    motif = _REFUS.get(code)
+    return f"le fournisseur de modèles a répondu : {motif}" if motif else None
 
 
 def _usage_tokens(resp) -> tuple[int, int]:
@@ -314,6 +334,16 @@ class ClaimLLM:
         )
         return (resp.choices[0].message.content or "").strip()
 
+    async def _ask_tier1_garde(self, *args, **kw) -> str:
+        """`_ask_tier1`, mais un refus du fournisseur remonte nommé."""
+        try:
+            return await self._ask_tier1(*args, **kw)
+        except Exception as exc:
+            motif = _refus(exc)
+            if motif:
+                raise ProviderRefused(motif) from exc
+            raise
+
     async def code_cap(self, text: str) -> int | None:
         """Range une déclaration dans la grille CAP, en DEUX questions.
 
@@ -345,12 +375,12 @@ class ClaimLLM:
         extrait = text.strip()[:600]
 
         try:
-            q1 = await self._ask_tier1(
+            q1 = await self._ask_tier1_garde(
                 Q1_SYSTEM, f"Déclaration : {extrait!r}\n\nRéponse :", "cap_q1")
             if "oui" not in q1.lower():
                 return None
 
-            q2 = await self._ask_tier1(
+            q2 = await self._ask_tier1_garde(
                 "Tu ranges une déclaration politique dans une grille thématique.\n\n"
                 + grid_for_prompt() + "\n\n" + CODING_RULE,
                 f"Déclaration : {extrait!r}\n\nCode :", "cap_q2")
@@ -359,6 +389,8 @@ class ClaimLLM:
             digits = "".join(c if c.isdigit() else " " for c in q2).split()
             code = int(digits[0]) if digits else None
             return code if is_valid(code) else None
+        except ProviderRefused:
+            raise
         except Exception as exc:  # noqa: BLE001
             logger.debug("claim_llm.cap_fail", error=str(exc)[:120])
             return None
@@ -431,6 +463,8 @@ class ClaimLLM:
             content = resp.choices[0].message.content or ""
             return schema.model_validate_json(content)
         except Exception as exc:  # noqa: BLE001
+            if _refus(exc):
+                raise ProviderRefused(_refus(exc)) from exc
             logger.warning("claim_llm.tier2_openai_fail", prov=prov, error=str(exc)[:160])
             return None
 
@@ -549,7 +583,7 @@ class ClaimLLM:
         reformule = (canonical or "").strip()[:800]
         extrait = reformule or brut
         try:
-            q1 = await self._ask_tier1(
+            q1 = await self._ask_tier1_garde(
                 _Q1, f"Déclaration : {extrait!r}\n\nRéponse :", "engagement_q1")
         except BudgetExceeded:
             raise

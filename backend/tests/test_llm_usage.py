@@ -123,3 +123,42 @@ def test_summary_flags_unknown_prices(tmp_path, monkeypatch):
         for c in _CACHES:
             c.cache_clear()
         llm_usage._budget = None
+
+
+# ── Un refus du fournisseur n'est pas une absence de travail ────────────────
+
+
+def test_a_provider_refusal_is_told_apart_from_a_passing_outage():
+    """Vécu le 02/09/2026 : OpenRouter répondait 402 « Insufficient credits »
+    à chaque appel. L'appel rendait None, l'étape rapportait « 0 sujet nommé »,
+    et la passe se déclarait `ok` — sur une chaîne arrêtée. Quatre cents appels
+    refusés, une une vide, et rien à l'écran pour le dire.
+
+    Trois codes ne se réparent pas en réessayant : 401 la clé, 402 les crédits,
+    403 l'accès. Tout le reste est une panne, qui se répare seule et doit rester
+    silencieuse.
+    """
+    from src.services.analysis.claim_llm import _refus
+
+    class _Erreur(Exception):
+        def __init__(self, code):
+            self.status_code = code
+
+    assert "crédits épuisés" in _refus(_Erreur(402))
+    assert "clé refusée" in _refus(_Erreur(401))
+    assert "accès refusé" in _refus(_Erreur(403))
+    # Une panne passagère, un dépassement de débit : on réessaiera.
+    assert _refus(_Erreur(503)) is None
+    assert _refus(_Erreur(429)) is None
+    assert _refus(Exception("timeout")) is None
+
+
+def test_the_refusal_exception_is_not_the_internal_budget_cap():
+    """Deux arrêts, deux causes, deux messages. Le plafond de dépense est un
+    choix qu'on a fait ; le refus du fournisseur est un fait qu'on subit, et
+    qui ne se règle que dehors — les confondre ferait chercher la panne du
+    mauvais côté."""
+    from src.services.analysis.llm_usage import BudgetExceeded, ProviderRefused
+
+    assert not issubclass(ProviderRefused, BudgetExceeded)
+    assert not issubclass(BudgetExceeded, ProviderRefused)
