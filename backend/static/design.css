@@ -563,6 +563,11 @@ p.stamp { white-space: normal; }
   font-style: italic;
   color: var(--muted);
   max-width: var(--measure-read);
+  /* Une citation reprise d'un tweet contient des adresses insécables : sans
+   * ça, la plus longue fixe la largeur du bloc et pousse la page. Même
+   * traitement que `.prose`, pour la même raison. */
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .entry__media {
@@ -957,9 +962,13 @@ p.stamp { white-space: normal; }
 .kv__v {
   margin-left: auto; font-family: var(--font-mono);
   font-variant-numeric: tabular-nums; color: var(--ink);
-  /* Une valeur coupée en deux (« 1.45 » puis « $ », « il y a » puis « 47 h »)
-   * cesse d'être lisible comme une valeur. */
-  white-space: nowrap;
+  /* La colonne des valeurs accueille aussi des relevés d'une phrase entière
+   * (« subjects 766 · updated 766 · … »). Le `nowrap` posé pour empêcher
+   * « 1.45 » de se séparer de son « $ » les rendait insécables eux aussi, et
+   * poussait la page à mille pixels de large sur un téléphone. Les paires qui
+   * doivent tenir ensemble le font par une espace insécable, à la source. */
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .kv__note { flex-basis: 100%; color: var(--muted); font-size: var(--t-micro); }
 .kv__produces { color: var(--muted); font-family: var(--font-mono); font-size: var(--t-micro); }

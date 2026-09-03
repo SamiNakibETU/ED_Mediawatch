@@ -10,7 +10,9 @@ const dur = (s) => {
   return m < 60 ? `${m} min ${Math.round(s % 60)} s` : `${Math.floor(m / 60)} h ${m % 60} min`;
 };
 
-const usd = (n) => `${(n ?? 0).toFixed(2)} $`;
+// Espace insécable : « 1.45 » et « $ » ne se séparent pas, sans qu'il faille
+// interdire le retour à la ligne à toute la colonne des valeurs.
+const usd = (n) => `${(n ?? 0).toFixed(2)} $`;
 
 // ── Entonnoir ───────────────────────────────────────────────────────────
 //
@@ -190,7 +192,7 @@ function renderSpend(c) {
 
 function freshRow(label, node, extra = "") {
   const tone = node.stale ? "alert" : "ok";
-  const age = node.age_hours == null ? "jamais" : `il y a ${node.age_hours} h`;
+  const age = node.age_hours == null ? "jamais" : `il y a ${node.age_hours} h`;
   return `<div class="kv__row">
     <span class="kv__k">${label}</span>
     <span class="kv__v">${age}</span>
