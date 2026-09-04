@@ -20,11 +20,12 @@ from datetime import datetime, timezone
 
 import aiohttp
 import structlog
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from src.config import get_settings
 from src.database import get_session_factory
 from src.models.article import Article
+from src.models.claim import Claim
 from src.models.post import Post
 from urllib.parse import urlparse
 
@@ -38,6 +39,7 @@ from src.utils import sha256
 logger = structlog.get_logger(__name__)
 
 _MODELS = {"press": Article, "x": Post}
+_CLE_CLAIM = {"press": Claim.article_id, "x": Claim.post_id}
 
 
 def _archive_target(kind: str, url: str) -> str:
@@ -72,6 +74,38 @@ async def _save_local_html(url: str, kind: str, ua: str, timeout: int) -> str | 
         return None
 
 
+async def file_a_archiver(db, kind: str, limit: int) -> list:
+    """Les prochains items à archiver, LE PERTINENT D'ABORD.
+
+    Wayback est lent et limité : quarante reçus toutes les quatre heures pour un
+    fonds de dix mille publications, soit six semaines pour en faire le tour.
+    Servir cette file par identifiant décroissant revenait à prouver n'importe
+    quoi sauf ce qu'on publie — un propos cité en une pouvait attendre six
+    semaines son reçu, et disparaître entre-temps. Or un tweet supprimé est
+    précisément celui qui compte le plus.
+
+    Même correction que pour le codage CAP : quand une ressource rare arbitre,
+    elle suit le classement éditorial, la date ensuite.
+    """
+    model = _MODELS[kind]
+    pertinence = (
+        select(func.max(Claim.relevance))
+        .where(_CLE_CLAIM[kind] == model.id)
+        .correlate(model)
+        .scalar_subquery()
+    )
+    return list(
+        (
+            await db.execute(
+                select(model)
+                .where(model.archived_at.is_(None))
+                .order_by(pertinence.desc().nullslast(), model.id.desc())
+                .limit(limit)
+            )
+        ).scalars().all()
+    )
+
+
 async def run_archival(kind: str = "press", limit: int = 100) -> dict:
     """Archive up to `limit` not-yet-archived items of `kind` ('press'|'x')."""
     settings = get_settings()
@@ -84,16 +118,7 @@ async def run_archival(kind: str = "press", limit: int = 100) -> dict:
     timeout = settings.request_timeout_seconds
 
     async with factory() as db:
-        rows = list(
-            (
-                await db.execute(
-                    select(model)
-                    .where(model.archived_at.is_(None))
-                    .order_by(model.id.desc())
-                    .limit(limit)
-                )
-            ).scalars().all()
-        )
+        rows = await file_a_archiver(db, kind, limit)
 
     abox = get_archivebox_client() if settings.archive_backend == "archivebox" else None
 

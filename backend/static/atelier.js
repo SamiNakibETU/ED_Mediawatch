@@ -155,7 +155,7 @@ function renderLastRun(run) {
 function gauge(label, spent, cap) {
   const pct = cap > 0 ? Math.min(100, (spent / cap) * 100) : 0;
   const tight = pct >= 80;
-  return `<div class="kv__row" style="flex-wrap:wrap">
+  return `<div class="kv__row">
     <span class="kv__k">${label}</span>
     <span class="kv__v">${usd(spent)}${cap > 0 ? ` / ${usd(cap)}` : " · sans plafond"}</span>
     ${cap > 0 ? `<div class="gauge" style="flex-basis:100%">
@@ -192,7 +192,7 @@ function renderSpend(c) {
 
 function freshRow(label, node, extra = "") {
   const tone = node.stale ? "alert" : "ok";
-  const age = node.age_hours == null ? "jamais" : `il y a ${node.age_hours} h`;
+  const age = node.age_hours == null ? "jamais" : `il y a ${node.age_hours.toLocaleString("fr-FR", { maximumFractionDigits: 1 })} h`;
   return `<div class="kv__row">
     <span class="kv__k">${label}</span>
     <span class="kv__v">${age}</span>
@@ -201,12 +201,36 @@ function freshRow(label, node, extra = "") {
   </div>`;
 }
 
-function renderFresh(f) {
+// Un « reçu » est une capture Wayback : la preuve que le propos a existé, le
+// jour où le compte le supprime. Wayback est lent et limité (quarante reçus
+// toutes les quatre heures), donc la file sert le pertinent d'abord — mais le
+// taux global doit rester sous les yeux, sinon personne ne sait qu'on cite des
+// milliers de propos sans preuve indépendante.
+function couverture(label, pct, note) {
+  return `<div class="kv__row">
+    <span class="kv__k">${label}</span>
+    <span class="kv__v">${pct.toLocaleString("fr-FR", { maximumFractionDigits: 1 })} %</span>
+    <span class="status status--${pct >= 60 ? "ok" : pct >= 20 ? "pending" : "alert"}"
+          style="margin-left:var(--s3)">${pct >= 60 ? "correct" : pct >= 20 ? "partiel" : "à peine entamé"}</span>
+    <span class="kv__note">${note}</span>
+  </div>`;
+}
+
+function renderFresh(f, rapport) {
+  const couv = rapport ? `
+    ${couverture("Reçus d’archive · X", rapport.x.archived_pct,
+      "Wayback sert le pertinent d’abord ; le reste suit, lentement")}
+    ${couverture("Reçus d’archive · presse", rapport.press.archived_pct,
+      "copie locale plus capture Wayback")}
+    ${couverture("Comptes X effectivement collectés", rapport.x.handle_coverage_pct,
+      "un compte suivi mais jamais collecté ressemble à un locuteur silencieux")}` : "";
   $("#fresh").innerHTML = `<div class="kv">
+    ${couv}
     ${freshRow("Collecte X", f.x,
       f.x.last_post_at ? `dernier post ${escapeHtml(relTime(f.x.last_post_at))}` : "")}
     ${freshRow("Collecte presse", f.press,
-      `${fmtNum(f.press.sources_stale)} source(s) muette(s) sur ${fmtNum(f.press.sources_total)}`)}
+      `${fmtNum(f.press.sources_stale)} source${f.press.sources_stale > 1 ? "s" : ""} muette${
+        f.press.sources_stale > 1 ? "s" : ""} sur ${fmtNum(f.press.sources_total)}`)}
     <div class="kv__row">
       <span class="kv__k">Seuil de péremption</span>
       <span class="kv__v">${f.threshold_hours} h</span>
@@ -268,7 +292,7 @@ function renderGraph(stages) {
   // Ce que produit une étape se lit à côté d'elle. Renvoyé au bout de la ligne,
   // le mot flottait sans se rattacher à quoi que ce soit.
   $("#graph").innerHTML = `<div class="kv">${stages.map((s) => `
-    <div class="kv__row" style="flex-wrap:wrap">
+    <div class="kv__row">
       <span class="kv__k" style="color:var(--ink)">${escapeHtml(s.label)}</span>
       ${s.produces ? `<span class="kv__produces">→ ${escapeHtml(s.produces)}</span>` : ""}
       <span class="kv__v"><span class="tag">${s.cost === "paid" ? "payante" : "gratuite"}</span></span>
@@ -314,7 +338,7 @@ function renderThemes(d) {
     : "";
 
   host.innerHTML = alerte + `<div class="kv">${rows.map((r) => `
-    <div class="kv__row" style="flex-wrap:wrap">
+    <div class="kv__row">
       <span class="kv__k" style="${r.code == null ? "color:var(--faint)" : "color:var(--ink)"}">
         ${escapeHtml(r.label)}</span>
       <span class="kv__v">${r.part} % <span class="statbar__of">${fmtNum(r.n)}</span></span>
@@ -331,13 +355,14 @@ function renderThemes(d) {
 
 async function load() {
   try {
-    const [f, runs, costs, fresh, graph, themes] = await Promise.all([
+    const [f, runs, costs, fresh, graph, themes, rapport] = await Promise.all([
       fetchJSON("/pipeline/funnel"),
       fetchJSON("/pipeline/runs?limit=8"),
       fetchJSON("/llm/costs").catch(() => null),
       fetchJSON("/health/freshness").catch(() => null),
       fetchJSON("/pipeline/stages").catch(() => null),
       fetchJSON("/pipeline/themes").catch(() => null),
+      fetchJSON("/health/collection-report").catch(() => null),
     ]);
 
     $("#stats").textContent = renderFunnel(f);
@@ -345,7 +370,7 @@ async function load() {
     renderLastRun((runs.items || [])[0]);
     renderRuns(runs.items || []);
     if (costs) renderSpend(costs);
-    if (fresh) renderFresh(fresh);
+    if (fresh) renderFresh(fresh, rapport);
     if (graph) renderGraph(graph.stages || []);
     renderThemes(themes);
     renderVeille();

@@ -281,7 +281,7 @@ function render(d) {
     ${d.contradictions?.length ? `
       <div class="band"><h2>Rapprochements la concernant</h2></div>
       <div class="kv">${d.contradictions.map((e) => `
-        <div class="kv__row" style="flex-wrap:wrap">
+        <div class="kv__row">
           <span class="kv__k" style="color:var(--ink)">${escapeHtml(e.type_label)}</span>
           <span class="kv__v">score ${e.score}</span>
           <span class="status status--${e.status === "confirmed" ? "ok" : e.status === "rejected" ? "alert" : "pending"}"

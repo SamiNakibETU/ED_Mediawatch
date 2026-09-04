@@ -698,7 +698,10 @@ p.stamp { white-space: normal; }
  * inviterait à la prendre par défaut quand aucun ne colle. */
 .filter--hors { border-style: dashed; margin-left: auto; }
 
-.status { font-family: var(--font-mono); font-size: var(--t-micro); letter-spacing: 0.04em; text-transform: uppercase; }
+.status {
+  font-family: var(--font-mono); font-size: var(--t-micro);
+  letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap;
+}
 .status--ok { color: var(--ok); }
 .status--pending { color: var(--pending); }
 .status--alert { color: var(--alert); }
@@ -997,7 +1000,10 @@ p.stamp { white-space: normal; }
 
 .kv { border-top: 0; }
 .kv__row {
-  display: flex; align-items: baseline; gap: var(--s3);
+  /* `flex-wrap` manquait, et la note (`flex-basis: 100%`, donc conçue pour
+   * occuper sa propre ligne) restait coincée sur la même ligne où elle écrasait
+   * ses voisins : « 0,3 % » se cassait en trois lignes d'un caractère. */
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s3);
   padding: var(--s3) 0; border-bottom: 1px solid var(--rule);
   font-size: var(--t-small);
 }
