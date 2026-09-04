@@ -32,6 +32,7 @@ from sqlalchemy import select
 
 from src.database import get_session_factory
 from src.models.claim import Claim
+from src.services.analysis.contradiction_detector import A_VERIFIER
 from src.models.contradiction import Contradiction
 from src.models.referentiel import Referent
 from src.services.analysis.claim_llm import get_claim_llm
@@ -218,6 +219,111 @@ def _drift_potential(pair: tuple[Claim, Claim, float]) -> tuple[int, int, float,
 JUGE_FENETRE = 8000
 
 
+# Le verdict du juge, traduit en motif de rejet du référentiel. Un rejet qui
+# nomme sa CAUSE est un rejet dont on peut corriger l'origine : « objets
+# différents » accuse le regroupement en sujets, « pas contradictoire » accuse
+# la sur-détection. Voir REJECTION_REASONS.
+_MOTIF_DE_REJET = {
+    "hors_sujet": "objets_differents",
+    "compatible": "pas_contradictoire",
+    "evolution_assumee": "evolution_assumee",
+}
+
+
+async def _lire_les_detections(llm, factory, labels, *, max_pairs: int) -> dict:
+    """Le juge lit les rapprochements trouvés par comparaison de nombres.
+
+    Le détecteur déterministe ne lit pas les phrases : il compare des scalaires
+    qui partagent un référent. Quand le rattachement au référent est faux, il
+    produit des absurdités — « 6 000 euros d'amende » opposé à « 210 expulsions
+    par an » — et elles atterrissaient telles quelles dans la file de validation
+    humaine. Faire écarter à la main ce qu'une machine peut écarter est le plus
+    sûr moyen que personne ne tranche jamais rien : 25 rapprochements en
+    attente, aucun tranché.
+
+    Deux filtres, dans cet ordre de coût. Le périmètre d'abord, qui ne coûte
+    rien : un rapprochement entre une figure suivie et quelqu'un d'autre —
+    Bardella contre Villepin — n'est pas l'objet de l'observatoire, et le
+    reconnaître ne demande aucun modèle. La lecture ensuite, pour le reste.
+    """
+    examine = promus = ecartes = hors = 0
+    budget_hit = False
+    async with factory() as db:
+        # Réparation, idempotente. Deux populations déjà en base ne devraient
+        # pas être dans la file humaine.
+        #
+        # 1. Les arêtes déterministes entrées en `pending` avant que la règle
+        #    n'existe : jamais lues par un modèle (`judge_version` vide), elles
+        #    demandaient à un relecteur d'écarter « 210 ≠ 6000 » à la main.
+        # 2. Les arêtes qui franchissent le périmètre — Bardella contre
+        #    Villepin. Vraies peut-être, mais pas l'objet de l'observatoire.
+        #
+        # On ne touche JAMAIS ce qu'un humain a tranché : `confirmed` et
+        # `rejected` sont sa décision, et elle tient.
+        rendues = (await db.execute(
+            select(Contradiction).where(Contradiction.status == "pending",
+                                        Contradiction.judge_version.is_(None))
+        )).scalars().all()
+        for arete in rendues:
+            arete.status = A_VERIFIER
+        if rendues:
+            logger.info("judge.file_humaine_reparee", rendues=len(rendues))
+        await db.commit()
+
+    async with factory() as db:
+        arretes = list((await db.execute(
+            select(Contradiction).where(Contradiction.status == A_VERIFIER)
+            .order_by(Contradiction.score.desc()).limit(max_pairs)
+        )).scalars().all())
+        # Le périmètre s'applique aussi à ce qui attend déjà un relecteur.
+        for arete in (await db.execute(
+            select(Contradiction).where(Contradiction.status == "pending")
+        )).scalars().all():
+            a = await db.get(Claim, arete.claim_a_id)
+            b = await db.get(Claim, arete.claim_b_id)
+            if a and b and (a.personality_id is None or b.personality_id is None):
+                arete.status = "rejected"
+                arete.rejection_reason = "hors_perimetre"
+                hors += 1
+
+        for arete in arretes:
+            a = await db.get(Claim, arete.claim_a_id)
+            b = await db.get(Claim, arete.claim_b_id)
+            if a is None or b is None:
+                continue
+            if a.personality_id is None or b.personality_id is None:
+                arete.status = "rejected"
+                arete.rejection_reason = "hors_perimetre"
+                hors += 1
+                continue
+            label = labels.get(arete.referent_key) or arete.referent_key or "—"
+            try:
+                res = await llm.judge_contradiction(_pair_prompt(a, b, label))
+            except BudgetExceeded as exc:
+                logger.warning("judge.budget_exceeded", detail=str(exc))
+                budget_hit = True
+                break
+            if res is None:
+                continue          # échec de lecture : la prochaine passe reposera
+            examine += 1
+            if res.verdict == "contradiction":
+                # Le motif chiffré est remplacé par une phrase qui explique. Un
+                # relecteur ne peut pas trancher sur « 210 ≠ 6000 ».
+                arete.rationale = res.explanation[:1000]
+                arete.status = "pending"
+                arete.detection_method = "deterministic_llm"
+                arete.judge_version = JUDGE_PROMPT_VERSION
+                promus += 1
+            else:
+                arete.status = "rejected"
+                arete.rejection_reason = _MOTIF_DE_REJET.get(res.verdict, "autre")
+                arete.rationale = res.explanation[:1000]
+                ecartes += 1
+        await db.commit()
+    return {"lues": examine, "promues": promus, "ecartees": ecartes,
+            "hors_perimetre": hors, "budget_exceeded": budget_hit}
+
+
 async def run_semantic_judging(max_pairs: int = 60) -> dict:
     """Juge les paires candidates non encore examinées. Idempotent, budgété."""
     llm = get_claim_llm()
@@ -226,8 +332,22 @@ async def run_semantic_judging(max_pairs: int = 60) -> dict:
 
     factory = get_session_factory()
     async with factory() as db:
-        seen = await _existing_pairs(db)
         labels = dict((await db.execute(select(Referent.key, Referent.label))).all())
+
+    # D'abord lire ce que le détecteur a trouvé : une arête qui attend est déjà
+    # payée en calcul, et tant qu'elle n'est pas lue elle encombre la file
+    # humaine ou n'existe pour personne. Un tiers du budget suffit — le reste
+    # sert à chercher du neuf.
+    relecture = await _lire_les_detections(
+        llm, factory, labels, max_pairs=max(1, max_pairs // 3))
+    if relecture["budget_exceeded"]:
+        return {"pairs_examined": 0, "contradictions_new": 0, "verdicts": {},
+                "pairs_truncated": 0, "budget_exceeded": True,
+                "judge_version": JUDGE_PROMPT_VERSION, "relecture": relecture}
+    max_pairs = max(1, max_pairs - relecture["lues"])
+
+    async with factory() as db:
+        seen = await _existing_pairs(db)
         claims = list(
             (
                 await db.execute(
@@ -311,6 +431,7 @@ async def run_semantic_judging(max_pairs: int = 60) -> dict:
         created += 1
 
     stats = {
+        "relecture": relecture,
         "pairs_examined": len(candidates),
         "contradictions_new": created,
         "verdicts": verdicts,

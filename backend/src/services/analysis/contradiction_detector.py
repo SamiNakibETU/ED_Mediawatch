@@ -6,7 +6,25 @@ claims entre eux, seulement à l'intérieur d'un bloc partageant `referent_key`
 
   1 revirement intra-locuteur · 2 intra-parti · 3 inter-partis · 6 variance.
 
-Toutes en statut `pending` → revue humaine avant publication.
+L'ORDRE DE LA CHAÎNE, corrigé le 04/09/2026. Ces arêtes entraient directement
+en `pending`, c'est-à-dire dans la file de validation humaine, sans qu'aucun
+modèle ne les ait lues. Résultat mesuré en production :
+
+    « La mairie de Chessy condamnée à verser 6000 euros à un Algérien sous
+      OQTF » ≠ « Suspensions de séance à répétition, logorrhées insupportables »
+    motif : Expulsions promises par an — 210 ≠ 6000 nb_par_an
+
+Les deux propos n'ont aucun rapport. Le détecteur compare des NOMBRES qui
+partagent un référent, et le rattachement au référent était faux : une amende
+de 6 000 € comptée comme un nombre d'expulsions par an. Le détecteur ne peut pas
+voir cette erreur — il ne lit pas les phrases, il compare des scalaires.
+
+Elles entrent donc désormais en `a_verifier` : le juge sémantique les lit avant
+qu'un humain les voie, et c'est lui qui décide de les faire passer en `pending`
+ou de les écarter. C'est l'architecture que la littérature de la vérification
+automatique décrit : un étage à FORT RAPPEL, bon marché et bête, puis un étage
+de PRÉCISION qui comprend les phrases, l'humain en dernier — et non l'humain
+comme premier filtre de la machine.
 """
 
 from __future__ import annotations
@@ -21,6 +39,11 @@ from src.models.contradiction import Contradiction
 from src.models.referentiel import Referent
 
 logger = structlog.get_logger(__name__)
+
+# Un rapprochement trouvé par comparaison de nombres, en attente de LECTURE par
+# le juge sémantique. Il n'est pas dans la file humaine : personne ne doit avoir
+# à écarter à la main ce qu'une machine pouvait écarter.
+A_VERIFIER = "a_verifier"
 
 # Écart relatif minimal pour considérer deux valeurs incompatibles (ignore l'arrondi).
 EPSILON = 0.02
@@ -119,7 +142,7 @@ async def run_contradiction_detection() -> dict:
                     db.add(Contradiction(
                         claim_a_id=ca, claim_b_id=cb, referent_key=ref_key,
                         type=ctype, score=score,
-                        rationale=_rationale(a, b, label), status="pending",
+                        rationale=_rationale(a, b, label), status=A_VERIFIER,
                     ))
                     seen.add((ca, cb))
                     new += 1
@@ -175,7 +198,7 @@ async def run_contradiction_detection() -> dict:
                     db.add(Contradiction(
                         claim_a_id=ca, claim_b_id=cb, referent_key=ref_key,
                         type=ctype, score=score,
-                        rationale=_rationale_norm(a, b, label), status="pending",
+                        rationale=_rationale_norm(a, b, label), status=A_VERIFIER,
                     ))
                     seen.add((ca, cb))
                     norm_new += 1

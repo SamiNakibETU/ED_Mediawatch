@@ -87,7 +87,7 @@ def test_normative_mechanics_still_work_when_enabled(tmp_path, monkeypatch):
     def check(stats, cons):
         assert stats["normative_new"] == 2
         assert len(cons) == 2
-        assert all(c.status == "pending" for c in cons)
+        assert all(c.status == "a_verifier" for c in cons)
         assert all(c.detection_method == "deterministe" for c in cons)
 
     _run(tmp_path, monkeypatch, "on.db", True, check)
