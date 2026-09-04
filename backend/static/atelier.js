@@ -216,6 +216,25 @@ function renderFresh(f) {
   </div>`;
 }
 
+// ── Depuis quand on regarde ─────────────────────────────────────────────
+// La distinction que le produit ne faisait pas, et dont tout le reste dépend :
+// un mois SURVEILLÉ (on lisait les comptes au fil de l'eau) et un mois
+// RECONSTITUÉ (on est allé le rechercher après coup, sans garantie d'avoir tout
+// trouvé) ne se comparent pas. Mesuré le 03/09/2026 : mars 2026 pesait 9
+// publications, août 2026 en pesait 2 097. Ce n'est pas le discours qui a
+// explosé, c'est la veille qui a commencé.
+
+async function renderVeille() {
+  const host = $("#veille");
+  if (!host) return;
+  try {
+    const d = await fetchJSON("/series/corpus");
+    host.innerHTML = lireSerie(d) + barresMensuelles(d.points || []);
+  } catch (e) {
+    host.innerHTML = `<p class="state state--error">Série indisponible (${escapeHtml(e.message)}).</p>`;
+  }
+}
+
 // ── Journal ─────────────────────────────────────────────────────────────
 
 function renderRuns(items) {
@@ -329,6 +348,7 @@ async function load() {
     if (fresh) renderFresh(fresh);
     if (graph) renderGraph(graph.stages || []);
     renderThemes(themes);
+    renderVeille();
 
     const live = $("#live");
     live.hidden = false;

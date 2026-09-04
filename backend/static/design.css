@@ -728,6 +728,54 @@ p.stamp { white-space: normal; }
 
 .chart-frame { padding: var(--s5) 0; }
 
+/* Barres mensuelles (chart.js). Même parti pris que `.plot` : du SVG écrit à la
+ * main, stylé ici, en classes plutôt qu'en attributs de présentation.
+ *
+ * La lecture est écrite AU-DESSUS des barres, en français, et c'est elle qui
+ * porte l'information — « 41 déclarations en mars 26, plus du double de son
+ * rythme habituel ». Le graphique l'illustre ; il ne la remplace pas. C'est la
+ * réponse au reproche fait aux versions précédentes : des petits graphiques
+ * dont on ne pouvait rien tirer sans les interpréter soi-même. */
+.chart__lecture {
+  font-size: var(--t-small); color: var(--ink);
+  margin-bottom: var(--s4); max-width: 60ch;
+}
+.chart { display: block; width: 100%; height: auto; margin-bottom: var(--s3); }
+.chart__grid { stroke: var(--rule); stroke-width: 1; }
+.chart__tick {
+  font-family: var(--font-mono); font-size: 10px;
+  fill: var(--faint); font-variant-numeric: tabular-nums;
+}
+/* Une barre pleine, sans dégradé ni arrondi : c'est un décompte. */
+.chart__bar { fill: var(--ink); transition: fill var(--dur-fast) var(--ease); }
+.chart__bar:hover { fill: var(--accent); }
+/* Le seul point de couleur du graphique, et il signifie quelque chose : ce
+ * mois-là, un rapprochement a été retenu. */
+.chart__flag { fill: var(--accent); }
+/* Un mois reconstitué après coup : contour seul. La barre creuse se lit
+ * « incomplet » même quand la légende est coupée — sur une capture d'écran
+ * partagée, c'est la seule mise en garde qui survit. */
+.chart__bar--retro {
+  fill: none; stroke: var(--ink); stroke-width: 1; stroke-dasharray: 2 2;
+}
+.chart__bar--retro:hover { fill: none; stroke: var(--accent); }
+.chart__legende {
+  display: flex; flex-wrap: wrap; gap: var(--s2) var(--s4);
+  font-size: var(--t-micro); color: var(--muted);
+}
+.chart__cle { display: inline-flex; align-items: center; gap: var(--s2); }
+.chart__flag-inline {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--accent); flex: 0 0 auto;
+}
+.chart__retro-inline {
+  width: 8px; height: 12px; flex: 0 0 auto;
+  border: 1px dashed var(--ink); background: none;
+}
+/* La portée de ce qu'on avance, dans la même phrase que ce qu'on avance :
+ * séparer la mesure de sa limite, c'est laisser circuler la mesure seule. */
+.chart__portee { color: var(--muted); }
+
 /* Tracé écrit à la main : le graphe est du SVG, stylé ici comme le reste.
  * `var()` dans un attribut de présentation SVG n'est pas honoré partout —
  * d'où des classes plutôt que des attributs. Pas de courbe reliant les

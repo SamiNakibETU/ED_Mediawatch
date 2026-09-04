@@ -51,7 +51,13 @@ async def code_claims(*, limit: int = 1500) -> dict:
     async with factory() as db:
         batch = list((await db.execute(
             select(Claim).where(_todo_filter())
-            .order_by(Claim.published_at.desc().nullslast())
+            # Le pertinent d'abord, la date ensuite. Le codage décide de ce qui
+            # est rétrogradé en une (« hors politique publique ») : coder par
+            # date laissait en tête des propos d'agenda pendant des jours, le
+            # temps que la file les rejoigne. La circularité est bénigne — le
+            # score existe avant le codage, le codage le corrige après.
+            .order_by(Claim.relevance.desc().nullslast(),
+                      Claim.published_at.desc().nullslast())
             .limit(limit)
         )).scalars().all())
 

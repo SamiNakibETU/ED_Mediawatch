@@ -29,6 +29,7 @@ from src.routers import (
     posts,
     coding,
     declarations,
+    series,
     pledges,
     referentiel,
     reviews,
@@ -93,6 +94,7 @@ app.include_router(reviews.router)
 app.include_router(pledges.router)
 app.include_router(coding.router)
 app.include_router(declarations.router)
+app.include_router(series.router)
 app.include_router(figure.router)
 app.include_router(pipeline_status.router)
 app.include_router(llm_costs.router)

@@ -205,6 +205,24 @@ async function loadMore() {
   }
 }
 
+// ── La série mensuelle ──────────────────────────────────────────────────────
+// Le graphique dit ce que la chronologie ne montre pas : le RYTHME. Un
+// locuteur peut avoir cinquante déclarations réparties sur quatre ans ou
+// toutes tenues en trois semaines de campagne, et la liste datée se lit
+// pareil dans les deux cas.
+
+async function renderSerie(id) {
+  const host = $("#serie");
+  if (!host) return;
+  try {
+    const d = await fetchJSON(`/series/figure/${id}`);
+    host.innerHTML = lireSerie(d) + barresMensuelles(d.points || []);
+  } catch (e) {
+    // Un graphique manquant ne doit pas passer pour un locuteur silencieux.
+    host.innerHTML = `<p class="state state--error">La série n’a pas pu être chargée (${escapeHtml(e.message)}).</p>`;
+  }
+}
+
 // ── Rendu ───────────────────────────────────────────────────────────────────
 
 function render(d) {
@@ -235,7 +253,7 @@ function render(d) {
           <span class="statbar__item"><span class="statbar__n">${fmtNum(s.n_claims)}</span> déclarations</span>
           <span class="statbar__item"><span class="statbar__n statbar__n--accent">${fmtNum(conf)}</span>
             sujets à plusieurs voix</span>
-          <span class="statbar__item"><span class="statbar__n">${months}</span> mois de suivi</span>
+          <span class="statbar__item"><span class="statbar__n">${months}</span> mois couverts</span>
           <span class="statbar__item">${escapeHtml(periode(s.first_seen, s.last_seen))}</span>
         </div>
       </div>
@@ -244,6 +262,11 @@ function render(d) {
     ${months < 24 && s.first_seen ? `<p class="caveat">
       Un changement de position se lit sur plusieurs années. En deçà, l’absence de revirement
       ne prouve rien — c’est une limite du corpus, pas un résultat.</p>` : ""}
+
+    <div class="band"><h2>Quand ${escapeHtml(f.full_name)} parle</h2>
+      <span class="spacer"></span>
+      <p>Déclarations attribuées, mois par mois.</p></div>
+    <div id="serie"><p class="state state--inline">Chargement…</p></div>
 
     ${d.dossier?.summary ? `
       <div class="band"><h2>Synthèse</h2><span class="spacer"></span>
@@ -279,6 +302,7 @@ function render(d) {
   renderSubjects();
   renderAmplifies(d.amplifies);
   renderTimeline();
+  renderSerie(f.id);
 }
 
 async function load(id) {
