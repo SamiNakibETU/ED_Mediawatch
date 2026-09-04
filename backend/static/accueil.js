@@ -50,6 +50,34 @@ function propos(d) {
     <span class="decl__rapporte">rapporté par la presse, pas cité</span></p>`;
 }
 
+// Le propos en regard.
+//
+// La une écrivait « contredit un autre propos » et ne montrait jamais lequel :
+// l'affirmation la plus lourde du produit, invérifiable. C'est pourtant la
+// promesse même — qui a dit quoi, quand, et où ça diverge. On pose donc les
+// deux côte à côte, avec leurs dates, et on dit ce que vaut le rapprochement :
+// « à relire » n'est pas « établi », et c'est un humain qui tranche.
+
+function enRegard(r) {
+  if (!r) return "";
+  const etabli = r.status === "confirmed";
+  const quand = r.published_at ? exactDate(r.published_at) : "date inconnue";
+  return `<div class="regard">
+    <p class="regard__cle">
+      <span class="regard__etat${etabli ? " regard__etat--ok" : ""}">${
+        etabli ? "Revirement confirmé" : "Rapprochement à relire"}</span>
+      ${escapeHtml(r.type)}
+    </p>
+    <p class="regard__quand">${escapeHtml(r.speaker || "locuteur non établi")}
+      · ${escapeHtml(quand)}</p>
+    <p class="regard__texte">${r.quote_style === "direct"
+      ? `« ${escapeHtml(r.text || "")} »` : escapeHtml(r.text || "")}</p>
+    ${r.rationale ? `<p class="regard__motif">${escapeHtml(r.rationale)}</p>` : ""}
+    <p><a class="source-link" href="contradictions.html">${
+      etabli ? "voir le verdict" : "trancher ce rapprochement"} ${ico("source")}</a></p>
+  </div>`;
+}
+
 function declaration(d) {
   const sujet = d.subject_id
     ? `<a class="decl__sujet" href="${lien(d.subject_id)}">${nomSujet({ label: d.subject_label, status: d.subject_status })} ${ico("source")}</a>`
@@ -64,6 +92,7 @@ function declaration(d) {
     </p>
     ${propos(d)}
     <p class="decl__pourquoi">${(d.why || []).map(escapeHtml).join(" · ") || "&nbsp;"}</p>
+    ${enRegard(d.en_regard)}
     <p class="entry__foot">
       ${sujet}
       <span class="spacer"></span>

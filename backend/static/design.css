@@ -1562,6 +1562,33 @@ a:hover > .story__title, a:hover .story__title { color: var(--accent); }
   color: var(--accent); margin: var(--s2) 0 0;
   letter-spacing: 0.01em;
 }
+/* Le propos mis en regard : décalé et sur fond neutre, pour qu'on voie d'un
+ * coup d'œil que c'est l'AUTRE côté de la confrontation et non la suite du
+ * propos. Pas de filet en marge — la mise en retrait suffit. */
+.regard {
+  margin: var(--s4) 0 0; padding: var(--s4);
+  background: var(--surface-sunk);
+  max-width: var(--measure-read);
+}
+.regard__cle {
+  display: flex; flex-wrap: wrap; gap: var(--s2) var(--s3); align-items: baseline;
+  font-size: var(--t-micro); color: var(--muted); margin: 0;
+}
+.regard__etat {
+  font-family: var(--font-mono); letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--pending); white-space: nowrap;
+}
+.regard__etat--ok { color: var(--alert); }
+.regard__quand {
+  font-family: var(--font-mono); font-size: var(--t-micro);
+  color: var(--faint); margin: var(--s2) 0 0;
+}
+.regard__texte {
+  font-family: var(--font-serif); font-size: var(--t-small);
+  line-height: var(--lh-read); color: var(--ink); margin: var(--s2) 0 var(--s3);
+}
+.regard__motif { font-size: var(--t-micro); color: var(--muted); margin: 0 0 var(--s3); }
+
 .decl__sujet {
   display: inline-flex; align-items: center; gap: var(--s1);
   font-family: var(--font-label); font-size: var(--t-small); font-weight: 600;

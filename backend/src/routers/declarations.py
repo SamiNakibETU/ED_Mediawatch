@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database import get_db
 from src.models.claim import Claim
+from src.models.contradiction import TYPE_LABELS, Contradiction
 from src.models.personality import Personality
 from src.models.subject import Subject
 from src.services.analysis.cap import CAP_VERSION
@@ -43,6 +44,60 @@ def _empreinte(texte: str) -> str:
     return " ".join(plat.split())[:100]
 
 router = APIRouter(prefix="/declarations", tags=["declarations"])
+
+
+async def _en_regard(db: AsyncSession, ids: list[int]) -> dict[int, dict]:
+    """Le propos que chacun contredit, prêt à être posé à côté.
+
+    La une écrivait « contredit un autre propos » sans jamais montrer lequel :
+    l'affirmation la plus lourde du produit, invérifiable d'un clic. Or c'est
+    précisément la promesse — qui a dit quoi, quand, et où ça diverge. Une
+    contradiction qu'on annonce sans l'exposer demande qu'on la croie sur
+    parole, ce qu'un observatoire ne peut pas se permettre.
+
+    On rend la mieux notée quand il y en a plusieurs, et on dit son statut : un
+    rapprochement à relire n'est pas un revirement établi. C'est un humain qui
+    tranche, et la page doit le dire avant que le lecteur ne conclue.
+    """
+    if not ids:
+        return {}
+    liens = (await db.execute(
+        select(Contradiction.claim_a_id, Contradiction.claim_b_id, Contradiction.id,
+               Contradiction.type, Contradiction.status, Contradiction.rationale,
+               Contradiction.score)
+        .where(Contradiction.status != "rejected",
+               Contradiction.claim_a_id.in_(ids) | Contradiction.claim_b_id.in_(ids))
+        .order_by(Contradiction.score.desc())
+    )).all()
+    if not liens:
+        return {}
+
+    besoin, meilleur = set(), {}
+    for a, b, cid, typ, statut, motif, score in liens:
+        for ici, la in ((a, b), (b, a)):
+            if ici in ids and ici not in meilleur:
+                meilleur[ici] = (la, cid, typ, statut, motif)
+                besoin.add(la)
+
+    autres = {c.id: c for c in (await db.execute(
+        select(Claim).where(Claim.id.in_(besoin)))).scalars().all()}
+
+    out: dict[int, dict] = {}
+    for ici, (la, cid, typ, statut, motif) in meilleur.items():
+        autre = autres.get(la)
+        if autre is None:
+            continue
+        out[ici] = {
+            "contradiction_id": cid,
+            "type": TYPE_LABELS.get(typ, "rapprochement"),
+            "status": statut,
+            "rationale": motif,
+            "speaker": autre.speaker_name,
+            "published_at": autre.published_at,
+            "text": autre.canonical or autre.verbatim,
+            "quote_style": autre.quote_style,
+        }
+    return out
 
 
 @router.get("")
@@ -90,6 +145,7 @@ async def list_declarations(
             break
     rows = gardes
     urls = await resolve_claim_urls(db, [r[0] for r in rows])
+    en_regard = await _en_regard(db, [r[0].id for r in rows])
 
     return {
         "jours": jours,
@@ -102,6 +158,7 @@ async def list_declarations(
                 "quote_style": c.quote_style,
                 "relevance": c.relevance, "why": c.relevance_why or [],
                 "n_reprises": c.n_reprises or 0,
+                "en_regard": en_regard.get(c.id),
                 "subject_id": c.subject_id, "subject_label": s_label,
                 "subject_status": s_status, "url": urls.get(c.id),
             }
