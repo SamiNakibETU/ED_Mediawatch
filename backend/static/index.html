@@ -19,9 +19,15 @@
     <div class="band band--flush"><h2>Ce qui compte cette semaine</h2>
       <span class="spacer"></span>
       <p id="pourquoi-note">Classé par ce qui est inhabituel, repris, contredit ou engageant.</p></div>
-    <main id="aujourdhui"><p class="state">Chargement…</p></main>
-
-    <section id="revue" hidden></section>
+    <!-- Deux colonnes : la parole à gauche, à la mesure de lecture ; ce qu'on
+         en a écrit à droite. Le corps de texte gardait sa juste largeur mais
+         laissait la moitié droite de l'écran vide, et la revue de la semaine —
+         le seul travail éditorial du produit — était reléguée sous la ligne de
+         flottaison. -->
+    <div class="une">
+      <main id="aujourdhui"><p class="state">Chargement…</p></main>
+      <aside id="revue" class="une__cote" hidden></aside>
+    </div>
 
     <div class="band"><h2>Les sujets qui bougent</h2>
       <span class="spacer"></span>

@@ -1515,13 +1515,48 @@ a:hover > .story__title, a:hover .story__title { color: var(--accent); }
  * raison qui fait la différence entre un classement et une boîte noire : le
  * lecteur peut la lire, et la contester. */
 
-.decl { padding: var(--s5) 0; border-bottom: 1px solid var(--rule); max-width: var(--measure-read); }
+/* La une : la colonne de lecture, puis ce qu'on en a écrit. Sous 62rem la
+ * seconde colonne passe dessous — un rail de 18rem à côté d'un texte à la
+ * mesure ne tient pas sur une tablette. */
+.une { display: grid; gap: var(--s7); align-items: start; }
+@media (min-width: 62rem) {
+  /* La colonne de gauche prend la place restante et le rail garde sa largeur.
+   * Borner la gauche à la mesure de lecture laissait un vide de deux cents
+   * pixels à droite du rail : la page paraissait tassée dans son coin. C'est le
+   * TEXTE qui garde la mesure, pas la colonne. */
+  .une { grid-template-columns: minmax(0, 1fr) minmax(16rem, 20rem); }
+}
+.une__cote { position: sticky; top: var(--s6); }
+/* Une entrée du rail : un empilement, pas la grille à deux colonnes de
+ * `.entry` — il n'y a pas de portrait à gauche, et la place est comptée. */
+.entry--lien {
+  display: block; padding: var(--s4) 0;
+  border-bottom: 1px solid var(--rule); color: inherit; text-decoration: none;
+}
+.entry--lien:hover .entry__titre { color: var(--accent); }
+.entry__titre {
+  display: block; margin: 2px 0; font-weight: 600;
+  font-size: var(--t-small); line-height: 1.35; color: var(--ink);
+  transition: color var(--dur-fast) var(--ease);
+}
+
+.decl { padding: var(--s5) 0; border-bottom: 1px solid var(--rule); }
 .decl:first-child { padding-top: var(--s3); }
 .decl__texte {
   font-family: var(--font-serif); font-size: var(--t-read); line-height: var(--lh-read);
   color: var(--ink); margin: var(--s3) 0 0;
+  max-width: var(--measure-read);
   overflow-wrap: anywhere;
 }
+/* Un propos rapporté n'est pas une citation : pas de guillemets, pas la police
+ * des verbatims, et la mention le dit en toutes lettres. La différence doit se
+ * voir avant d'être lue. */
+.decl__texte--rapporte { font-family: var(--font-ui); color: var(--ink); }
+.decl__rapporte {
+  font-family: var(--font-mono); font-size: var(--t-micro);
+  color: var(--faint); margin-left: var(--s2); white-space: nowrap;
+}
+
 .decl__pourquoi {
   font-family: var(--font-mono); font-size: var(--t-micro);
   color: var(--accent); margin: var(--s2) 0 0;

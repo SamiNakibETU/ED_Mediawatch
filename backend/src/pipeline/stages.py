@@ -90,6 +90,11 @@ async def _pledges() -> dict:
     return await detect_pledges(limit=400)
 
 
+async def _quotation() -> dict:
+    from src.services.analysis.quotation import qualify_quotations
+    return await qualify_quotations(limit=4000)
+
+
 async def _party_of_record() -> dict:
     from src.services.analysis.party_of_record import fix_claim_parties
     return await fix_claim_parties(limit=5000)
@@ -183,6 +188,10 @@ STAGES: tuple[Stage, ...] = (
     # jour où la déclaration a été extraite.
     Stage("party_of_record", "Parti à la date du propos", FREE, _party_of_record,
           depends_on=("extract_l0",), produces="partis rectifiés"),
+    # Cité ou rapporté. Déduit de la ponctuation du document, sans modèle : la
+    # position des guillemets est un fait vérifiable et gratuit.
+    Stage("quotation", "Cité ou rapporté", FREE, _quotation,
+          depends_on=("extract_l0",), produces="propos qualifiés"),
     # Le registre des engagements. Bornée à 400 par passe : la question ne se
     # pose que pour les propos normatifs et prédictifs, et rien ne presse — un
     # engagement pris hier vaudra la même chose demain.

@@ -27,6 +27,20 @@ from src.services.analysis.claim_sources import resolve_claim_urls
 # classé. C'est une règle de rédaction, pas de score.
 MAX_PAR_LOCUTEUR = 2
 
+
+def _empreinte(texte: str) -> str:
+    """Le propos réduit à ce qui le distingue, pour repérer les redites.
+
+    Deux journaux qui citent la même phrase produisent deux déclarations, dans
+    deux articles : le dédoublonnage par source les laissait toutes les deux en
+    une. Or qu'une phrase soit reprise ailleurs est un SIGNAL (elle pèse déjà
+    dans le score par la reprise presse), pas une raison de l'afficher deux fois.
+    Les cent premiers caractères suffisent : au-delà, deux propos qui commencent
+    pareil sur cette longueur sont le même propos.
+    """
+    plat = "".join(c for c in texte.lower() if c.isalnum() or c == " ")
+    return " ".join(plat.split())[:100]
+
 router = APIRouter(prefix="/declarations", tags=["declarations"])
 
 
@@ -56,14 +70,19 @@ async def list_declarations(
         .limit(limit * 6)
     )).all())
     vues: set[tuple] = set()
+    dits: set[str] = set()
     par_locuteur: dict[str, int] = {}
     gardes = []
     for row in rows:
         c = row[0]
         cle = ("post", c.post_id) if c.post_id else ("article", c.article_id)
-        if cle in vues or par_locuteur.get(c.speaker_name, 0) >= MAX_PAR_LOCUTEUR:
+        dit = _empreinte(c.verbatim or c.canonical or "")
+        if (cle in vues or dit in dits
+                or par_locuteur.get(c.speaker_name, 0) >= MAX_PAR_LOCUTEUR):
             continue
         vues.add(cle)
+        if dit:
+            dits.add(dit)
         par_locuteur[c.speaker_name] = par_locuteur.get(c.speaker_name, 0) + 1
         gardes.append(row)
         if len(gardes) >= limit:
@@ -79,6 +98,7 @@ async def list_declarations(
                 "handle": handle, "photo_url": photo,
                 "published_at": c.published_at, "platform": c.platform,
                 "text": c.canonical or c.verbatim, "verbatim": c.verbatim,
+                "quote_style": c.quote_style,
                 "relevance": c.relevance, "why": c.relevance_why or [],
                 "subject_id": c.subject_id, "subject_label": s_label,
                 "subject_status": s_status, "url": urls.get(c.id),

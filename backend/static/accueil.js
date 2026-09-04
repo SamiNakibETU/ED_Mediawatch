@@ -27,6 +27,29 @@ function face(d) {
     : repli;
 }
 
+// Les mots du locuteur, ou ceux du journaliste.
+//
+// Le 04/09/2026, les six déclarations en tête venaient de la presse et
+// s'affichaient toutes entre guillemets sous un nom : « Marine Le Pen assure
+// avoir elle-même souhaité ce départ », qui est une phrase de journaliste à la
+// troisième personne. Sur 3 294 propos tirés de la presse, 3 100 étaient dans
+// ce cas. Mettre des guillemets autour, c'est prêter à quelqu'un des mots qu'il
+// n'a pas prononcés — pour un observatoire du discours, la faute qui invalide
+// tout le reste.
+//
+// Les guillemets sont donc réservés à ce qui est cité comme tel dans la source.
+// Le reste s'affiche sans guillemets, dans la formulation neutre, et dit d'où
+// il vient. Voir `services/analysis/quotation.py`.
+
+function propos(d) {
+  if (d.quote_style === "direct") {
+    return `<p class="decl__texte">« ${escapeHtml(d.verbatim || d.text || "")} »</p>`;
+  }
+  return `<p class="decl__texte decl__texte--rapporte">
+    ${escapeHtml(d.text || d.verbatim || "")}
+    <span class="decl__rapporte">rapporté par la presse, pas cité</span></p>`;
+}
+
 function declaration(d) {
   const sujet = d.subject_id
     ? `<a class="decl__sujet" href="${lien(d.subject_id)}">${nomSujet({ label: d.subject_label, status: d.subject_status })} ${ico("source")}</a>`
@@ -39,7 +62,7 @@ function declaration(d) {
       <span class="spacer"></span>
       <span class="stamp">${escapeHtml(exactDate(d.published_at))}</span>
     </p>
-    <p class="decl__texte">« ${escapeHtml(d.verbatim || d.text || "")} »</p>
+    ${propos(d)}
     <p class="decl__pourquoi">${(d.why || []).map(escapeHtml).join(" · ") || "&nbsp;"}</p>
     <p class="entry__foot">
       ${sujet}
@@ -69,16 +92,15 @@ function renderRevue(items) {
   if (!items.length) { host.hidden = true; return; }
   host.hidden = false;
   host.innerHTML = `
-    <div class="band"><h2>La revue de la semaine</h2><span class="spacer"></span>
-      <p>Sujet par sujet, chaque paragraphe cite ce qu’il rapporte.</p></div>
-    <div class="tiles">${items.slice(0, 3).map((r) => `
-      <a class="tile" href="revue.html?id=${r.id}">
-        ${kicker(r.theme, r.status === "brouillon" ? "brouillon" : "relue")}
-        <h3 class="card-title">${escapeHtml(r.title || "sans titre")}</h3>
-        <p class="dek">${nomSujet({ label: r.subject_label || "", status: r.subject_status })}</p>
-        <p class="tile__foot"><span class="stamp">${fmtNum(r.n_sources)} déclarations citées</span></p>
+    <p class="section-label">La revue de la semaine</p>
+    <p class="lede mb-4">Sujet par sujet, chaque paragraphe cite ce qu’il rapporte.</p>
+    <div class="register">${items.slice(0, 4).map((r) => `
+      <a class="entry entry--lien" href="revue.html?id=${r.id}">
+        <span class="stamp">${escapeHtml(r.status === "brouillon" ? "brouillon" : "relue")}</span>
+        <span class="entry__titre">${escapeHtml(r.title || "sans titre")}</span>
+        <span class="stamp">${fmtNum(r.n_sources)} déclarations citées</span>
       </a>`).join("")}</div>
-    <p class="mt-4"><a class="btn btn--sm" href="revue.html">Toutes les revues ${ico("source")}</a></p>`;
+    <p class="mt-4"><a class="source-link" href="revue.html">Toutes les revues ${ico("source")}</a></p>`;
 }
 
 // ── Les sujets qui bougent ──────────────────────────────────────────────────

@@ -46,6 +46,12 @@ class Claim(Base, TimestampMixin):
 
     # Contenu (fidélité au verbatim)
     verbatim: Mapped[str] = mapped_column(Text, nullable=False)
+    # « direct » : le verbatim est entre guillemets DANS le document, ce sont les
+    # mots du locuteur. « rapporte » : c'est la formulation du journaliste. La
+    # une affichait les deux entre guillemets sous le nom de la personne, ce qui
+    # lui prêtait des phrases qu'elle n'avait pas prononcées. Voir
+    # `services/analysis/quotation.py`. `None` = pas encore établi.
+    quote_style: Mapped[str | None] = mapped_column(String(10), index=True)
     canonical: Mapped[str | None] = mapped_column(Text)
     claim_type: Mapped[str] = mapped_column(String(30), default="factuel_quantitatif")
 

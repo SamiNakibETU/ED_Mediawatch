@@ -76,6 +76,13 @@ AUDIENCE_PLANCHER = 300
 # observatoire du discours politique met en tête. Le codage le sait. On ne
 # pénalise pas ce qui n'est PAS ENCORE codé : l'inconnu n'est pas le hors-sujet.
 HORS_SUJET_FACTEUR = 0.3
+# Un propos que la presse RAPPORTE — sans guillemets, donc dans les mots du
+# journaliste — reste du matériau : un observatoire suit aussi ce qui est écrit
+# sur ces gens. Mais il ne vaut pas la parole tenue. Mesuré le 04/09/2026 :
+# 3 100 des 3 294 propos de presse étaient dans ce cas, et ils occupaient toute
+# la une, guillemets compris. Rétrogradés, pas exclus — la distinction est
+# affichée, le lecteur tranche.
+RAPPORTE_FACTEUR = 0.5
 RECENCE_JOURS = 30.0
 # Un locuteur dont on a moins de six posts n'a pas de « moyenne » : on ne peut
 # pas dire qu'un tweet est inhabituel pour lui, on retombe sur la portée seule.
@@ -113,9 +120,14 @@ def recence(quand: datetime | None, maintenant: datetime) -> float:
     return math.exp(-jours / RECENCE_JOURS)
 
 
-def score(signaux: dict[str, float], *, hors_sujet: bool = False) -> float:
+def score(signaux: dict[str, float], *, hors_sujet: bool = False,
+          rapporte: bool = False) -> float:
     brut = sum(POIDS[k] * signaux.get(k, 0.0) for k in POIDS)
-    return round(brut * (HORS_SUJET_FACTEUR if hors_sujet else 1.0), 3)
+    if hors_sujet:
+        brut *= HORS_SUJET_FACTEUR
+    if rapporte:
+        brut *= RAPPORTE_FACTEUR
+    return round(brut, 3)
 
 
 def pourquoi(signaux: dict[str, float], *, brut_audience: int, facteur: float,
@@ -179,13 +191,14 @@ async def compute_relevance() -> dict:
         claims = (await db.execute(
             select(Claim.id, Claim.personality_id, Claim.post_id, Claim.article_id,
                    Claim.published_at, Claim.pledge_status,
-                   Claim.cap_version, Claim.cap_major,
+                   Claim.cap_version, Claim.cap_major, Claim.quote_style,
                    Post.likes, Post.retweets, Post.quotes)
             .outerjoin(Post, Post.id == Claim.post_id)
         )).all()
 
         maj = 0
-        for cid, pid, post_id, article_id, quand, pledge, capv, capm, l, r, q in claims:
+        for (cid, pid, post_id, article_id, quand, pledge, capv, capm, style,
+             l, r, q) in claims:
             # Codé, et codé « aucun objet d'action publique ».
             hors_sujet = bool(capv and capv.startswith(CAP_VERSION)) and capm is None
             signaux = {
@@ -208,7 +221,8 @@ async def compute_relevance() -> dict:
             obj = await db.get(Claim, cid)
             if obj is None:
                 continue
-            obj.relevance = score(signaux, hors_sujet=hors_sujet)
+            obj.relevance = score(signaux, hors_sujet=hors_sujet,
+                                  rapporte=style == "rapporte")
             obj.relevance_why = pourquoi(signaux, brut_audience=brut,
                                          facteur=facteur, confirmee=bool(confirmee))
             maj += 1

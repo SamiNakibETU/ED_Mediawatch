@@ -34,6 +34,7 @@ from src.services.analysis.claim_llm import (
     Declaration,
     get_claim_llm,
 )
+from src.services.analysis.quotation import DIRECT, style_de_citation
 from src.utils import sha256, strip_accents
 
 logger = structlog.get_logger(__name__)
@@ -136,6 +137,10 @@ async def _store(
     if not verbatim_in_source(decl.verbatim, _SRC_CACHE.get(src_ref, "")):
         logger.debug("decl.verbatim_rejected", src=src_ref, v=decl.verbatim[:60])
         return False
+    # Cité ou rapporté, tant qu'on a le texte source sous la main. Un post X est
+    # écrit par le locuteur ; la question ne se pose que pour la presse.
+    style = (DIRECT if platform == "x"
+             else style_de_citation(decl.verbatim, _SRC_CACHE.get(src_ref, "")))
     dk = _dedup_key(src_ref, decl.verbatim)
     if await db.scalar(select(Claim.id).where(Claim.dedup_key == dk)):
         return False
@@ -147,7 +152,7 @@ async def _store(
         stance_polarity=decl.stance_polarity,
         stance_target=(decl.stance_target or None), published_at=published_at,
         extraction_method="llm_segment", extraction_model=model,
-        confidence=0.7, dedup_key=dk,
+        confidence=0.7, dedup_key=dk, quote_style=style,
     ))
     return True
 
