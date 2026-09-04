@@ -131,7 +131,7 @@ def score(signaux: dict[str, float], *, hors_sujet: bool = False,
 
 
 def pourquoi(signaux: dict[str, float], *, brut_audience: int, facteur: float,
-             confirmee: bool) -> list[str]:
+             confirmee: bool, reprises: int = 0) -> list[str]:
     """Les raisons en clair, dans l'ordre où elles pèsent. C'est ce que la page
     affiche à côté d'une déclaration ; sans ça le classement serait une boîte
     noire, et un lecteur ne peut pas contester une boîte noire."""
@@ -139,7 +139,10 @@ def pourquoi(signaux: dict[str, float], *, brut_audience: int, facteur: float,
     if signaux.get("contradiction"):
         raisons.append("contredit un autre propos" + (" — confirmé" if confirmee else ""))
     if signaux.get("presse"):
-        raisons.append("reprise dans la presse")
+        # Combien de rédactions l'ont reprise : c'est ce que le regroupement des
+        # redites a rendu comptable. Vingt reprises ne pèsent pas comme une.
+        raisons.append(f"reprise par {reprises + 1} sources" if reprises
+                       else "reprise dans la presse")
     if signaux.get("engagement"):
         raisons.append("engagement pris")
     if signaux.get("audience", 0) >= 1.0:
@@ -192,13 +195,14 @@ async def compute_relevance() -> dict:
             select(Claim.id, Claim.personality_id, Claim.post_id, Claim.article_id,
                    Claim.published_at, Claim.pledge_status,
                    Claim.cap_version, Claim.cap_major, Claim.quote_style,
+                   Claim.n_reprises,
                    Post.likes, Post.retweets, Post.quotes)
             .outerjoin(Post, Post.id == Claim.post_id)
         )).all()
 
         maj = 0
         for (cid, pid, post_id, article_id, quand, pledge, capv, capm, style,
-             l, r, q) in claims:
+             reprises, l, r, q) in claims:
             # Codé, et codé « aucun objet d'action publique ».
             hors_sujet = bool(capv and capv.startswith(CAP_VERSION)) and capm is None
             signaux = {
@@ -224,7 +228,8 @@ async def compute_relevance() -> dict:
             obj.relevance = score(signaux, hors_sujet=hors_sujet,
                                   rapporte=style == "rapporte")
             obj.relevance_why = pourquoi(signaux, brut_audience=brut,
-                                         facteur=facteur, confirmee=bool(confirmee))
+                                         facteur=facteur, confirmee=bool(confirmee),
+                                         reprises=reprises or 0)
             maj += 1
         await db.commit()
 

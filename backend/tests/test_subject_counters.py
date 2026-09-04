@@ -47,6 +47,7 @@ def _run(tmp_path, monkeypatch, check):
             await db.refresh(vide)
             for i, qui in enumerate(("Marine Le Pen", "Sébastien Chenu")):
                 db.add(Claim(platform="x", subject_id=garde.id, speaker_name=qui,
+                             personality_id=1,
                              verbatim=f"propos {i}", claim_type="normatif",
                              published_at=QUAND, confidence=0.7, dedup_key=f"k{i}"))
             await db.commit()

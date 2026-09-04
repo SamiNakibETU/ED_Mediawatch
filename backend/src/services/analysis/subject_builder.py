@@ -31,6 +31,7 @@ from sqlalchemy import func, select
 from src.database import get_session_factory
 from src.models.claim import Claim
 from src.models.subject import Subject
+from src.services.analysis.perimetre import retenu
 from src.services.analysis.subject_clustering import (
     ETA_ENTITY_OVERLAP,
     MERGE_COSINE,
@@ -96,7 +97,7 @@ async def _resync_counters(db) -> tuple[int, int]:
             select(Claim.subject_id, func.count(Claim.id),
                    func.count(func.distinct(Claim.speaker_name)),
                    func.min(Claim.published_at), func.max(Claim.published_at))
-            .where(Claim.subject_id.isnot(None))
+            .where(Claim.subject_id.isnot(None), retenu())
             .group_by(Claim.subject_id)
         )).all()
     }

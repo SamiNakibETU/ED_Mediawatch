@@ -231,7 +231,8 @@ def test_the_press_path_runs_end_to_end(tmp_path, monkeypatch):
 
     assert stats["articles_processed"] == 1
     assert stats["remaining_articles"] == 0, "l'article n'a pas été marqué comme vu"
-    assert len(claims) == 3, "les déclarations retenues doivent entrer au Grand Livre"
+    assert len(claims) == 1, ("seule la voix du périmètre entre au Grand Livre : "
+                              "l'article en portait trois")
 
 
 def test_the_model_gets_the_followed_figures_as_context_only(tmp_path, monkeypatch):
@@ -244,20 +245,24 @@ def test_the_model_gets_the_followed_figures_as_context_only(tmp_path, monkeypat
     assert llm.known_recu == ["Marine Le Pen", "Jordan Bardella"]
 
 
-def test_each_press_declaration_is_attributed_on_its_own(tmp_path, monkeypatch):
-    """Un papier porte plusieurs voix : chacune est vérifiée séparément.
+def test_only_the_voice_inside_the_perimeter_is_recorded(tmp_path, monkeypatch):
+    """Un papier porte plusieurs voix ; l'observatoire n'en suit qu'une sorte.
 
-    Trois sorts distincts pour trois propos du même article — la figure suivie
-    rattachée à sa fiche, la voix extérieure nommée sans fiche, et le propos
-    dont le locuteur proposé n'est pas dans le texte CONSERVÉ mais non attribué.
-    Refuser une attribution n'est pas refuser le propos : le texte a bien été
-    écrit, c'est seulement le « qui » qui n'est pas établi."""
+    L'article de ce test porte trois propos : Marine Le Pen, Marylise Léon
+    (CFDT) et un propos dont le locuteur proposé n'est pas dans le texte. Les
+    deux derniers sont exacts et vérifiables — et ne sont pas le matériau d'un
+    observatoire de l'extrême droite.
+
+    Ce n'est pas une précaution théorique : mesuré en production le 04/09/2026,
+    659 propos étaient attribués à 139 personnes hors périmètre, dont Dominique
+    de Villepin, Jean-Luc Mélenchon et Benyamin Netanyahou, parce qu'un article
+    sur le RN cite aussi ses adversaires. Ils entraient dans les sujets, dans
+    les compteurs de voix, et dans les candidats du juge."""
     stats, claims, _ = _extraire_un_article(tmp_path, monkeypatch)
 
-    par_nom = {c.speaker_name: c for c in claims}
-    assert set(par_nom) == {"Marine Le Pen", "Marylise Léon", None}
-    assert par_nom["Marine Le Pen"].personality_id is not None
-    assert par_nom["Marylise Léon"].personality_id is None
-    assert par_nom[None].personality_id is None
+    assert [c.speaker_name for c in claims] == ["Marine Le Pen"]
+    assert claims[0].personality_id is not None
+    assert claims[0].platform == "press" and claims[0].article_id
+    # L'attribution continue de compter les DEUX voix nommées : le compteur
+    # mesure ce que la lecture du papier a établi, pas ce qu'on a consigné.
     assert stats["press_attributed"] == 2
-    assert all(c.platform == "press" and c.article_id for c in claims)

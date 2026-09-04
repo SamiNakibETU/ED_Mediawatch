@@ -21,6 +21,7 @@ from src.models.personality import Personality
 from src.models.subject import Subject
 from src.services.analysis.cap import CAP_VERSION
 from src.services.analysis.claim_sources import resolve_claim_urls
+from src.services.analysis.perimetre import retenu
 
 # Une une n'est pas le fil d'une personne. Au-delà de deux lignes, le troisième
 # propos du même locuteur cède la place au premier d'un autre — même mieux
@@ -57,7 +58,7 @@ async def list_declarations(
         .outerjoin(Personality, Personality.id == Claim.personality_id)
         .outerjoin(Subject, Subject.id == Claim.subject_id)
         .where(Claim.published_at >= depuis,
-               Claim.speaker_name.isnot(None),   # sans auteur, rien à imputer
+               retenu(),          # du périmètre, et pas une reprise
                Claim.relevance.isnot(None),
                # Codé hors politique publique : jamais en une, quelle que soit
                # l'audience. Pas encore codé : on ne sait pas, on laisse passer.
@@ -100,6 +101,7 @@ async def list_declarations(
                 "text": c.canonical or c.verbatim, "verbatim": c.verbatim,
                 "quote_style": c.quote_style,
                 "relevance": c.relevance, "why": c.relevance_why or [],
+                "n_reprises": c.n_reprises or 0,
                 "subject_id": c.subject_id, "subject_label": s_label,
                 "subject_status": s_status, "url": urls.get(c.id),
             }

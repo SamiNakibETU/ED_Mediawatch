@@ -134,6 +134,12 @@ async def _store(
 ) -> bool:
     if not decl.check_worthy:
         return False
+    # Hors périmètre : un article sur le RN cite aussi ses adversaires, et le
+    # modèle les nomme fidèlement. Un propos de Villepin ou de Mélenchon est
+    # exact, vérifiable — et n'est pas le matériau d'un observatoire de
+    # l'extrême droite. Voir `services/analysis/perimetre.py`.
+    if personality_id is None:
+        return False
     if not verbatim_in_source(decl.verbatim, _SRC_CACHE.get(src_ref, "")):
         logger.debug("decl.verbatim_rejected", src=src_ref, v=decl.verbatim[:60])
         return False

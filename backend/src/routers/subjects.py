@@ -20,6 +20,7 @@ from src.models.claim import Claim
 from src.models.contradiction import Contradiction, TYPE_LABELS
 from src.models.personality import Personality
 from src.models.subject import Subject
+from src.services.analysis.perimetre import retenu
 from src.services.analysis.claim_sources import resolve_claim_urls
 
 router = APIRouter(prefix="/subjects", tags=["subjects"])
@@ -177,7 +178,7 @@ async def subject_detail(
     claims = list(
         (
             await db.execute(
-                select(Claim).where(Claim.subject_id == subject_id)
+                select(Claim).where(Claim.subject_id == subject_id, retenu())
                 .order_by(Claim.published_at.asc().nullsfirst())
             )
         ).scalars().all()

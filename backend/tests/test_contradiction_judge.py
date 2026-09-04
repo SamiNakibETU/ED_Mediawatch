@@ -99,7 +99,7 @@ def _run_judging(tmp_path, monkeypatch, db_name, verdict, assertion):
                 db.add(Claim(
                     platform="x", verbatim=f"position {cid}", claim_type="normatif",
                     canonical=f"position {cid}", embedding=vec,
-                    speaker_name="Marine Test", party="RN",
+                    speaker_name="Marine Test", party="RN", personality_id=1,
                     referent_key="age_retraite", post_id=post,
                     published_at=datetime(2026, 1, day, tzinfo=timezone.utc),
                     extraction_method="llm_segment", dedup_key=f"k{cid}",

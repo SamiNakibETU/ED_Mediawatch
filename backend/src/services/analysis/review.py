@@ -47,6 +47,7 @@ from src.models.review import Review
 from src.models.subject import Subject
 from src.services.analysis.claim_llm import get_claim_llm
 from src.services.analysis.llm_usage import BudgetExceeded
+from src.services.analysis.perimetre import retenu
 
 logger = structlog.get_logger(__name__)
 
@@ -163,7 +164,7 @@ async def build_reviews(*, limit: int = 6, semaines: int = 1) -> dict:
                 select(Claim.subject_id,
                        func.count(Claim.id),
                        func.count(func.distinct(Claim.speaker_name)))
-                .where(Claim.subject_id.isnot(None),
+                .where(Claim.subject_id.isnot(None), retenu(),
                        Claim.published_at >= debut, Claim.published_at < fin)
                 .group_by(Claim.subject_id)
             )).all()
@@ -195,7 +196,7 @@ async def build_reviews(*, limit: int = 6, semaines: int = 1) -> dict:
             async with factory() as db:
                 sujet = await db.get(Subject, sid)
                 claims = list((await db.execute(
-                    select(Claim).where(Claim.subject_id == sid,
+                    select(Claim).where(Claim.subject_id == sid, retenu(),
                                         Claim.published_at >= debut,
                                         Claim.published_at < fin)
                     .order_by(Claim.published_at)
@@ -203,7 +204,7 @@ async def build_reviews(*, limit: int = 6, semaines: int = 1) -> dict:
                 # Ce qui se disait avant : la mémoire sans laquelle une revue
                 # hebdomadaire n'est qu'un bulletin de plus.
                 anterieurs = list((await db.execute(
-                    select(Claim).where(Claim.subject_id == sid,
+                    select(Claim).where(Claim.subject_id == sid, retenu(),
                                         Claim.published_at < debut)
                     .order_by(Claim.relevance.desc().nullslast(),
                               Claim.published_at.desc())

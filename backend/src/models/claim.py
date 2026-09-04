@@ -52,6 +52,13 @@ class Claim(Base, TimestampMixin):
     # lui prêtait des phrases qu'elle n'avait pas prononcées. Voir
     # `services/analysis/quotation.py`. `None` = pas encore établi.
     quote_style: Mapped[str | None] = mapped_column(String(10), index=True)
+    # Une phrase dite une fois et reprise par vingt journaux reste une phrase.
+    # `duplicate_of` pointe la prise de position reprise ; `n_reprises` la porte,
+    # parce que la reprise est un signal de poids, pas du bruit. Voir
+    # `services/analysis/redites.py`. `None` = c'est l'original.
+    duplicate_of: Mapped[int | None] = mapped_column(
+        ForeignKey("claims.id", ondelete="SET NULL"), index=True)
+    n_reprises: Mapped[int | None] = mapped_column(Integer, default=0)
     canonical: Mapped[str | None] = mapped_column(Text)
     claim_type: Mapped[str] = mapped_column(String(30), default="factuel_quantitatif")
 

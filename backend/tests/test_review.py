@@ -114,6 +114,7 @@ def _run(tmp_path, monkeypatch, revue, check):
             await db.refresh(s)
             for i, qui in enumerate(("Marine Le Pen", "Sébastien Chenu", "Marine Le Pen")):
                 db.add(Claim(platform="x", subject_id=s.id, speaker_name=qui,
+                             personality_id=1,
                              party="RN", verbatim=f"propos {i}", claim_type="normatif",
                              published_at=quand, confidence=0.7, dedup_key=f"r{i}"))
             await db.commit()
@@ -241,6 +242,7 @@ def _avec_anterieur(tmp_path, monkeypatch, revue, check):
         vieux_jour = datetime.now(timezone.utc) - timedelta(days=190)
         async with factory() as db:
             db.add(Claim(platform="x", subject_id=sid, speaker_name="Marine Le Pen",
+                         personality_id=1,
                          party="RN", verbatim="la position d'il y a six mois",
                          claim_type="normatif", published_at=vieux_jour,
                          confidence=0.7, dedup_key="ancien", relevance=4.0))

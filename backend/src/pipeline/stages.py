@@ -149,6 +149,11 @@ async def _review() -> dict:
     return await build_reviews(limit=6, semaines=2)
 
 
+async def _redites() -> dict:
+    from src.services.analysis.redites import fold_redites
+    return await fold_redites()
+
+
 async def _relevance() -> dict:
     from src.services.analysis.relevance import compute_relevance
     return await compute_relevance()
@@ -211,8 +216,14 @@ STAGES: tuple[Stage, ...] = (
     # rapprochement, et qu'on avait sautée. Gratuite : tous ses signaux sont
     # en base. Les agents payants qui suivent travaillent sur ce classement,
     # pas sur la file entière.
+    # Une phrase reprise par vingt rédactions est une prise de position, pas
+    # vingt. Avant le classement : ce qui compte se compte sur des propos
+    # distincts.
+    Stage("redites", "Reprises regroupées", FREE, _redites,
+          depends_on=("build_subjects", "embed"), produces="prises de position"),
     Stage("relevance", "Ce qui compte", FREE, _relevance,
-          depends_on=("build_subjects", "detect", "pledges"), produces="classement"),
+          depends_on=("build_subjects", "detect", "pledges", "redites"),
+          produces="classement"),
     Stage("label_subjects", "Nommage des sujets", PAID, _label_subjects,
           depends_on=("relevance",), produces="libellés"),
     Stage("judge", "Juge sémantique", PAID, _judge,

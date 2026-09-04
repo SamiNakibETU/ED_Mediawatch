@@ -38,6 +38,7 @@ from src.services.analysis.claim_llm import get_claim_llm
 from src.services.analysis.contradiction_detector import _classify, _existing_pairs
 from src.services.analysis.embeddings import cosine
 from src.services.analysis.llm_usage import BudgetExceeded
+from src.services.analysis.perimetre import retenu
 
 logger = structlog.get_logger(__name__)
 
@@ -207,7 +208,14 @@ def _drift_potential(pair: tuple[Claim, Claim, float]) -> tuple[int, int, float,
 
 
 # Les N déclarations les plus pertinentes entrent dans les blocs du juge.
-JUGE_FENETRE = 2000
+#
+# Mesuré le 04/09/2026, après le regroupement des redites et le filtre de
+# périmètre : à 2 000, le juge ne voyait que 165 paires candidates ; sur les
+# 7 100 déclarations retenues, il y en a 1 544 — dont 102 séparées de plus d'un
+# an, les seules qui peuvent porter un revirement. La fenêtre était le goulot,
+# et elle ne coûte rien : ce qui se paie, c'est `max_pairs` (les appels au
+# modèle), pas la lecture ni les cosinus locaux.
+JUGE_FENETRE = 8000
 
 
 async def run_semantic_judging(max_pairs: int = 60) -> dict:
@@ -230,6 +238,7 @@ async def run_semantic_judging(max_pairs: int = 60) -> dict:
                         # sur corpus réel, ~90 % des déclarations n'atteignent
                         # aucun des 28 référents (grille fine, discours large).
                         # Sans ce second blocking, le juge ne verrait presque rien.
+                        retenu(),
                         (Claim.subject_id.isnot(None))
                         | (Claim.referent_key.isnot(None))
                         | (Claim.speaker_name.isnot(None) & Claim.theme.isnot(None)),

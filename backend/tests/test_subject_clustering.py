@@ -148,6 +148,7 @@ def test_named_subjects_keep_their_label_on_rebuild(tmp_path, monkeypatch):
                     canonical=f"La contribution européenne augmente de {i} milliards.",
                     claim_type="factuel_quantitatif", theme="economie",
                     embedding=[1.0, 0.05 * i, 0.0], speaker_name=f"Locuteur {i}",
+                    personality_id=i + 1,
                     dedup_key=f"k{i}",
                 ))
             await db.commit()
