@@ -197,6 +197,15 @@ async def figure_detail(
             "photo_url": p.photo_url, "verif": p.verif,
             "x_followers": getattr(p, "followers_count", None),
             "last_status": p.last_status,
+            # La collecte de CE compte, sur sa propre fiche. Sans ça, une page
+            # qui affiche « 158 propos » laisse croire au silence d'un locuteur
+            # là où c'est la collecte qui est muette — douze comptes sur 113
+            # étaient dans ce cas, dont un à seize échecs d'affilée. Un
+            # observatoire ne peut pas confondre « il n'a rien dit » et « on
+            # n'a pas su lire ».
+            "collecte_echecs": p.consecutive_failures or 0,
+            "collecte_erreur": p.last_error,
+            "collecte_le": p.last_collected_at,
         },
         "stats": {
             "n_claims": sum(by_type.values()),

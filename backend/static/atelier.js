@@ -259,6 +259,44 @@ async function renderVeille() {
   }
 }
 
+// ── Ce qui ne rentre plus ────────────────────────────────────────────────
+// `/health/collectors` existait et n'était affiché nulle part : douze comptes
+// suivis échouaient en silence, dont un depuis seize passes. Une collecte
+// muette est plus dangereuse qu'une collecte absente — elle ne se signale pas,
+// et le locuteur passe pour silencieux.
+
+function muet(nom, echecs, erreur, quand) {
+  return `<div class="kv__row">
+    <span class="kv__k">${escapeHtml(nom)}</span>
+    <span class="kv__v">${echecs} échecs</span>
+    <span class="status status--alert" style="margin-left:var(--s3)">muet</span>
+    <span class="kv__note">${escapeHtml(erreur || "cause non enregistrée")}${
+      quand ? ` · dernière collecte ${escapeHtml(relTime(quand))}` : " · jamais collecté"}</span>
+  </div>`;
+}
+
+function renderMuets(d) {
+  const host = $("#muets");
+  if (!host) return;
+  if (!d) { host.innerHTML = '<p class="state">État des collecteurs indisponible.</p>'; return; }
+  const lignes = [
+    ...d.x.failing.map((h) => muet(`@${h.handle}`, h.consecutive_failures,
+                                   h.last_error, h.last_collected_at)),
+    ...d.press.failing.map((s) => muet(s.name, s.consecutive_failures,
+                                       s.last_error, s.last_collected_at)),
+  ];
+  if (!lignes.length) {
+    host.innerHTML = `<p class="state"><span class="state__title">Tout rentre</span>
+      <span class="state__hint">Aucun compte ni flux en échec répété.</span></p>`;
+    return;
+  }
+  host.innerHTML = `<p class="lede mb-4">${d.x.failing.length} compte(s) sur
+    ${d.x.active_total} et ${d.press.failing.length} flux sur ${d.press.active_total}
+    échouent depuis au moins ${d.fail_threshold} passes. Leurs fiches portent la
+    mention ; leurs chiffres sont des planchers.</p>
+    <div class="kv">${lignes.join("")}</div>`;
+}
+
 // ── Journal ─────────────────────────────────────────────────────────────
 
 function renderRuns(items) {
@@ -355,7 +393,7 @@ function renderThemes(d) {
 
 async function load() {
   try {
-    const [f, runs, costs, fresh, graph, themes, rapport] = await Promise.all([
+    const [f, runs, costs, fresh, graph, themes, rapport, muets] = await Promise.all([
       fetchJSON("/pipeline/funnel"),
       fetchJSON("/pipeline/runs?limit=8"),
       fetchJSON("/llm/costs").catch(() => null),
@@ -363,6 +401,7 @@ async function load() {
       fetchJSON("/pipeline/stages").catch(() => null),
       fetchJSON("/pipeline/themes").catch(() => null),
       fetchJSON("/health/collection-report").catch(() => null),
+      fetchJSON("/health/collectors").catch(() => null),
     ]);
 
     $("#stats").textContent = renderFunnel(f);
@@ -374,6 +413,7 @@ async function load() {
     if (graph) renderGraph(graph.stages || []);
     renderThemes(themes);
     renderVeille();
+    renderMuets(muets);
 
     const live = $("#live");
     live.hidden = false;

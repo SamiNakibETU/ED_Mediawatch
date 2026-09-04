@@ -1566,6 +1566,20 @@ a:hover > .story__title, a:hover .story__title { color: var(--accent); }
  * en clair, à côté des chiffres qu'elle nuance, et pas en note de bas de page. */
 /* Une réserve se lit, elle ne se signale pas par un trait de couleur : le fond
  * la met à part sans ajouter un sixième filet à la page. */
+/* Une mise en garde sur la DONNÉE elle-même, pas sur sa lecture : le lecteur
+ * doit la voir avant les chiffres qu'elle invalide. Elle se signale par une
+ * mention, pas par un filet sur le côté — les traits d'accent posés en marge
+ * ont été retirés partout ailleurs du produit. */
+.caveat__mention {
+  font-family: var(--font-mono); font-size: var(--t-micro);
+  letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--alert); margin-right: var(--s2);
+}
+.caveat__cause {
+  display: block; margin-top: 2px;
+  font-family: var(--font-mono); font-size: var(--t-micro); color: var(--faint);
+}
+
 .caveat {
   margin: var(--s5) 0 0;
   padding: var(--s3) var(--s4);

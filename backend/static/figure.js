@@ -205,6 +205,28 @@ async function loadMore() {
   }
 }
 
+// ── Quand la collecte est muette ────────────────────────────────────────
+// Le pire malentendu que cette page puisse produire : un compteur à 158 propos
+// qu'on lit comme le rythme d'un locuteur, alors que la collecte de son compte
+// échoue depuis des semaines. Douze comptes sur 113 étaient dans ce cas, dont
+// un à seize échecs d'affilée, et rien ne le disait nulle part.
+//
+// Le seuil est celui de `/health/collectors` : deux échecs consécutifs. Un
+// échec isolé arrive (quota, coupure) et ne veut rien dire.
+
+const ECHECS_AVANT_ALERTE = 2;
+
+function collecteMuette(f) {
+  if (!f.handle || (f.collecte_echecs || 0) < ECHECS_AVANT_ALERTE) return "";
+  const depuis = f.collecte_le ? ` — dernière collecte réussie ${relTime(f.collecte_le)}` : "";
+  return `<p class="caveat">
+    <span class="caveat__mention">Collecte interrompue</span>
+    La collecte de <span class="nowrap">@${escapeHtml(f.handle)}</span> échoue depuis
+    ${f.collecte_echecs} passes${escapeHtml(depuis)}. Ce qui suit est donc incomplet :
+    l’absence de propos récents ne veut pas dire qu’il n’y en a pas eu.
+    ${f.collecte_erreur ? `<span class="caveat__cause">${escapeHtml(f.collecte_erreur)}</span>` : ""}</p>`;
+}
+
 // ── La série mensuelle ──────────────────────────────────────────────────────
 // Le graphique dit ce que la chronologie ne montre pas : le RYTHME. Un
 // locuteur peut avoir cinquante déclarations réparties sur quatre ans ou
@@ -259,6 +281,8 @@ function render(d) {
       </div>
     </header>
 
+    ${collecteMuette(f)}
+
     ${months < 24 && s.first_seen ? `<p class="caveat">
       Un changement de position se lit sur plusieurs années. En deçà, l’absence de revirement
       ne prouve rien — c’est une limite du corpus, pas un résultat.</p>` : ""}
@@ -307,6 +331,10 @@ function render(d) {
 
 async function load(id) {
   state.id = id;
+  // L'adresse suit le locuteur affiché. Sans ça, aucune fiche n'était
+  // citable : la page ouvrait toujours sur le premier nom de la liste, et un
+  // observatoire dont on ne peut pas lier une fiche ne se cite pas.
+  history.replaceState(null, "", `figure.html?id=${id}`);
   state.onlyConf = true;
   renderList();
   $("#detail").innerHTML = '<p class="state">Chargement…</p>';
@@ -324,8 +352,11 @@ async function init() {
     state.figures = data.items;
     $("#stats").innerHTML = `<strong>${fmtNum(data.total)}</strong> locuteurs`;
     renderList();
-    const first = state.figures.find((f) => f.n_claims > 0);
-    if (first) load(first.id);
+    // Le locuteur demandé dans l'adresse ; à défaut, le premier qui a parlé.
+    const voulu = +new URLSearchParams(location.search).get("id") || null;
+    const cible = state.figures.find((f) => f.id === voulu)
+      || state.figures.find((f) => f.n_claims > 0);
+    if (cible) load(cible.id);
   } catch (e) {
     $("#figList").innerHTML = `<p class="state state--error">Répertoire indisponible (${e.message}).</p>`;
   }
