@@ -170,6 +170,11 @@ class ContradictionOut(BaseModel):
     # en production alors que les tests passaient en local sur une base neuve.
     detection_method: str | None = None
     judge_version: str | None = None
+    # Pourquoi le rapprochement a été écarté. Chaque motif accuse un étage
+    # DIFFÉRENT de la chaîne — « objets différents » le regroupement en sujets,
+    # « pas contradictoire » la sur-détection du juge. Sans lui, un rejet est
+    # une perte sèche au lieu d'un diagnostic. Voir REJECTION_REASONS.
+    rejection_reason: str | None = None
 
     @field_validator("detection_method", mode="before")
     @classmethod

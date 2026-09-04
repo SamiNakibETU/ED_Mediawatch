@@ -259,6 +259,50 @@ async function renderVeille() {
   }
 }
 
+// ── Ce que le juge apprend ──────────────────────────────────────────────
+// La boucle existait entièrement — `learning.py` injecte les décisions de la
+// rédaction dans la consigne du juge dès cinq rapprochements tranchés — et
+// n'était affichée nulle part. Personne ne pouvait savoir si le système
+// apprenait, ni de quoi. Un dispositif d'apprentissage invisible est un
+// dispositif dont on ne peut pas dire s'il fonctionne.
+//
+// Les motifs de rejet sont le vrai diagnostic : chacun accuse un étage
+// différent de la chaîne, donc appelle un correctif différent.
+
+function renderApprentissage(d) {
+  const host = $("#apprentissage");
+  if (!host) return;
+  if (!d) { host.innerHTML = '<p class="state">Indisponible.</p>'; return; }
+  const pct = (v) => (v == null ? "—" : `${Math.round(v * 100)} %`);
+  const amorce = d.enough_to_learn;
+  host.innerHTML = `
+    <p class="lede mb-4">${amorce
+      ? `Vos <b>${fmtNum(d.decided)}</b> décisions sont désormais citées en exemple
+         dans la consigne du juge : il rejuge à votre main.`
+      : `Il faut <b>5</b> rapprochements tranchés pour que vos décisions entrent
+         dans la consigne du juge. Vous en avez tranché <b>${fmtNum(d.decided)}</b>.`}</p>
+    <div class="kv">
+      <div class="kv__row">
+        <span class="kv__k">Précision du juge</span>
+        <span class="kv__v">${pct(d.precision)}</span>
+        <span class="kv__note">part de ses rapprochements que vous avez confirmés</span>
+      </div>
+      <div class="kv__row">
+        <span class="kv__k">En attente de votre avis</span>
+        <span class="kv__v">${fmtNum(d.pending)}</span>
+        <span class="kv__note">une file en attente n’est pas un résultat</span>
+      </div>
+      ${(d.rejection_reasons || []).map((r) => `
+        <div class="kv__row">
+          <span class="kv__k">${escapeHtml(r.reason.replace(/_/g, " "))}</span>
+          <span class="kv__v">${fmtNum(r.n)}</span>
+          <span class="kv__note">${escapeHtml(r.means)}</span>
+        </div>`).join("")}
+    </div>
+    <p class="mt-4"><a class="btn btn--sm" href="contradictions.html">Trancher les
+      rapprochements ${ico("source")}</a></p>`;
+}
+
 // ── Ce qui ne rentre plus ────────────────────────────────────────────────
 // `/health/collectors` existait et n'était affiché nulle part : douze comptes
 // suivis échouaient en silence, dont un depuis seize passes. Une collecte
@@ -393,7 +437,8 @@ function renderThemes(d) {
 
 async function load() {
   try {
-    const [f, runs, costs, fresh, graph, themes, rapport, muets] = await Promise.all([
+    const [f, runs, costs, fresh, graph, themes, rapport, muets,
+           apprentissage] = await Promise.all([
       fetchJSON("/pipeline/funnel"),
       fetchJSON("/pipeline/runs?limit=8"),
       fetchJSON("/llm/costs").catch(() => null),
@@ -402,6 +447,7 @@ async function load() {
       fetchJSON("/pipeline/themes").catch(() => null),
       fetchJSON("/health/collection-report").catch(() => null),
       fetchJSON("/health/collectors").catch(() => null),
+      fetchJSON("/learning/stats").catch(() => null),
     ]);
 
     $("#stats").textContent = renderFunnel(f);
@@ -414,6 +460,7 @@ async function load() {
     renderThemes(themes);
     renderVeille();
     renderMuets(muets);
+    renderApprentissage(apprentissage);
 
     const live = $("#live");
     live.hidden = false;
