@@ -18,6 +18,19 @@ jamais été vrai au moment qu'il prétend décrire. La clé unique en base l'im
 et l'étape saute ce qui existe déjà — ce qui la rend aussi reprenable.
 
 Elle reste un brouillon jusqu'à relecture humaine, comme les contradictions.
+
+CE QUI MANQUAIT. La revue ne voyait que la semaine en cours. Elle pouvait donc
+décrire, jamais dire CE QUI A CHANGÉ — c'est-à-dire précisément ce que le
+produit promet. Un observatoire qui republie chaque semaine un état des lieux
+sans mémoire produit des bulletins interchangeables ; « tenir le compte de ce
+qui se dit » suppose de savoir ce qui se disait avant.
+
+L'antériorité est donc fournie à part, bornée aux déclarations les mieux classées
+du même sujet avant la période. Deux garde-fous : le rédacteur peut la citer
+(sinon il ne pourrait pas montrer le déplacement), mais une revue qui ne citerait
+QUE du passé n'est pas la revue de la semaine et n'est pas enregistrée. Et la
+règle 4 tient toujours — rapprocher deux propos n'est pas conclure à la
+contradiction, ce que seul un relecteur fait.
 """
 
 from __future__ import annotations
@@ -42,6 +55,10 @@ CADENCE = "hebdomadaire"
 # déclaration unique et se lit comme un communiqué.
 MIN_CLAIMS = 3
 MIN_SPEAKERS = 2
+# L'antériorité donnée au rédacteur : les mieux classées, pas les plus récentes
+# — c'est le classement éditorial qui dit ce qui faisait référence sur ce sujet.
+# Bornée, parce qu'un contexte de deux cents propos noie la semaine à décrire.
+ANTERIEURS_MAX = 12
 
 
 class Paragraphe(BaseModel):
@@ -74,6 +91,12 @@ Règles, dans l'ordre :
    contradiction est le travail d'un relecteur, pas le tien.
 5. Ton neutre et descriptif. Ni dénonciation, ni reprise à ton compte des
    formules employées. Tu rapportes un propos, tu ne l'endosses pas.
+6. Si des déclarations antérieures te sont fournies, ton dernier paragraphe dit
+   ce qui a changé depuis : un locuteur qui revient sur le sujet dans d'autres
+   termes, une position nouvelle, une voix qui se tait. Tu cites les deux côtés,
+   l'ancien et le nouveau. Si rien n'a bougé, tu l'écris — « les positions sont
+   inchangées depuis » est une information, pas un aveu d'échec. Tu ne conclus
+   jamais qu'un locuteur s'est contredit : tu rapportes les deux propos.
 
 Trois à cinq paragraphes. Pas d'introduction ni de conclusion générale."""
 
@@ -177,12 +200,24 @@ async def build_reviews(*, limit: int = 6, semaines: int = 1) -> dict:
                                         Claim.published_at < fin)
                     .order_by(Claim.published_at)
                 )).scalars().all())
+                # Ce qui se disait avant : la mémoire sans laquelle une revue
+                # hebdomadaire n'est qu'un bulletin de plus.
+                anterieurs = list((await db.execute(
+                    select(Claim).where(Claim.subject_id == sid,
+                                        Claim.published_at < debut)
+                    .order_by(Claim.relevance.desc().nullslast(),
+                              Claim.published_at.desc())
+                    .limit(ANTERIEURS_MAX)
+                )).scalars().all())
             if sujet is None or not claims:
                 continue
+            anterieurs.sort(key=lambda c: c.published_at or debut)
 
             prompt = (f"Sujet : {sujet.label or 'sans nom'}\n"
                       f"Semaine : {period}\n\n"
-                      f"Déclarations de la semaine :\n{_contexte(claims)}")
+                      f"Déclarations de la semaine :\n{_contexte(claims)}"
+                      + (f"\n\nCe qui avait été dit sur ce sujet AVANT cette "
+                         f"semaine :\n{_contexte(anterieurs)}" if anterieurs else ""))
             try:
                 ecrite = await llm.write_review(prompt=prompt, system=_SYSTEM)
             except BudgetExceeded as exc:
@@ -192,7 +227,14 @@ async def build_reviews(*, limit: int = 6, semaines: int = 1) -> dict:
             if ecrite is None:
                 continue
 
-            paragraphes, cites = ground(ecrite, {c.id for c in claims})
+            de_la_semaine = {c.id for c in claims}
+            paragraphes, cites = ground(
+                ecrite, de_la_semaine | {c.id for c in anterieurs})
+            # Une revue qui ne cite que l'antériorité décrit le passé, pas la
+            # semaine : elle porterait un titre de période qu'elle ne couvre pas.
+            if paragraphes and not de_la_semaine.intersection(cites):
+                logger.info("revue.hors_periode", subject_id=sid, period=period)
+                paragraphes = []
             if not paragraphes:
                 # Tout a été rejeté : on n'enregistre pas une revue vide, et on
                 # ne marque rien — la semaine repassera.

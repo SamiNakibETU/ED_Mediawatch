@@ -209,3 +209,97 @@ def test_an_unnamed_subject_gets_no_review(tmp_path, monkeypatch):
         assert llm.appels == 0
 
     _run(tmp_path, monkeypatch, None, check)
+
+
+# ── La mémoire de la revue ─────────────────────────────────────────────────
+# Sans antériorité, une revue hebdomadaire décrit et ne compare pas : elle
+# republie chaque lundi un état des lieux interchangeable, quand la promesse du
+# produit est de tenir le compte de ce qui se dit DANS LA DURÉE.
+
+
+class _LLMEspion(_LLM):
+    """Retient le prompt reçu : c'est lui qui décide de ce que la revue peut
+    dire, et donc ce qu'il faut geler."""
+
+    def __init__(self, revue):
+        super().__init__(revue)
+        self.prompt = None
+
+    async def write_review(self, *, prompt, system):
+        self.prompt = prompt
+        return await super().write_review(prompt=prompt, system=system)
+
+
+def _avec_anterieur(tmp_path, monkeypatch, revue, check):
+    """Le même décor, plus un propos tenu six mois plus tôt sur le même sujet."""
+    espion = _LLMEspion(revue)
+
+    async def check_augmente(factory, sid, _llm):
+        # Après `_run`, qui pose son propre modèle factice : sans ce second
+        # branchement, l'espion serait remplacé et les tests passeraient à vide.
+        monkeypatch.setattr("src.services.analysis.review.get_claim_llm", lambda: espion)
+        vieux_jour = datetime.now(timezone.utc) - timedelta(days=190)
+        async with factory() as db:
+            db.add(Claim(platform="x", subject_id=sid, speaker_name="Marine Le Pen",
+                         party="RN", verbatim="la position d'il y a six mois",
+                         claim_type="normatif", published_at=vieux_jour,
+                         confidence=0.7, dedup_key="ancien", relevance=4.0))
+            await db.commit()
+            ancien = (await db.execute(
+                select(Claim).where(Claim.dedup_key == "ancien"))).scalar_one()
+            recents = [c.id for c in (await db.execute(
+                select(Claim).where(Claim.dedup_key != "ancien"))).scalars().all()]
+        await check(factory, sid, espion, ancien.id, recents)
+
+    _run(tmp_path, monkeypatch, revue, check_augmente)
+
+
+def test_the_writer_is_given_what_was_said_before(tmp_path, monkeypatch):
+    """Ce qui précède arrive au rédacteur séparé de la semaine, et annoncé comme
+    tel : mélangé aux propos récents, il daterait la semaine de six mois."""
+
+    async def check(factory, sid, espion, ancien_id, recents):
+        espion.revue = _revue_valide(recents)
+        await build_reviews()
+        assert "AVANT cette semaine" in espion.prompt
+        assert f"[{ancien_id}]" in espion.prompt
+        semaine, avant = espion.prompt.split("AVANT cette semaine")
+        assert f"[{ancien_id}]" not in semaine, "l'ancien propos n'est pas de la semaine"
+        assert f"[{recents[0]}]" in semaine
+
+    _avec_anterieur(tmp_path, monkeypatch, None, check)
+
+
+def test_a_review_that_only_cites_the_past_is_not_this_weeks(tmp_path, monkeypatch):
+    """Le rédacteur peut citer l'antériorité — sinon il ne pourrait pas montrer
+    un déplacement. Mais une revue qui ne cite QUE le passé porte un titre de
+    période qu'elle ne couvre pas : elle n'est pas enregistrée."""
+
+    async def check(factory, sid, espion, ancien_id, recents):
+        espion.revue = RevueEcrite(titre="Retour sur le printemps", paragraphes=[
+            Paragraphe(texte="Elle défendait alors l'inverse.", claim_ids=[ancien_id]),
+        ])
+        stats = await build_reviews()
+        assert stats["ecrites"] == 0
+        async with factory() as db:
+            assert (await db.execute(select(Review))).scalars().first() is None
+
+    _avec_anterieur(tmp_path, monkeypatch, None, check)
+
+
+def test_a_review_may_cite_both_sides_of_a_shift(tmp_path, monkeypatch):
+    """Le cas qui justifie tout le reste : un paragraphe qui met l'ancien propos
+    en regard du nouveau. Il doit passer entier."""
+
+    async def check(factory, sid, espion, ancien_id, recents):
+        espion.revue = RevueEcrite(titre="Un déplacement en six mois", paragraphes=[
+            Paragraphe(texte="Elle disait l'inverse au printemps.",
+                       claim_ids=[ancien_id, recents[0]]),
+        ])
+        stats = await build_reviews()
+        assert stats["ecrites"] == 1
+        async with factory() as db:
+            r = (await db.execute(select(Review))).scalars().one()
+        assert ancien_id in r.claim_ids and recents[0] in r.claim_ids
+
+    _avec_anterieur(tmp_path, monkeypatch, None, check)
