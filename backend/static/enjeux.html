@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Enjeux — ED Mediawatch</title>
+  <link rel="stylesheet" href="design.css" />
+  <script>
+    try { const t = localStorage.getItem("theme"); if (t) document.documentElement.dataset.theme = t; } catch {}
+  </script>
+</head>
+<body data-page="enjeux" data-tagline="Ce qu'ils ont défendu, et quand ça a bougé">
+  <header id="masthead"></header>
+
+  <div class="wrap page">
+    <div class="filters lede-first" id="enjeux" role="group" aria-label="Enjeux"></div>
+    <main id="fiche"><p class="state">Chargement…</p></main>
+
+    <section class="mt-6" aria-labelledby="methodeTitre">
+      <div class="band"><h2 id="methodeTitre">Méthode</h2></div>
+      <div class="prose">
+        <p>Chaque enjeu est une question fermée, avec une échelle de positions écrite à
+          l’avance. Les tweets des comptes suivis qui touchent la question sont lus un par un,
+          du plus ancien au plus récent, et rangés sur l’échelle quand leur auteur prend
+          position. Le modèle qui les lit ne connaît pas le nom de l’auteur.</p>
+        <p>Une position n’est retenue que si la phrase qui la porte se retrouve mot pour mot
+          dans le tweet. Les retweets simples sont exclus&nbsp;: ce sont les mots d’un autre.
+          Un tweet qui ne prend pas position n’apparaît pas.</p>
+        <p>Un écart signale qu’une même personne s’est placée à deux endroits différents de
+          l’échelle, à plus d’un mois d’intervalle. C’est un point de départ pour la lecture,
+          pas un verdict&nbsp;: chaque écart renvoie aux deux tweets, à lire en entier.</p>
+        <p>La collecte passe par l’affichage public des comptes sur X. Elle ne voit pas tout,
+          et un silence sur cette page peut venir d’un tweet qu’elle n’a pas récupéré.</p>
+      </div>
+    </section>
+  </div>
+
+  <script src="common.js"></script>
+  <script src="enjeux.js"></script>
+</body>
+</html>

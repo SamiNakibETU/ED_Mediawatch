@@ -76,6 +76,11 @@ async def _extract_l0() -> dict:
     return await run_declaration_extraction(limit_posts=1500, limit_articles=400)
 
 
+async def _positions() -> dict:
+    from src.services.analysis.positions import lire_positions
+    return await lire_positions(limit=400)
+
+
 async def _cap_coding() -> dict:
     from src.services.analysis.cap_coder import code_claims
 
@@ -181,6 +186,11 @@ STAGES: tuple[Stage, ...] = (
     # déclarations fausses par omission, et la dépense est à refaire.
     Stage("amplifications", "Graphe d'amplification", FREE, _amplifications,
           depends_on=("collect_x",), produces="arêtes"),
+    # Le registre des positions lit les tweets eux-mêmes, pas les déclarations
+    # L0 : il ne dépend que du texte intégral. Placé avant L0, il n'attend pas
+    # la file d'extraction, qui est la plus longue de la chaîne.
+    Stage("positions", "Registre des positions", PAID, _positions,
+          depends_on=("enrich_truncated",), produces="positions"),
     Stage("extract_l0", "Extraction des déclarations (L0)", PAID, _extract_l0,
           depends_on=("enrich_truncated", "collect_press"),
           produces="déclarations"),

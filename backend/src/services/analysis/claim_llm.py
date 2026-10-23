@@ -619,6 +619,21 @@ class ClaimLLM:
                 task="engagement_q2")
         return None
 
+    async def read_position(self, *, prompt: str, system: str, schema):
+        """Range une prise de parole sur l'échelle d'un enjeu (registre des positions).
+
+        Le prompt est construit par `positions.py`, sans le nom du locuteur :
+        le modèle lit ce qui est dit, pas qui le dit.
+        """
+        prov = self._s.claim_tier2_provider
+        if prov == "anthropic" and self._anthropic is not None:
+            return await self._tier2_anthropic(
+                prompt, schema=schema, system=system, max_tokens=400, task="position")
+        if prov in self._openai:
+            return await self._tier2_openai(
+                prov, prompt, schema=schema, system=system, max_tokens=500, task="position")
+        return None
+
     async def write_review(self, *, prompt: str, system: str):
         """Écrit la revue d'un sujet sur une période (cf. `review.py`).
 

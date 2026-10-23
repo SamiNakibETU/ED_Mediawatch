@@ -20,6 +20,7 @@ from src.routers import (
     classification,
     compteur,
     contradictions,
+    enjeux,
     figure,
     health,
     llm_costs,
@@ -96,6 +97,7 @@ app.include_router(coding.router)
 app.include_router(declarations.router)
 app.include_router(series.router)
 app.include_router(figure.router)
+app.include_router(enjeux.router)
 app.include_router(pipeline_status.router)
 app.include_router(llm_costs.router)
 

@@ -169,6 +169,7 @@ function nomSujet(s) {
 // d'entrer, donc aucune.
 const PAGES = [
   ["index.html", "accueil", "Aujourd’hui", "observatoire"],
+  ["enjeux.html", "enjeux", "Enjeux", "sujets"],
   ["sujets.html", "sujets", "Sujets", "sujets"],
   ["figure.html", "figures", "Locuteurs", "locuteurs"],
   ["atelier.html", "atelier", "Coulisses", "atelier"],

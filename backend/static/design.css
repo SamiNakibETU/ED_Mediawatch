@@ -1281,6 +1281,23 @@ p.stamp { white-space: normal; }
 .frise__dot:hover, .frise__dot:focus-visible { width: 17px; height: 17px; }
 .frise__dot[aria-pressed="true"] { width: 17px; height: 17px; border-color: var(--ink); }
 
+/* Registre des positions : la hauteur du point dit le cran de l'échelle. Un
+ * filet par cran, pour que deux points à la même hauteur se lisent comme la
+ * même position. */
+.frise__track--echelle {
+  height: calc(var(--crans, 4) * 0.9rem + 0.6rem);
+  background: none;
+}
+.frise__cran {
+  position: absolute; left: 0; right: 0; height: 1px;
+  background: var(--rule); pointer-events: none;
+}
+.echelle-cle {
+  margin: var(--s4) 0 0; padding-left: 1.4em;
+  font-size: var(--t-small); color: var(--muted);
+}
+.echelle-cle li { margin: 0.1rem 0; }
+
 @media (max-width: 600px) {
   .frise__lane { grid-template-columns: 1fr; gap: var(--s2); }
   .frise__head { display: none; }

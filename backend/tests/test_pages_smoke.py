@@ -24,7 +24,7 @@ import pytest
 pytest.importorskip("playwright", reason="navigateur absent")
 
 RACINE = Path(__file__).resolve().parents[1]
-PAGES = ["index", "sujets", "sujet", "figure", "revue", "engagements",
+PAGES = ["index", "enjeux", "sujets", "sujet", "figure", "revue", "engagements",
          "archive", "contradictions", "compteur", "atelier", "codage"]
 
 # Bruit extérieur : les portraits viennent d'un service tiers qui refuse parfois
