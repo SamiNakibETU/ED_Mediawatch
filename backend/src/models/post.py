@@ -83,6 +83,11 @@ class Post(Base, TimestampMixin):
     l0_done_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), index=True
     )
+    # Registre des déclarations : version de la lecture qui a déjà traité ce
+    # tweet, qu'il ait donné une déclaration, rien, ou qu'il ait été écarté au
+    # prétri. Marquer la source, comme pour L0 : sans ça, un tweet sans
+    # déclaration repasserait au modèle à chaque passe.
+    decl_lu: Mapped[str | None] = mapped_column(String(60), index=True)
     # Langue détectée (défaut fonctionnel 'fr').
     lang: Mapped[str | None] = mapped_column(String(8))
     # Hash du texte normalisé → détecter reposts/éditions au-delà du guid d'URL.

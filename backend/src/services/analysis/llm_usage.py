@@ -49,6 +49,8 @@ class ProviderRefused(RuntimeError):
 # Vérifier les prix sur openrouter.ai/models avant tout changement de modèle.
 # La première sous-chaîne qui matche gagne (ordre = du plus spécifique au moins).
 _PRICES: list[tuple[str, tuple[float, float]]] = [
+    # Variantes gratuites d'OpenRouter : rien à facturer, mais l'appel se compte.
+    (":free", (0.0, 0.0)),
     ("deepseek-v4-flash", (0.0679, 0.168)),  # vérifié openrouter.ai 2026-08-26
     ("deepseek", (0.57, 1.15)),
     ("mimo", (0.14, 0.28)),
@@ -62,6 +64,11 @@ _PRICES: list[tuple[str, tuple[float, float]]] = [
     ("claude-haiku", (1.0, 5.0)),
     ("claude-sonnet", (3.0, 15.0)),
 ]
+# Fournisseurs dont l'accès est gratuit (quota par minute, pas de facture).
+# Le prix ne dépend alors pas du modèle : DeepSeek chez NVIDIA ne coûte rien,
+# le même chez OpenRouter se paie.
+FREE_PROVIDERS = frozenset({"nvidia"})
+
 # Grille prudente pour un modèle inconnu : surestime plutôt que sous-estime.
 _UNKNOWN_PRICE = (1.0, 5.0)
 
@@ -150,7 +157,8 @@ class LlmBudget:
         output_tokens: int,
     ) -> float:
         """Écrit la ligne comptable d'un appel réussi. Retourne le coût $."""
-        cost, known = estimate_cost(model, input_tokens, output_tokens)
+        cost, known = ((0.0, True) if provider in FREE_PROVIDERS
+                       else estimate_cost(model, input_tokens, output_tokens))
         if not known:
             logger.warning("llm_usage.price_unknown", model=model)
         factory = get_session_factory()

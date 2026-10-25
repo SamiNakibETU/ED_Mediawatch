@@ -11,6 +11,7 @@ from src.models.media_source import MediaSource
 from src.models.personality import Personality
 from src.models.post import Post
 from src.models.position import Position
+from src.models.declaration import Declaration
 from src.models.pipeline_run import PipelineRun, PipelineStep
 from src.models.subject import Subject
 from src.models.annotation import CapAnnotation
@@ -23,6 +24,7 @@ __all__ = [
     "Personality",
     "Post",
     "Position",
+    "Declaration",
     "CollectionRun",
     "MediaSource",
     "Article",

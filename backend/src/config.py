@@ -117,12 +117,13 @@ class Settings(BaseSettings):
     groq_api_key: str = ""
     cerebras_api_key: str = ""
     mistral_api_key: str = ""
+    nvidia_api_key: str = ""
     cohere_api_key: str = ""  # embeddings (blocking sémantique des référents)
     cohere_embed_model: str = "embed-multilingual-v3.0"  # 1024d, FR
 
     # Activer le raffinage LLM des claims (sinon : déterministe seul).
     llm_refine_enabled: bool = False
-    # Tier-1 (filtre de masse) : openrouter | cerebras | groq | mistral | anthropic
+    # Tier-1 (filtre de masse) : openrouter | nvidia | cerebras | groq | mistral | anthropic
     # DeepSeek V4 Flash : 0,08/0,17 $/M — vérifier l'ID exact sur openrouter.ai/models.
     claim_tier1_provider: str = "openrouter"
     claim_tier1_model: str = "deepseek/deepseek-v4-flash:floor"

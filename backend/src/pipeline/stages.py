@@ -76,9 +76,9 @@ async def _extract_l0() -> dict:
     return await run_declaration_extraction(limit_posts=1500, limit_articles=400)
 
 
-async def _positions() -> dict:
-    from src.services.analysis.positions import lire_positions
-    return await lire_positions(limit=400)
+async def _registre() -> dict:
+    from src.services.analysis.registre import lire
+    return await lire(limit=1500)
 
 
 async def _cap_coding() -> dict:
@@ -186,11 +186,10 @@ STAGES: tuple[Stage, ...] = (
     # déclarations fausses par omission, et la dépense est à refaire.
     Stage("amplifications", "Graphe d'amplification", FREE, _amplifications,
           depends_on=("collect_x",), produces="arêtes"),
-    # Le registre des positions lit les tweets eux-mêmes, pas les déclarations
-    # L0 : il ne dépend que du texte intégral. Placé avant L0, il n'attend pas
-    # la file d'extraction, qui est la plus longue de la chaîne.
-    Stage("positions", "Registre des positions", PAID, _positions,
-          depends_on=("enrich_truncated",), produces="positions"),
+    # Le registre des déclarations lit les tweets eux-mêmes : il ne dépend que
+    # du texte intégral. Il remplace l'extraction L0, gelée.
+    Stage("registre", "Registre des déclarations", PAID, _registre,
+          depends_on=("enrich_truncated",), produces="déclarations rangées"),
     Stage("extract_l0", "Extraction des déclarations (L0)", PAID, _extract_l0,
           depends_on=("enrich_truncated", "collect_press"),
           produces="déclarations"),
@@ -262,9 +261,20 @@ BY_NAME: dict[str, Stage] = {s.name: s for s in STAGES}
 COLLECTE = ("collect_x", "collect_press")
 
 
+# L'ancienne chaîne d'analyse, gelée le 26 octobre 2026. Elle découpait chaque
+# texte, tweet ou article, en assertions de cinq types, puis cherchait les
+# contradictions par similarité : 1 228 sujets, une seule contradiction, et
+# c'était un écart d'arrondi. Elle est remplacée par le registre des
+# déclarations, qui ne lit que les tweets et range chaque prise de position sur
+# une liste fermée d'enjeux. Ses étapes payantes sortent de la passe horaire :
+# elles dépenseraient le budget sur une méthode abandonnée. Elles restent
+# lançables à la main (`/pipeline/run?stage=…`), et leurs tables restent en base.
+GELEES = frozenset({"extract_l0", "cap_coding", "pledges", "label_subjects", "judge", "review"})
+
+
 def analysis_stages() -> list[str]:
-    """Toutes les étapes sauf la collecte, dans l'ordre du graphe."""
-    return [s.name for s in STAGES if s.name not in COLLECTE]
+    """Les étapes de la passe horaire : tout sauf la collecte et la chaîne gelée."""
+    return [s.name for s in STAGES if s.name not in COLLECTE and s.name not in GELEES]
 
 
 def resolve_order(names: list[str] | None = None) -> list[Stage]:

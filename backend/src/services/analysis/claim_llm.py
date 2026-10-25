@@ -76,6 +76,9 @@ _OPENAI_BASE = {
     "groq": "https://api.groq.com/openai/v1",
     "cerebras": "https://api.cerebras.ai/v1",
     "mistral": "https://api.mistral.ai/v1",
+    # Catalogue d'API de NVIDIA (build.nvidia.com) : gratuit, plafonné vers
+    # 40 requêtes par minute, réservé au développement selon ses conditions.
+    "nvidia": "https://integrate.api.nvidia.com/v1",
 }
 
 
@@ -618,6 +621,56 @@ class ClaimLLM:
                 prov, prompt, schema=EngagementLu, system=_Q2, max_tokens=500,
                 task="engagement_q2")
         return None
+
+    def model_for(self, tier: int) -> str:
+        return self._s.claim_tier1_model if tier == 1 else self._s.claim_tier2_model
+
+    async def ask_json(self, *, tier: int, system: str, prompt: str, schema,
+                       task: str, max_tokens: int = 2000, raisonnement: str | None = "off"):
+        """Une question à réponse JSON, validée contre `schema`, au tier choisi.
+
+        Le système passe en premier et ne change jamais d'un appel à l'autre :
+        c'est la partie que les fournisseurs mettent en cache, et elle porte le
+        référentiel entier. Ce qui varie, les tweets, vient après.
+
+        Un échec remonte : il n'est jamais rendu comme une réponse vide, que
+        l'appelant prendrait pour « rien à signaler ».
+
+        `raisonnement` : « off » coupe la réflexion des modèles qui raisonnent
+        avant de répondre. Mesuré le 26/10/2026 sur DeepSeek V4 Flash, Qwen 3.7
+        Flash et GPT-5.6 Luna : 6 à 13 tokens de réponse au lieu de 300, pour la
+        même réponse à une question de tri. Sans ce réglage, la réflexion
+        consommait tout le plafond et la réponse revenait vide, facturée.
+        « low » la garde courte ; None laisse le réglage du fournisseur.
+        """
+        prov = self._s.claim_tier1_provider if tier == 1 else self._s.claim_tier2_provider
+        client = self._openai.get(prov)
+        if client is None:
+            raise RuntimeError(f"aucun client pour le fournisseur {prov}")
+        model = self.model_for(tier)
+        budget = get_llm_budget()
+        await budget.check_or_raise()
+        try:
+            extra = {}
+            if prov == "openrouter" and raisonnement:
+                extra["reasoning"] = ({"enabled": False} if raisonnement == "off"
+                                      else {"effort": raisonnement})
+            resp = await client.chat.completions.create(
+                model=model, max_tokens=max_tokens, temperature=0,
+                response_format={"type": "json_object"},
+                messages=[{"role": "system", "content": system},
+                          {"role": "user", "content": prompt}],
+                extra_body=extra or None,
+            )
+        except Exception as exc:
+            if _refus(exc):
+                raise ProviderRefused(_refus(exc)) from exc
+            raise
+        tin, tout = _usage_tokens(resp)
+        await budget.record(provider=prov, model=model, task=task,
+                            input_tokens=tin, output_tokens=tout)
+        content = resp.choices[0].message.content or ""
+        return schema.model_validate_json(content[content.find("{"): content.rfind("}") + 1])
 
     async def read_position(self, *, prompt: str, system: str, schema):
         """Range une prise de parole sur l'échelle d'un enjeu (registre des positions).

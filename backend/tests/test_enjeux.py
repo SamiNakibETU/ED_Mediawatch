@@ -2,8 +2,8 @@
 
 from datetime import datetime, timedelta, timezone
 
-from src.services.analysis.enjeux import ENJEUX, PAR_SLUG, Point, ecarts
-from src.services.analysis.positions import PositionLue, prompt_for, valider
+from src.services.analysis.enjeux import ENJEUX, PAR_SLUG, THEMES, Point, ecarts
+from src.services.analysis.registre import DeclLue, pretri, prompt_extraction, valider
 
 T0 = datetime(2022, 3, 1, tzinfo=timezone.utc)
 UKR = PAR_SLUG["ukraine"]
@@ -19,14 +19,7 @@ def test_chaque_enjeu_a_une_echelle_ordonnee_sans_doublon():
         rangs = [c.rang for c in e.echelle]
         assert rangs == list(range(1, len(rangs) + 1)), e.slug
         assert len({c.code for c in e.echelle}) == len(e.echelle)
-        assert e.amorces
-
-
-def test_les_motifs_ecartent_les_faux_amis_des_amorces():
-    # « russ » ratisse Russell en SQL ; l'expression régulière doit le refuser.
-    assert not UKR.concerne("Bertrand Russell avait raison sur ce point")
-    assert UKR.concerne("Il faut cesser de livrer des armes à l'Ukraine")
-    assert RET.concerne("Nous rétablirons la retraite à 60 ans")
+        assert e.question.endswith("?") and e.theme in THEMES
 
 
 def test_une_position_constante_ne_fait_pas_d_ecart():
@@ -63,27 +56,45 @@ def test_un_code_hors_echelle_est_ignore():
 
 
 TWEET = "Nous rétablirons la retraite à 60 ans pour tous les Français. C'est une question de justice."
+PHRASE = "Nous rétablirons la retraite à 60 ans pour tous les Français."
 
 
-def test_valider_garde_une_position_dont_le_verbatim_est_dans_le_tweet():
-    lue = PositionLue(prend_position=True, position="60_tous", certitude="explicite",
-                      verbatim="Nous rétablirons la retraite à 60 ans pour tous les Français.")
-    assert valider(RET, lue, TWEET)[0] == "60_tous"
+def test_valider_garde_une_declaration_dont_le_verbatim_est_dans_le_tweet():
+    d = DeclLue(enjeu="retraites", position="60_tous", modalite="promet", verbatim=PHRASE)
+    assert valider(d, TWEET).position == "60_tous"
 
 
 def test_valider_refuse_un_verbatim_reecrit():
-    lue = PositionLue(prend_position=True, position="60_tous", certitude="explicite",
-                      verbatim="Le RN veut la retraite à 60 ans pour tous.")
-    assert valider(RET, lue, TWEET) == (None, None, None)
+    d = DeclLue(enjeu="retraites", position="60_tous", verbatim="Le RN veut la retraite à 60 ans pour tous.")
+    assert valider(d, TWEET) is None
 
 
-def test_valider_refuse_un_cran_invente():
-    lue = PositionLue(prend_position=True, position="59_ans", certitude="explicite",
-                      verbatim="Nous rétablirons la retraite à 60 ans pour tous les Français.")
-    assert valider(RET, lue, TWEET) == (None, None, None)
+def test_un_cran_invente_passe_hors_liste_sans_position():
+    d = DeclLue(enjeu="retraites", position="59_ans", verbatim=PHRASE)
+    v = valider(d, TWEET)
+    assert v.enjeu == "hors_liste" and v.position is None and v.objet
 
 
-def test_le_prompt_ne_contient_que_le_texte_et_la_question():
-    p = prompt_for(RET, TWEET, cite="Texte cité")
-    assert RET.question in p and TWEET in p and "contexte seulement" in p
-    assert "Locuteur" not in p
+def test_hors_liste_exige_un_objet():
+    assert valider(DeclLue(enjeu="hors_liste", verbatim=PHRASE), TWEET) is None
+    assert valider(DeclLue(enjeu="hors_liste", objet="justice sociale", verbatim=PHRASE), TWEET).objet
+
+
+class _Post:
+    def __init__(self, content, **kw):
+        self.content, self.is_retweet, self.post_type = content, kw.get("rt", False), kw.get("type", "original")
+        self.lang, self.quoted_content = kw.get("lang", "fr"), kw.get("cite")
+        self.published_at = T0
+
+
+def test_le_pretri_ecarte_sans_appel_ce_qui_ne_peut_pas_porter_de_position():
+    assert pretri(_Post(TWEET, rt=True)) == "retweet"
+    assert pretri(_Post("Merci à tous ! https://t.co/x #RN")) == "trop_court"
+    assert pretri(_Post("We will never accept this deal with the European Union.", lang="en")) == "langue"
+    assert pretri(_Post(TWEET)) is None
+
+
+def test_le_prompt_ne_donne_ni_le_nom_ni_le_compte_de_l_auteur():
+    p = prompt_extraction([_Post(TWEET, cite="Texte cité")])
+    assert TWEET in p and "écrit par quelqu'un d'autre" in p and "2022-03-01" in p
+    assert "@" not in p

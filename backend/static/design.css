@@ -1845,3 +1845,9 @@ a.statbar__item:hover .statbar__n { color: var(--accent); }
 .src__texte { font-size: var(--t-small); color: var(--ink-soft); white-space: pre-line; overflow-wrap: anywhere; }
 .src__cite { font-size: var(--t-micro); color: var(--muted); overflow-wrap: anywhere; }
 .src__liens { display: flex; flex-wrap: wrap; gap: var(--s3); align-items: baseline; }
+
+/* Le sommaire des enjeux, par thème. */
+.enjeux-nav { display: grid; gap: var(--s3); }
+.enjeux-theme { display: grid; grid-template-columns: 12rem 1fr; gap: var(--s3); align-items: baseline; }
+.enjeux-theme .section-label { margin: 0; }
+@media (max-width: 700px) { .enjeux-theme { grid-template-columns: 1fr; gap: var(--s2); } }

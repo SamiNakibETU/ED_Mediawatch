@@ -17,11 +17,11 @@ function citation(p) {
     <div class="position__head">
       <span class="stamp">${jour(p.date)}</span>
       <span class="tag">${escapeHtml(p.label)}</span>
-      <span class="spacer"></span>
-      ${p.recu ? `<a class="source-link" href="${p.recu}" target="_blank" rel="noopener">archive ↗</a>` : ""}
-      <a class="source-link" href="${p.url}" target="_blank" rel="noopener">tweet ↗</a>
+      ${p.modalite ? `<span class="stamp">${escapeHtml(p.modalite)}</span>` : ""}
+      ${p.valeur != null ? `<span class="tag">${p.valeur}${p.unite ? " " + escapeHtml(p.unite) : ""}</span>` : ""}
     </div>
     <p class="position__q">${escapeHtml(p.verbatim)}</p>
+    ${sourceCard(p.source)}
   </article>`;
 }
 
@@ -116,10 +116,25 @@ function render() {
 
 async function load() {
   const liste = await fetchJSON("/enjeux");
-  if (!state.slug || !liste.some((e) => e.slug === state.slug)) state.slug = liste[0]?.slug;
-  $("#enjeux").innerHTML = liste.map((e) =>
-    `<button class="filter" data-slug="${e.slug}" aria-pressed="${e.slug === state.slug}">${
-      escapeHtml(e.titre)}<span class="count">${fmtNum(e.positions)}</span></button>`).join("");
+  // Par défaut, l'enjeu le mieux documenté : arriver sur une fiche vide ne
+  // montre rien de ce que la page sait faire.
+  if (!state.slug || !liste.some((e) => e.slug === state.slug)) {
+    state.slug = [...liste].sort((a, b) => b.positions - a.positions)[0]?.slug;
+  }
+  // Groupés par thème, dans l'ordre du référentiel : quarante-quatre boutons à
+  // la suite ne se parcourent pas.
+  const themes = [];
+  for (const e of liste) {
+    let t = themes.find((x) => x.theme === e.theme);
+    if (!t) themes.push((t = { theme: e.theme, label: e.theme_label, items: [] }));
+    t.items.push(e);
+  }
+  $("#enjeux").innerHTML = themes.map((t) => `<div class="enjeux-theme">
+      <p class="section-label">${escapeHtml(t.label)}</p>
+      <div class="filters">${t.items.map((e) =>
+        `<button class="filter" data-slug="${e.slug}" aria-pressed="${e.slug === state.slug}">${
+          escapeHtml(e.titre)}<span class="count">${fmtNum(e.positions)}</span></button>`).join("")}</div>
+    </div>`).join("");
   document.querySelectorAll("#enjeux .filter").forEach((b) => (b.onclick = () => {
     state.slug = b.dataset.slug;
     history.replaceState(null, "", `?e=${state.slug}`);

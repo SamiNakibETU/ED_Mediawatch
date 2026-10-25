@@ -13,16 +13,20 @@
   <header id="masthead"></header>
 
   <div class="wrap page">
-    <div class="filters lede-first" id="enjeux" role="group" aria-label="Enjeux"></div>
+    <nav class="enjeux-nav lede-first" id="enjeux" aria-label="Enjeux"></nav>
     <main id="fiche"><p class="state">Chargement…</p></main>
 
     <section class="mt-6" aria-labelledby="methodeTitre">
       <div class="band"><h2 id="methodeTitre">Méthode</h2></div>
       <div class="prose">
         <p>Chaque enjeu est une question fermée, avec une échelle de positions écrite à
-          l’avance. Les tweets des comptes suivis qui touchent la question sont lus un par un,
-          du plus ancien au plus récent, et rangés sur l’échelle quand leur auteur prend
-          position. Le modèle qui les lit ne connaît pas le nom de l’auteur.</p>
+          l’avance. Tous les tweets des comptes suivis sont lus, du plus ancien au plus récent.
+          Un premier tri écarte les retweets et les messages trop courts&nbsp;; une première
+          lecture repère ceux qui contiennent une déclaration de leur auteur&nbsp;; une seconde
+          range chaque déclaration sur l’échelle de la question qu’elle concerne. Le modèle qui
+          les lit ne connaît pas le nom de l’auteur.</p>
+        <p>Les déclarations viennent des tweets seulement, jamais des articles de presse&nbsp;:
+          dans un article, la parole passe par le journaliste.</p>
         <p>Une position n’est retenue que si la phrase qui la porte se retrouve mot pour mot
           dans le tweet. Les retweets simples sont exclus&nbsp;: ce sont les mots d’un autre.
           Un tweet qui ne prend pas position n’apparaît pas.</p>
