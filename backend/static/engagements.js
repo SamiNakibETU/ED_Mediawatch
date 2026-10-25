@@ -21,6 +21,7 @@ function ligne(e) {
         <span class="stamp">${escapeHtml(exactDate(e.published_at))}</span>
       </p>
       <p class="prose">« ${escapeHtml(e.verbatim || "")} »</p>
+      ${sourceCard(e.source)}
       ${e.mesure ? `<p class="engagement__mesure">
         <span class="overline">Tenu si</span> ${escapeHtml(e.mesure)}</p>` : ""}
       <p class="entry__foot">

@@ -82,6 +82,7 @@ function position(c) {
         : '<span class="stamp">source non résolue</span>'}
     </div>
     <p class="position__q">${escapeHtml(c.text || c.verbatim || "")}</p>
+    ${sourceCard(c.source)}
   </article>`;
 }
 
@@ -189,7 +190,8 @@ function wire(d) {
           ${hit.c.source_url
             ? `<a class="source-link" href="${hit.c.source_url}" target="_blank" rel="noopener">source ↗</a>` : ""}
         </div>
-        <p class="position__q">${escapeHtml(hit.c.text || hit.c.verbatim || "")}</p>`;
+        <p class="position__q">${escapeHtml(hit.c.text || hit.c.verbatim || "")}</p>
+        ${sourceCard(hit.c.source)}`;
 
       // Marquer le propos correspondant plus bas : la frise sert de sommaire,
       // pas de vue de remplacement.

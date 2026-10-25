@@ -28,6 +28,7 @@ function claim(c) {
     <p class="entry__head"><span class="speaker">${escapeHtml(who)}</span>
       <span class="stamp">${date}</span><span class="tag">${escapeHtml(platform)}</span></p>
     <p class="claim__text">« ${escapeHtml((c.canonical || c.verbatim || "").slice(0, 220))} »</p>
+    ${sourceCard(c.source)}
     ${c.source_url ? `<p class="entry__foot"><a class="source-link" href="${c.source_url}"
       target="_blank" rel="noopener">vérifier la source ↗</a></p>` : ""}
   </div>`;

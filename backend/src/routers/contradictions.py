@@ -16,7 +16,7 @@ from src.database import get_db
 from src.models.contradiction import TYPE_LABELS, Contradiction
 from src.schemas import ContradictionPage
 from src.security import require_token
-from src.services.analysis.claim_sources import resolve_claim_urls
+from src.services.analysis.claim_sources import resolve_claim_sources, resolve_claim_urls
 from src.services.analysis.contradiction_detector import run_contradiction_detection
 from src.services.analysis.contradiction_judge import run_semantic_judging
 
@@ -54,9 +54,12 @@ async def list_contradictions(
     # Provenance : URL source de chaque claim (pour vérifier le verbatim en contexte).
     all_claims = [c.claim_a for c in items] + [c.claim_b for c in items]
     urls = await resolve_claim_urls(db, all_claims)
+    sources = await resolve_claim_sources(db, all_claims)
     for c in items:
         c.claim_a.source_url = urls.get(c.claim_a.id)
         c.claim_b.source_url = urls.get(c.claim_b.id)
+        c.claim_a.source = sources.get(c.claim_a.id)
+        c.claim_b.source = sources.get(c.claim_b.id)
 
     return ContradictionPage(total=total, limit=limit, offset=offset, items=items)
 

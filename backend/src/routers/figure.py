@@ -26,7 +26,7 @@ from src.models.personality import Personality
 from src.models.subject import Subject
 from src.models.post import Post
 from src.services.analysis.amplification import who_they_amplify
-from src.services.analysis.claim_sources import resolve_claim_urls
+from src.services.analysis.claim_sources import resolve_claim_sources, resolve_claim_urls
 
 router = APIRouter(prefix="/figures", tags=["figures"])
 
@@ -149,6 +149,7 @@ async def figure_detail(
         )).scalars().all()
     )
     urls = await resolve_claim_urls(db, claims)
+    sources = await resolve_claim_sources(db, claims)
 
     # Chronologie groupée par mois : c'est l'échelle à laquelle une position se
     # lit — un jour est trop fin, une année masque le mouvement.
@@ -167,6 +168,7 @@ async def figure_detail(
             "published_at": c.published_at,
             "platform": c.platform,
             "source_url": urls.get(c.id),
+            "source": sources.get(c.id),
         })
 
     claim_ids = {c.id for c in claims}

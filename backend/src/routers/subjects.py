@@ -21,7 +21,7 @@ from src.models.contradiction import Contradiction, TYPE_LABELS
 from src.models.personality import Personality
 from src.models.subject import Subject
 from src.services.analysis.perimetre import retenu
-from src.services.analysis.claim_sources import resolve_claim_urls
+from src.services.analysis.claim_sources import resolve_claim_sources, resolve_claim_urls
 
 router = APIRouter(prefix="/subjects", tags=["subjects"])
 
@@ -184,6 +184,7 @@ async def subject_detail(
         ).scalars().all()
     )
     urls = await resolve_claim_urls(db, claims)
+    sources = await resolve_claim_sources(db, claims)
 
     # Groupé par locuteur : c'est la lecture utile sur un sujet — « qui défend
     # quoi », et l'évolution de chacun dans le temps.
@@ -200,6 +201,7 @@ async def subject_detail(
             "published_at": c.published_at,
             "platform": c.platform,
             "source_url": urls.get(c.id),
+            "source": sources.get(c.id),
         })
 
     ids = {c.id for c in claims}

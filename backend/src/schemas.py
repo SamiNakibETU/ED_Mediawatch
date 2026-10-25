@@ -149,6 +149,7 @@ class ClaimMini(BaseModel):
     canonical: str | None
     confidence: float
     source_url: str | None = None
+    source: dict | None = None
 
 
 class ContradictionOut(BaseModel):

@@ -1831,3 +1831,17 @@ a.statbar__item:hover .statbar__n { color: var(--accent); }
 /* Un champ de filtre n'a pas a s'etirer sur toute la ligne : sa largeur dit
  * combien on attend qu'on y tape. */
 .field--inline { max-width: 22rem; }
+
+/* La source d'une déclaration : le tweet ou l'article, posé sous elle. Un filet
+ * à gauche et un fond à peine marqué suffisent à dire « ceci est la pièce, pas
+ * notre lecture ». */
+.src {
+  margin-top: var(--s3); padding: var(--s3) var(--s4);
+  border-left: 2px solid var(--rule-strong); background: var(--surface-sunk);
+  display: grid; gap: var(--s2); min-width: 0;
+}
+.src p { margin: 0; }
+.src__head { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s2); }
+.src__texte { font-size: var(--t-small); color: var(--ink-soft); white-space: pre-line; overflow-wrap: anywhere; }
+.src__cite { font-size: var(--t-micro); color: var(--muted); overflow-wrap: anywhere; }
+.src__liens { display: flex; flex-wrap: wrap; gap: var(--s3); align-items: baseline; }

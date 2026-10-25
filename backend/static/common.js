@@ -100,6 +100,36 @@ const exactDate = (iso) =>
     day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit",
   }) : "";
 
+// La source d'une déclaration, montrée en entier sous elle. Un lien seul ne
+// suffisait pas : on lisait une reformulation sans voir ce qui avait été écrit,
+// et un tweet supprimé ne s'ouvre plus. Le texte conservé en base et l'archive
+// sont alors la seule trace.
+function sourceCard(src) {
+  if (!src || !src.url) return "";
+  const quand = src.published_at ? exactDate(src.published_at) : "";
+  const liens = `<a class="source-link" href="${escapeHtml(src.url)}" target="_blank" rel="noopener">${
+    src.kind === "tweet" ? "ouvrir sur X" : "lire l’article"} ↗</a>${
+    src.archive
+      ? ` <a class="source-link" href="${escapeHtml(src.archive)}" target="_blank" rel="noopener">archive ↗</a>`
+      : ' <span class="stamp">pas encore archivé</span>'}`;
+  if (src.kind === "article") {
+    return `<div class="src">
+      <p class="src__head"><span class="handle">${escapeHtml(src.author || "")}</span><span class="stamp">${quand}</span></p>
+      <p class="src__texte">${escapeHtml(src.title || "")}</p>
+      <p class="src__liens">${liens}</p>
+    </div>`;
+  }
+  const type = { retweet: "retweet", quote: "citation", reply: "réponse" }[src.post_type] || "tweet";
+  return `<div class="src">
+    <p class="src__head"><span class="handle">@${escapeHtml(src.author || "")}</span>
+      <span class="tag">${type}</span><span class="stamp">${quand}</span></p>
+    <p class="src__texte">${escapeHtml(src.text || "")}${src.truncated ? " <span class=\"stamp\">(texte coupé par X)</span>" : ""}</p>
+    ${src.quoted_text ? `<p class="src__cite">cite @${escapeHtml(src.quoted_author || "?")} : ${
+      escapeHtml(src.quoted_text.slice(0, 220))}${src.quoted_text.length > 220 ? "…" : ""}</p>` : ""}
+    <p class="src__liens">${liens}</p>
+  </div>`;
+}
+
 async function fetchJSON(path) {
   const res = await fetch(`${API}${path}`);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);

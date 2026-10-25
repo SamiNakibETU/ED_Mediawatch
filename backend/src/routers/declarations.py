@@ -21,7 +21,7 @@ from src.models.contradiction import TYPE_LABELS, Contradiction
 from src.models.personality import Personality
 from src.models.subject import Subject
 from src.services.analysis.cap import CAP_VERSION
-from src.services.analysis.claim_sources import resolve_claim_urls
+from src.services.analysis.claim_sources import resolve_claim_sources, resolve_claim_urls
 from src.services.analysis.perimetre import retenu
 
 # Une une n'est pas le fil d'une personne. Au-delà de deux lignes, le troisième
@@ -145,6 +145,7 @@ async def list_declarations(
             break
     rows = gardes
     urls = await resolve_claim_urls(db, [r[0] for r in rows])
+    sources = await resolve_claim_sources(db, [r[0] for r in rows])
     en_regard = await _en_regard(db, [r[0].id for r in rows])
 
     return {
@@ -161,6 +162,7 @@ async def list_declarations(
                 "en_regard": en_regard.get(c.id),
                 "subject_id": c.subject_id, "subject_label": s_label,
                 "subject_status": s_status, "url": urls.get(c.id),
+                "source": sources.get(c.id),
             }
             for c, handle, photo, s_label, s_status in rows
         ],

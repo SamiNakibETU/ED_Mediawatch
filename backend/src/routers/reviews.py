@@ -16,7 +16,7 @@ from src.database import get_db
 from src.models.claim import Claim
 from src.models.review import Review
 from src.models.subject import Subject
-from src.services.analysis.claim_sources import resolve_claim_urls
+from src.services.analysis.claim_sources import resolve_claim_sources, resolve_claim_urls
 
 router = APIRouter(prefix="/reviews", tags=["reviews"])
 
@@ -77,11 +77,13 @@ async def get_review(review_id: int, db: AsyncSession = Depends(get_db)):
         select(Claim).where(Claim.id.in_(r.claim_ids or []))
     )).scalars().all())
     urls = await resolve_claim_urls(db, claims)
+    sources = await resolve_claim_sources(db, claims)
     par_id = {
         c.id: {
             "id": c.id, "speaker": c.speaker_name, "party": c.party,
             "published_at": c.published_at, "platform": c.platform,
             "text": c.canonical or c.verbatim, "url": urls.get(c.id),
+            "source": sources.get(c.id),
         }
         for c in claims
     }

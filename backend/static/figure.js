@@ -140,6 +140,7 @@ function claimRow(c) {
     <div>
       ${value ? `<p class="claim__value">${escapeHtml(value)}</p>` : ""}
       <p class="prose" style="margin-top:0">${escapeHtml(c.canonical || c.verbatim)}</p>
+      ${sourceCard(c.source)}
       <div class="entry__foot">
         <span class="tag">${TYPE_LABEL[c.claim_type] || escapeHtml(c.claim_type)}</span>
         ${c.theme ? `<span class="tag tag--theme">${escapeHtml(themeLabel(c.theme))}</span>` : ""}

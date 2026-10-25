@@ -18,7 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database import get_db
 from src.models.claim import Claim
-from src.services.analysis.claim_sources import resolve_claim_urls
+from src.services.analysis.claim_sources import resolve_claim_sources, resolve_claim_urls
 from src.services.analysis.pledges import VERDICTS
 
 router = APIRouter(prefix="/engagements", tags=["engagements"])
@@ -45,6 +45,7 @@ async def list_pledges(
         .limit(limit).offset(offset)
     )).scalars().all())
     urls = await resolve_claim_urls(db, rows)
+    sources = await resolve_claim_sources(db, rows)
 
     # Qui s'engage, et combien de fois : la première question qu'on se pose
     # devant un registre, et celle qui ordonne la page.
@@ -68,6 +69,7 @@ async def list_pledges(
                 "published_at": c.published_at, "platform": c.platform,
                 "verbatim": c.verbatim, "mesure": c.pledge_measure,
                 "status": c.pledge_status, "url": urls.get(c.id),
+                "source": sources.get(c.id),
                 "subject_id": c.subject_id,
             }
             for c in rows

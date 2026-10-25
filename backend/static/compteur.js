@@ -220,6 +220,7 @@ async function loadCompteur(key) {
           <span class="stamp">${p.published_at ? asDate(p.published_at).toLocaleDateString("fr-FR") : "date inconnue"}</span>
         </div>
         <blockquote class="quoted">${escapeHtml((p.verbatim || "").slice(0, 240))}</blockquote>
+        ${sourceCard(p.source)}
         ${p.source_url ? `<div class="entry__foot"><span class="spacer"></span>
           <a class="source-link" href="${p.source_url}" target="_blank" rel="noopener">source ↗</a></div>` : ""}
       </div>

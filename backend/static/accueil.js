@@ -91,6 +91,7 @@ function declaration(d) {
       <span class="stamp">${escapeHtml(exactDate(d.published_at))}</span>
     </p>
     ${propos(d)}
+    ${sourceCard(d.source)}
     <p class="decl__pourquoi">${(d.why || []).map(escapeHtml).join(" · ") || "&nbsp;"}</p>
     ${enRegard(d.en_regard)}
     <p class="entry__foot">

@@ -84,6 +84,7 @@ function source(s) {
       <span class="stamp">${escapeHtml(exactDate(s.published_at))}</span>
     </p>
     <p class="quoted">${escapeHtml(s.text || "")}</p>
+    ${sourceCard(s.source)}
     ${s.url ? `<p class="entry__foot"><a class="source-link" href="${escapeHtml(s.url)}"
         target="_blank" rel="noopener">vérifier la source ${ico("source")}</a></p>` : ""}
   </div>`;
