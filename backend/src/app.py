@@ -22,6 +22,7 @@ from src.routers import (
     contradictions,
     enjeux,
     figure,
+    themes,
     health,
     llm_costs,
     meta,
@@ -107,6 +108,7 @@ app.include_router(declarations.router)
 app.include_router(series.router)
 app.include_router(figure.router)
 app.include_router(enjeux.router)
+app.include_router(themes.router)
 app.include_router(pipeline_status.router)
 app.include_router(llm_costs.router)
 

@@ -7,6 +7,7 @@ articles later into the same analytical pipeline (themes, inconsistencies).
 from datetime import datetime
 
 from sqlalchemy import (
+    JSON,
     DateTime,
     ForeignKey,
     Index,
@@ -88,6 +89,16 @@ class Post(Base, TimestampMixin):
     # prétri. Marquer la source, comme pour L0 : sans ça, un tweet sans
     # déclaration repasserait au modèle à chaque passe.
     decl_lu: Mapped[str | None] = mapped_column(String(60), index=True)
+    # Thème du tweet, parmi les thèmes du référentiel (`enjeux.THEMES`) ou
+    # « autre ». Posé sur TOUS les tweets, retweets compris : il sert à suivre
+    # de quoi parle l'extrême droite, pas seulement ce qu'elle déclare.
+    theme_ed: Mapped[str | None] = mapped_column(String(20), index=True)
+    theme_lu: Mapped[str | None] = mapped_column(String(60))
+    # Vecteur du texte (même espace que les futurs vecteurs d'articles, pour
+    # comparer un jour discours politique et discours médiatique) et l'étiquette
+    # du modèle qui l'a produit : deux modèles ne se comparent pas.
+    vecteur: Mapped[list | None] = mapped_column(JSON)
+    vecteur_tag: Mapped[str | None] = mapped_column(String(80), index=True)
     # Langue détectée (défaut fonctionnel 'fr').
     lang: Mapped[str | None] = mapped_column(String(8))
     # Hash du texte normalisé → détecter reposts/éditions au-delà du guid d'URL.

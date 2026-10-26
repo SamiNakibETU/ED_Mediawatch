@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Thèmes, ED Mediawatch</title>
+  <link rel="stylesheet" href="design.css" />
+  <script>
+    try { const t = localStorage.getItem("theme"); if (t) document.documentElement.dataset.theme = t; } catch {}
+  </script>
+</head>
+<body data-page="themes" data-tagline="De quoi parle l'extrême droite sur X">
+  <header id="masthead"></header>
+
+  <div class="wrap page">
+    <h1 class="hero-title lede-first">De quoi parle l’extrême droite sur X</h1>
+    <p class="dek" id="lecture">Chargement…</p>
+
+    <div class="controls mt-6" aria-label="Réglages">
+      <div class="filters" id="pas" role="group" aria-label="Échelle de temps"></div>
+      <label class="sr-only" for="parti">Parti</label>
+      <select id="parti" class="field field--inline">
+        <option value="">Tous les partis</option>
+        <option value="RN">RN</option>
+        <option value="UDR">UDR</option>
+        <option value="FIGURE">Autres figures</option>
+      </select>
+      <label class="switch"><input type="checkbox" id="retweets" checked /> retweets compris</label>
+    </div>
+
+    <section aria-labelledby="titreCourbes">
+      <div class="band"><h2 id="titreCourbes">Les thèmes dans le temps</h2>
+        <span class="spacer"></span><p id="periode"></p></div>
+      <div class="multiples" id="multiples"></div>
+    </section>
+
+    <section aria-labelledby="titreMoment" id="moment" hidden>
+      <div class="band"><h2 id="titreMoment"></h2><span class="spacer"></span>
+        <button class="btn btn--ghost btn--sm" id="fermerMoment">Fermer</button></div>
+      <div id="tweetsMoment"></div>
+    </section>
+
+    <section aria-labelledby="titreSujets">
+      <div class="band"><h2 id="titreSujets">Les sujets de la semaine</h2>
+        <span class="spacer"></span>
+        <label class="sr-only" for="semaine">Semaine</label>
+        <select id="semaine" class="field field--inline"></select></div>
+      <p class="dek">Les tweets de la semaine regroupés par proximité de sens, puis nommés à partir
+        de leurs propres mots. Un sujet compte seulement s’il réunit au moins cinq tweets et deux
+        figures. C’est une lecture du moment&nbsp;: elle sert à explorer, pas à établir.</p>
+      <ol class="sujets" id="sujets"></ol>
+      <div id="tweetsSujet"></div>
+    </section>
+  </div>
+
+  <script src="common.js"></script>
+  <script src="themes.js"></script>
+</body>
+</html>

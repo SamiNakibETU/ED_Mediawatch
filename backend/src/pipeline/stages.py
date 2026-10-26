@@ -76,6 +76,21 @@ async def _extract_l0() -> dict:
     return await run_declaration_extraction(limit_posts=1500, limit_articles=400)
 
 
+async def _themes() -> dict:
+    from src.services.analysis.themes import classer
+    return await classer(limit=4000)
+
+
+async def _vecteurs() -> dict:
+    from src.services.analysis.themes import vectoriser
+    return await vectoriser(limit=4000)
+
+
+async def _sujets_semaine() -> dict:
+    from src.services.analysis.themes import sujets_recents
+    return await sujets_recents(semaines=2)
+
+
 async def _registre() -> dict:
     from src.services.analysis.registre import lire
     return await lire(limit=1500)
@@ -190,6 +205,14 @@ STAGES: tuple[Stage, ...] = (
     # du texte intégral. Il remplace l'extraction L0, gelée.
     Stage("registre", "Registre des déclarations", PAID, _registre,
           depends_on=("enrich_truncated",), produces="déclarations rangées"),
+    # De quoi parle l'extrême droite sur X : un thème sur chaque tweet, retweets
+    # compris, puis les vecteurs, puis les sujets qui émergent chaque semaine.
+    Stage("themes", "Thème de chaque tweet", PAID, _themes,
+          depends_on=("enrich_truncated",), produces="tweets classés"),
+    Stage("vecteurs", "Vecteurs des tweets", FREE, _vecteurs,
+          depends_on=("enrich_truncated",), produces="tweets vectorisés"),
+    Stage("sujets_semaine", "Sujets de la semaine", PAID, _sujets_semaine,
+          depends_on=("themes", "vecteurs"), produces="sujets nommés"),
     Stage("extract_l0", "Extraction des déclarations (L0)", PAID, _extract_l0,
           depends_on=("enrich_truncated", "collect_press"),
           produces="déclarations"),

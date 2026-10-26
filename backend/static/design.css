@@ -1851,3 +1851,31 @@ a.statbar__item:hover .statbar__n { color: var(--accent); }
 .enjeux-theme { display: grid; grid-template-columns: 12rem 1fr; gap: var(--s3); align-items: baseline; }
 .enjeux-theme .section-label { margin: 0; }
 @media (max-width: 700px) { .enjeux-theme { grid-template-columns: 1fr; gap: var(--s2); } }
+
+/* Thèmes : petits multiples, un panneau par thème, tous à la même échelle. */
+.multiples { display: grid; gap: var(--s2); }
+.multiple { display: grid; grid-template-columns: 13rem 1fr; gap: var(--s4); align-items: end; }
+.multiple__titre { margin: 0; font-size: var(--t-small); font-weight: 600; color: var(--ink); }
+.multiple__titre span { display: block; font-weight: 400; color: var(--muted); font-variant-numeric: tabular-nums; }
+.multiple__svg { width: 100%; height: 3.5rem; display: block; }
+.multiple__base { stroke: var(--rule-strong); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.multiple__barre { fill: var(--ink-soft); cursor: pointer; }
+.multiple__barre:hover { fill: var(--ink); }
+.multiple__barre[aria-current="true"] { fill: var(--accent); }
+.multiples__axe { display: flex; justify-content: space-between; margin-left: calc(13rem + var(--s4));
+  font-size: var(--t-micro); color: var(--muted); font-variant-numeric: tabular-nums; }
+@media (max-width: 700px) {
+  .multiple { grid-template-columns: 1fr; gap: var(--s1); }
+  .multiples__axe { margin-left: 0; }
+}
+.sujets { list-style: none; margin: var(--s4) 0 0; padding: 0; display: grid; gap: 0; }
+.sujets li { border-bottom: 1px solid var(--rule); }
+.sujet { display: grid; gap: var(--s1); width: 100%; text-align: left; background: none; border: 0;
+  padding: var(--s3) 0; cursor: pointer; color: var(--ink); font: inherit; }
+.sujet:hover .sujet__libelle, .sujet[aria-pressed="true"] .sujet__libelle { color: var(--accent); }
+.sujet:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.sujet__libelle { font-weight: 600; }
+.decl-ligne { margin: var(--s2) 0 0; font-size: var(--t-small); color: var(--ink-soft); }
+.sujet__meta { font-size: var(--t-small); color: var(--muted); font-variant-numeric: tabular-nums; }
+.decl-ligne__k { font-weight: 600; color: var(--ink); margin-right: var(--s2); }
+body[data-page="themes"] select.field--inline { width: auto; max-width: 16rem; }
