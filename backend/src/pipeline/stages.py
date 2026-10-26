@@ -106,6 +106,11 @@ async def _juge_ecarts() -> dict:
     return await juger(limit=40)
 
 
+async def _rattrapage() -> dict:
+    from src.services.collection.couverture import rattrapage_quotidien
+    return await rattrapage_quotidien()
+
+
 async def _registre() -> dict:
     from src.services.analysis.registre import lire
     return await lire(limit=1500)
@@ -216,6 +221,9 @@ STAGES: tuple[Stage, ...] = (
     # déclarations fausses par omission, et la dépense est à refaire.
     Stage("amplifications", "Graphe d'amplification", FREE, _amplifications,
           depends_on=("collect_x",), produces="arêtes"),
+    # L'historique depuis 2022 des figures clés, par Wayback, une fois par jour.
+    Stage("rattrapage", "Rattrapage de l'historique depuis 2022", FREE, _rattrapage,
+          produces="tweets anciens retrouvés"),
     # Le registre des déclarations lit les tweets eux-mêmes : il ne dépend que
     # du texte intégral. Il remplace l'extraction L0, gelée.
     Stage("registre", "Registre des déclarations", PAID, _registre,
@@ -303,7 +311,7 @@ BY_NAME: dict[str, Stage] = {s.name: s for s in STAGES}
 # lente et dépend du réseau ; l'analyse est rapide et travaille sur ce qui est
 # DÉJÀ en base. Les séparer permet de faire tourner l'analyse toutes les heures
 # sur le corpus existant, sans attendre la collecte suivante.
-COLLECTE = ("collect_x", "collect_press")
+COLLECTE = ("collect_x", "collect_press", "rattrapage")
 
 
 # L'ancienne chaîne d'analyse, gelée le 26 octobre 2026. Elle découpait chaque

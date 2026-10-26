@@ -20,6 +20,7 @@ from src.routers import (
     classification,
     compteur,
     contradictions,
+    couverture,
     ecarts,
     enjeux,
     figure,
@@ -111,6 +112,7 @@ app.include_router(figure.router)
 app.include_router(enjeux.router)
 app.include_router(themes.router)
 app.include_router(ecarts.router)
+app.include_router(couverture.router)
 app.include_router(pipeline_status.router)
 app.include_router(llm_costs.router)
 
