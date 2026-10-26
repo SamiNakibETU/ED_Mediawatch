@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Écarts, ED Mediawatch</title>
+  <link rel="stylesheet" href="design.css" />
+  <script>
+    try { const t = localStorage.getItem("theme"); if (t) document.documentElement.dataset.theme = t; } catch {}
+  </script>
+</head>
+<body data-page="ecarts" data-tagline="Ce qui ne coïncide pas">
+  <header id="masthead"></header>
+
+  <div class="wrap page">
+    <h1 class="hero-title lede-first">Les écarts</h1>
+    <p class="dek" id="lecture">Chargement…</p>
+
+    <div class="controls mt-6" aria-label="Filtres">
+      <div class="filters" id="statut" role="group" aria-label="Statut"></div>
+      <div class="filters" id="type" role="group" aria-label="Type d’écart"></div>
+      <div class="filters" id="juge" role="group" aria-label="Avis du juge"></div>
+    </div>
+
+    <p class="dek">Les écarts concentrent les erreurs de lecture : une position mal lue crée
+      mécaniquement un faux écart. Le juge relit les deux textes et sépare les écarts réels des
+      erreurs de lecture, qui signalent des déclarations à corriger.</p>
+
+    <section aria-labelledby="titreListe">
+      <div class="band"><h2 id="titreListe">À relire</h2><span class="spacer"></span><p id="total"></p></div>
+      <div id="liste"></div>
+      <p class="state" id="plus" hidden><button class="btn btn--ghost btn--sm" id="suite">Afficher la suite</button></p>
+    </section>
+
+    <section aria-labelledby="titreDiv">
+      <div class="band"><h2 id="titreDiv">Entre RN, UDR et Reconquête</h2></div>
+      <p class="dek">La position la plus fréquente de chaque parti sur chaque enjeu, sur les douze
+        derniers mois, avec sa part parmi les déclarations du parti. Un parti à 55&nbsp;% sur une
+        position n’est pas unanime. Le parti de chaque propos est celui du jour où il a été tenu.</p>
+      <div class="table-scroll"><table class="tableau" id="divergences"></table></div>
+    </section>
+
+    <section aria-labelledby="titreRelecture" class="mt-6">
+      <div class="band"><h2 id="titreRelecture">Relecture</h2></div>
+      <p class="dek">Confirmer ou écarter un écart demande le jeton de relecture. Il reste dans ce
+        navigateur.</p>
+      <label class="sr-only" for="jeton">Jeton de relecture</label>
+      <input id="jeton" class="field field--inline" type="password" autocomplete="off" placeholder="Jeton de relecture" />
+    </section>
+  </div>
+
+  <script src="common.js"></script>
+  <script src="ecarts.js"></script>
+</body>
+</html>

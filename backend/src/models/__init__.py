@@ -14,6 +14,7 @@ from src.models.position import Position
 from src.models.declaration import Declaration
 from src.models.engagement_programme import EngagementProgramme
 from src.models.sujet_semaine import SujetSemaine
+from src.models.ecart import Ecart
 from src.models.pipeline_run import PipelineRun, PipelineStep
 from src.models.subject import Subject
 from src.models.annotation import CapAnnotation
@@ -29,6 +30,7 @@ __all__ = [
     "Declaration",
     "EngagementProgramme",
     "SujetSemaine",
+    "Ecart",
     "CollectionRun",
     "MediaSource",
     "Article",

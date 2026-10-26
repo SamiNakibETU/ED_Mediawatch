@@ -1879,3 +1879,21 @@ a.statbar__item:hover .statbar__n { color: var(--accent); }
 .sujet__meta { font-size: var(--t-small); color: var(--muted); font-variant-numeric: tabular-nums; }
 .decl-ligne__k { font-weight: 600; color: var(--ink); margin-right: var(--s2); }
 body[data-page="themes"] select.field--inline { width: auto; max-width: 16rem; }
+
+/* Écarts : les deux textes côte à côte, puis l'avis du juge. */
+.ecart { padding: var(--s5) 0; border-bottom: 1px solid var(--rule); display: grid; gap: var(--s3); }
+.ecart__titre { margin: 0; font-weight: 600; font-size: var(--t-read); }
+.ecart__cotes { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s5); }
+.ecart__cote { min-width: 0; display: grid; gap: var(--s2); align-content: start; }
+.ecart__position { margin: 0; font-weight: 600; color: var(--accent); }
+.ecart__juge { display: grid; gap: var(--s2); border-left: 2px solid var(--ink); padding-left: var(--s4); }
+.ecart__juge p { margin: 0; }
+.ecart__actions { display: flex; flex-wrap: wrap; gap: var(--s3); align-items: center; }
+@media (max-width: 760px) { .ecart__cotes { grid-template-columns: 1fr; } }
+.table-scroll { overflow-x: auto; }
+.tableau { width: 100%; border-collapse: collapse; font-size: var(--t-small); }
+.tableau th, .tableau td { text-align: left; vertical-align: top; padding: var(--s2) var(--s3) var(--s2) 0; }
+.tableau thead th { border-bottom: 1px solid var(--ink); font-weight: 600; }
+.tableau tbody tr { border-bottom: 1px solid var(--rule); }
+.tableau tbody th { font-weight: 600; }
+.tableau__marque th { color: var(--accent); }

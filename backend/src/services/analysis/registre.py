@@ -62,6 +62,7 @@ RAISONNEMENT_FILTRE = "off"
 # les rangements forcés (1 à 2 contre 3 à 6), pour 50 % de coût en plus.
 RAISONNEMENT_EXTRACTION = "low"
 MIN_MOTS = 5
+VERBATIM_MIN = 25
 
 
 # ── Étage 1 : prétri ────────────────────────────────────────────────────
@@ -224,6 +225,11 @@ def prompt_extraction(posts: list[Post]) -> str:
 def valider(d: DeclLue, texte: str) -> DeclLue | None:
     """La déclaration telle qu'elle s'écrit, ou None si elle ne tient pas."""
     if not d.verbatim or not verbatim_in_source(d.verbatim, texte):
+        return None
+    # Une exclamation ne porte pas une position : « Halte au fou ! » avait été
+    # rangé en « s'opposer à l'aide à l'Ukraine », et le juge l'a relevé comme
+    # erreur de lecture. Sous 25 signes, la phrase ne dit pas ce que l'auteur veut.
+    if len(d.verbatim.strip()) < VERBATIM_MIN:
         return None
     try:
         valeur = float(str(d.valeur).replace(",", ".")) if d.valeur not in (None, "") else None

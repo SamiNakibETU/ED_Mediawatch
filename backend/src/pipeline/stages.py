@@ -91,6 +91,16 @@ async def _sujets_semaine() -> dict:
     return await sujets_recents(semaines=2)
 
 
+async def _ecarts() -> dict:
+    from src.services.analysis.ecarts import detecter
+    return await detecter()
+
+
+async def _juge_ecarts() -> dict:
+    from src.services.analysis.ecarts import juger
+    return await juger(limit=40)
+
+
 async def _registre() -> dict:
     from src.services.analysis.registre import lire
     return await lire(limit=1500)
@@ -207,6 +217,11 @@ STAGES: tuple[Stage, ...] = (
           depends_on=("enrich_truncated",), produces="déclarations rangées"),
     # De quoi parle l'extrême droite sur X : un thème sur chaque tweet, retweets
     # compris, puis les vecteurs, puis les sujets qui émergent chaque semaine.
+    # Les confrontations : par requête sur le registre, puis relues par le juge.
+    Stage("ecarts", "Écarts entre positions", FREE, _ecarts,
+          depends_on=("registre",), produces="écarts à relire"),
+    Stage("juge_ecarts", "Juge des écarts", PAID, _juge_ecarts,
+          depends_on=("ecarts",), produces="écarts qualifiés"),
     Stage("themes", "Thème de chaque tweet", PAID, _themes,
           depends_on=("enrich_truncated",), produces="tweets classés"),
     Stage("vecteurs", "Vecteurs des tweets", FREE, _vecteurs,
