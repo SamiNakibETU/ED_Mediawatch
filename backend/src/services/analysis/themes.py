@@ -258,7 +258,31 @@ async def vectoriser(*, limit: int = 4000) -> dict:
 # ── Les sujets de la semaine ────────────────────────────────────────────
 
 class Libelles(BaseModel):
-    libelles: list[str] = Field(default_factory=list)
+    # Souple : des chaînes dans l'ordre, ou des objets {"groupe": k, "libelle": ...}.
+    libelles: list = Field(default_factory=list)
+
+
+def lire_libelles(brut: list, n: int) -> list[str | None]:
+    """Un libellé par groupe, None pour ceux que la réponse ne nomme pas.
+
+    Le 26/10/2026, une réponse qui ne comptait pas autant de libellés que de
+    groupes faisait tout jeter, et la revue titrait « Sujet 1 », « Sujet 2 ». Un
+    libellé numéroté trouve sa place même si un autre manque ; une liste de
+    chaînes ne vaut que complète, faute de savoir lequel manque.
+    """
+    out: list[str | None] = [None] * n
+    if brut and all(isinstance(x, dict) for x in brut):
+        for x in brut:
+            try:
+                k = int(x.get("groupe")) - 1
+            except (TypeError, ValueError):
+                continue
+            lib = str(x.get("libelle") or "").strip()
+            if 0 <= k < n and lib:
+                out[k] = lib
+    elif len(brut) == n:
+        out = [str(x).strip() or None for x in brut]
+    return out
 
 
 LIBELLE_SYSTEM = (
@@ -268,7 +292,8 @@ LIBELLE_SYSTEM = (
     "retraites à l'Assemblée », « l'attaque au couteau d'Annecy »). Pas de jugement, pas "
     "d'adjectif qui prend parti. Si deux groupes parlent du même événement, donne-leur "
     "exactement le même libellé.\n\n"
-    'Réponds par un JSON : {"libelles": ["sujet du groupe 1", ...]}, dans l\'ordre.'
+    'Réponds par un JSON, un objet par groupe : '
+    '{"libelles": [{"groupe": 1, "libelle": "..."}, {"groupe": 2, "libelle": "..."}]}.'
 )
 
 
@@ -391,7 +416,17 @@ async def sujets_de_la_semaine(lundi: datetime, *, top: int = 12, min_tweets: in
         for k, (g, _) in enumerate(candidats, 1))
     r = await llm.ask_json(tier=1, system=LIBELLE_SYSTEM, prompt=prompt, schema=Libelles,
                            task="sujets_semaine", max_tokens=800, raisonnement="off")
-    libelles = r.libelles if len(r.libelles) == len(candidats) else [None] * len(candidats)
+    libelles = lire_libelles(r.libelles, len(candidats))
+    for k, lib in enumerate(libelles):
+        if lib is None:  # oublié : redemandé seul, c'est une petite question
+            try:
+                seul = await llm.ask_json(
+                    tier=1, system=LIBELLE_SYSTEM, schema=Libelles, task="sujets_semaine", max_tokens=200,
+                    raisonnement="off",
+                    prompt="## Groupe 1\n" + "\n".join("- " + _court(i) for i in candidats[k][0][:6]))
+                libelles[k] = lire_libelles(seul.libelles, 1)[0]
+            except Exception as exc:  # noqa: BLE001 — un sujet sans nom vaut mieux qu'une semaine perdue
+                logger.warning("sujets.libelle_echec", groupe=k + 1, error=str(exc)[:120])
 
     # Deux groupes qui reçoivent le même nom sont le même sujet, coupé en deux
     # par les retweets d'un même texte : on les réunit.

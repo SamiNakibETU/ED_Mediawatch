@@ -100,3 +100,11 @@ def test_un_sujet_porte_par_des_relais_montre_une_fois_le_texte_relaye(tmp_path,
     s = r["une"][1]
     assert (s["n_tweets"], s["n_retweets"]) == (0, 2)
     assert len(s["tweets"]) == 1 and s["tweets"][0]["post_type"] == "retweet"
+
+
+def test_un_libelle_manquant_ne_fait_pas_perdre_les_autres():
+    from src.services.analysis.themes import lire_libelles
+    numerotes = [{"groupe": 1, "libelle": "Le meeting d'Orléans"}, {"groupe": 3, "libelle": "L'attaque de Trappes"}]
+    assert lire_libelles(numerotes, 3) == ["Le meeting d'Orléans", None, "L'attaque de Trappes"]
+    assert lire_libelles(["a", "b"], 3) == [None, None, None]  # incomplète, et on ne sait pas laquelle manque
+    assert lire_libelles(["a", "b"], 2) == ["a", "b"]

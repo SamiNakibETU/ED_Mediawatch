@@ -1901,11 +1901,11 @@ body[data-page="themes"] select.field--inline { width: auto; max-width: 16rem; }
 /* Revue de la semaine : un sujet par bloc, ses tweets dessous. */
 .revue-tete { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--s4); }
 body[data-page="revue"] select.field--inline { width: auto; max-width: 16rem; }
-.une { padding: var(--s5) 0; border-bottom: 1px solid var(--rule); display: grid; gap: var(--s2); }
-.une:first-child { padding-top: 0; }
-.une .card-title { margin: 0; }
-.une .sujet__meta { margin: 0; max-width: var(--measure-read); }
-.une__plus { margin: var(--s2) 0 0; }
-.une__tous { display: grid; gap: 0; }
-.une__lu { padding: var(--s4) 0; border-bottom: 1px solid var(--rule); }
-.une__lu .sujet__meta { margin: 0; }
+.rv-sujet { padding: var(--s5) 0; border-bottom: 1px solid var(--rule); display: grid; gap: var(--s2); }
+.rv-sujet:first-child { padding-top: 0; }
+.rv-sujet .card-title { margin: 0; }
+.rv-sujet .sujet__meta { margin: 0; max-width: var(--measure-read); }
+.rv-plus { margin: var(--s2) 0 0; }
+.rv-tous { display: grid; gap: 0; }
+.rv-lu { padding: var(--s4) 0; border-bottom: 1px solid var(--rule); }
+.rv-lu .sujet__meta { margin: 0; }
