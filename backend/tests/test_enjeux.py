@@ -119,3 +119,19 @@ def test_un_ecart_n_est_retenu_que_si_les_deux_juges_le_tiennent_pour_reel():
 def test_un_verbatim_trop_court_ne_porte_pas_de_position():
     d = DeclLue(enjeu="ukraine", position="contre_aide", verbatim="Halte au fou !")
     assert valider(d, "Halte au fou ! On ne fait pas la guerre à une puissance nucléaire.") is None
+
+
+def test_l_import_zeeschuimer_lit_le_texte_long_et_le_tweet_cite():
+    import json
+    from src.services.collection.x_zeeschuimer import lire
+    auteur = {"core": {"user_results": {"result": {"core": {"screen_name": "J_Bardella"}}}}}
+    cite = {"rest_id": "2", "legacy": {"id_str": "2", "full_text": "Texte cité", "created_at": "Mon Jun 10 08:00:00 +0000 2024"},
+            "core": {"user_results": {"result": {"core": {"screen_name": "MLP_officiel"}}}}}
+    tw = {"data": {"rest_id": "1", **auteur, "quoted_status_result": {"result": cite},
+                   "note_tweet": {"note_tweet_results": {"result": {"text": "Un texte long qui dépasse 280 signes."}}},
+                   "legacy": {"id_str": "1", "full_text": "Un texte coupé", "created_at": "Tue Jun 11 08:00:00 +0000 2024"}}}
+    tweets, illisibles = lire(json.dumps(tw) + "\n" + "pas du json\n")
+    assert illisibles == 1
+    (a1, d1), (a2, d2) = tweets
+    assert a1 == "J_Bardella" and d1["content"].startswith("Un texte long") and d1["post_type"] == "quote"
+    assert d1["quoted_handle"] == "MLP_officiel" and a2 == "MLP_officiel"

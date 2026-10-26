@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -75,3 +75,16 @@ async def trigger_collection() -> CollectionStats:
     """Run one collection sweep now (manual trigger, useful in dev)."""
     stats = await run_collection()
     return CollectionStats(**stats)
+
+
+@router.post("/collect/zeeschuimer", dependencies=[Depends(require_token)])
+async def importer_zeeschuimer(request: Request) -> dict:
+    """Importe un export Zeeschuimer (NDJSON brut dans le corps de la requête).
+
+    Seuls les tweets des comptes suivis entrent en base ; un tweet déjà collecté
+    n'est pas dupliqué. Le registre et les thèmes les liront à la passe suivante.
+    """
+    from src.services.collection.x_zeeschuimer import importer
+
+    texte = (await request.body()).decode("utf-8", errors="replace")
+    return await importer(texte)
