@@ -113,7 +113,14 @@ async def _rattrapage() -> dict:
 
 async def _registre() -> dict:
     from src.services.analysis.registre import lire
-    return await lire(limit=1500)
+
+    # Par les deux bouts : les tweets récents d'abord, pour que la revue et les
+    # écarts de la semaine aient leurs déclarations, puis l'historique. Lu du
+    # plus ancien seulement, le registre laissait la semaine 43 sans une seule
+    # déclaration tant qu'il n'avait pas fini 2022 à 2025. Le budget total ne change pas.
+    recents = await lire(limit=400, plus_recents=True)
+    histoire = await lire(limit=1100)
+    return {"recents": recents, "histoire": histoire}
 
 
 async def _cap_coding() -> dict:
