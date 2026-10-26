@@ -160,9 +160,47 @@ def lire(texte: str) -> tuple[list[tuple[str, dict]], int]:
 
 async def importer(texte: str) -> dict:
     """Écrit en base les tweets des comptes suivis contenus dans un export."""
+    tweets, illisibles = lire(texte)
+    return await importer_lot(tweets, illisibles)
+
+
+# Ce qu'un lot venu d'ailleurs peut écrire dans `posts` : rien d'autre ne passe.
+CHAMPS_LOT = {"url", "content", "published_at", "is_retweet", "is_reply", "post_type", "reply_to_handle",
+              "reply_to_url", "likes", "retweets", "replies", "quotes", "views", "lang", "text_truncated",
+              "collected_via", "quoted_handle", "quoted_url", "quoted_content", "word_count"}
+
+
+def normaliser_lot(brut: list[dict], via: str) -> list[tuple[str, dict]]:
+    """Un lot JSON (un objet par tweet, avec `auteur`) au format de `importer_lot`.
+
+    Les champs hors liste sont ignorés, la date ISO redevient une date, l'adresse
+    doit être celle d'un tweet sur x.com : un lot ne peut pas écrire n'importe quoi.
+    """
+    out = []
+    for t in brut:
+        auteur, url = str(t.get("auteur") or ""), str(t.get("url") or "")
+        if not auteur or not url.startswith("https://x.com/") or not t.get("content"):
+            continue
+        d = {k: v for k, v in t.items() if k in CHAMPS_LOT}
+        if isinstance(d.get("published_at"), str):
+            try:
+                d["published_at"] = datetime.fromisoformat(d["published_at"]).astimezone(timezone.utc)
+            except ValueError:
+                d["published_at"] = None
+        d["collected_via"] = via[:8]
+        # Mêmes champs pour tous : un INSERT multi-lignes aux clés hétérogènes
+        # fait échouer le lot entier (vu en août 2026 sur les `quoted_*`).
+        for k in CHAMPS_LOT:
+            d.setdefault(k, False if k in ("is_retweet", "is_reply", "text_truncated")
+                         else 0 if k == "word_count" else None)
+        out.append((auteur, d))
+    return out
+
+
+async def importer_lot(tweets: list[tuple[str, dict]], illisibles: int = 0) -> dict:
+    """Écrit en base les tweets des comptes suivis, sans doublon avec les autres voies."""
     from src.services.collection.x_collector import _insert_new
 
-    tweets, illisibles = lire(texte)
     factory = get_session_factory()
     async with factory() as db:
         suivis = {h.lower(): (pid, h) for pid, h in (await db.execute(

@@ -88,3 +88,18 @@ async def importer_zeeschuimer(request: Request) -> dict:
 
     texte = (await request.body()).decode("utf-8", errors="replace")
     return await importer(texte)
+
+
+@router.post("/collect/tweets", dependencies=[Depends(require_token)])
+async def importer_tweets(request: Request) -> dict:
+    """Importe un lot de tweets déjà au format de la collecte (JSON).
+
+    Corps : `{"via": "xitter", "tweets": [{"auteur": "MLP_officiel", "url": "https://x.com/…",
+    "content": "…", "published_at": "2022-03-01T08:50:00+00:00", …}]}`. Sert à la récupération
+    de l'historique (`src.scripts.historique_x`) ; mêmes règles que l'import Zeeschuimer.
+    """
+    from src.services.collection.x_zeeschuimer import importer_lot, normaliser_lot
+
+    corps = await request.json()
+    lot = normaliser_lot(corps.get("tweets") or [], str(corps.get("via") or "lot"))
+    return await importer_lot(lot)

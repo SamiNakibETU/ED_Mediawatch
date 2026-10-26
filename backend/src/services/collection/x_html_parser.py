@@ -201,3 +201,78 @@ def parse_profile_html(
             break
 
     return posts, next_cursor
+
+
+# ── Pages de recherche, pour l'historique ─────────────────────────────────
+
+_STATUS_RE = re.compile(r"^/(\w+)/status/(\d+)")
+
+
+def _texte_complet(node) -> str:
+    """Le texte d'un tweet avec les liens en entier.
+
+    Nitter affiche un lien raccourci (« rassemblementnational.fr/22-mes… ») et met
+    l'adresse complète dans `href`. On garde l'adresse, comme Zeeschuimer et la
+    syndication, pour que le registre lise la même chose quelle que soit la voie.
+    Mentions et mots-dièse gardent leur forme écrite.
+    """
+    morceaux: list[str] = [node.text or ""]
+    for enfant in node:
+        if enfant.tag == "br":
+            morceaux.append("\n")
+        elif enfant.tag == "a":
+            vu = enfant.text_content()
+            href = enfant.get("href") or ""
+            morceaux.append(href if href.startswith("http") and not vu.startswith(("@", "#")) else vu)
+        else:
+            morceaux.append(enfant.text_content())
+        morceaux.append(enfant.tail or "")
+    return "".join(morceaux).strip()
+
+
+def lire_page_recherche(html_text: str) -> tuple[list[tuple[str, dict]], str | None, int]:
+    """Une page de recherche Nitter : (tweets, lien de la page suivante, retweets vus).
+
+    Chaque tweet est rendu au format de la collecte, sous son adresse x.com : la
+    clé de dédoublonnage est alors la même que celle de la syndication et de
+    Zeeschuimer. Les retweets sont comptés mais pas rendus : Nitter n'en donne que
+    le tweet d'origine, pas l'identifiant du retweet lui-même, et les ranger sous
+    l'original ferait des doublons avec les autres voies.
+    """
+    doc = lxml_html.fromstring(html_text)
+    tweets: list[tuple[str, dict]] = []
+    retweets = 0
+    for item in doc.cssselect(".timeline-item"):
+        cls = item.get("class") or ""
+        if "show-more" in cls or "unavailable" in cls:
+            continue
+        if item.cssselect(".retweet-header"):
+            retweets += 1
+            continue
+        m = _STATUS_RE.match(_tweet_link(item))
+        contenu = item.cssselect(".tweet-content")
+        if not m or not contenu:
+            continue
+        auteur, tid = m.group(1), m.group(2)
+        texte = _texte_complet(contenu[0])
+        if not texte:
+            continue
+        url = f"https://x.com/{auteur}/status/{tid}"
+        quote = _quote_info(item, "https://x.com")
+        is_reply = bool(item.cssselect(".replying-to"))
+        tweets.append((auteur, {
+            "guid": tweet_guid(auteur, url), "url": url, "content": texte,
+            "published_at": _parse_date(item, auteur),
+            "is_retweet": False, "is_reply": is_reply,
+            "post_type": "quote" if quote else "reply" if is_reply else "original",
+            "reply_to_handle": _reply_target(item) if is_reply else None,
+            "quoted_url": quote.get("quoted_url"), "quoted_handle": quote.get("quoted_handle"),
+            "quoted_content": (quote.get("quoted_content") or "")[:2000] or None,
+            "replies": _stat_value(item, "icon-comment"), "retweets": _stat_value(item, "icon-retweet"),
+            "quotes": _stat_value(item, "icon-quote"), "likes": _stat_value(item, "icon-heart"),
+            "views": _stat_value(item, "icon-views"),
+            # Nitter ne donne pas la langue : « und », que le prétri du registre laisse passer.
+            "lang": "und", "text_truncated": False, "word_count": len(texte.split()),
+        }))
+    suite = next((a.get("href") for a in doc.cssselect(".show-more a") if "cursor=" in (a.get("href") or "")), None)
+    return tweets, suite, retweets
