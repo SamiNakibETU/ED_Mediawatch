@@ -46,8 +46,11 @@ def _construire(tmp_path, monkeypatch):
             sujet = [tweet(lp, 1, "cap9", likes=10), tweet(jb, 2, "cap9", likes=900, retweets=50),
                      tweet(jb, 3, "cap9", likes=5)]
             tweet(lp, 4, "cap1")
-            tweet(lp, 2, "cap9", is_retweet=True, post_type="retweet", likes=99999)
+            rt = tweet(lp, 2, "cap9", is_retweet=True, post_type="retweet", likes=99999)
+            rt2 = tweet(jb, 2, "cap9", is_retweet=True, post_type="retweet", texte=rt.content)
             await db.flush()
+            db.add(SujetSemaine(semaine="2026-W43", debut=LUNDI, ordre=2, libelle="Un meeting relayé",
+                                theme="cap20", n_tweets=2, n_figures=2, post_ids=[rt.id, rt2.id]))
             db.add(SujetSemaine(semaine="2026-W43", debut=LUNDI, ordre=1, libelle="Le projet de loi immigration",
                                 theme="cap9", n_tweets=3, n_figures=2, post_ids=[p.id for p in sujet]))
             db.add(Declaration(post_id=sujet[1].id, personality_id=jb.id, published_at=sujet[1].published_at,
@@ -68,7 +71,7 @@ def _construire(tmp_path, monkeypatch):
 
 def test_la_une_montre_d_abord_les_tweets_les_plus_lus_du_sujet(tmp_path, monkeypatch):
     r = _construire(tmp_path, monkeypatch)
-    (s,) = r["une"]
+    s = r["une"][0]
     assert s["libelle"] == "Le projet de loi immigration" and s["n_figures"] == 2
     assert s["tweets"][0]["author"] == "J_Bardella"  # 900 j'aime et 50 partages
     assert {v["nom"] for v in s["voix"]} == {"Marine Le Pen", "Jordan Bardella"}
@@ -76,7 +79,8 @@ def test_la_une_montre_d_abord_les_tweets_les_plus_lus_du_sujet(tmp_path, monkey
 
 def test_un_retweet_n_est_ni_compte_ni_mis_en_avant(tmp_path, monkeypatch):
     r = _construire(tmp_path, monkeypatch)
-    assert (r["volume"]["tweets"], r["volume"]["retweets"], r["volume"]["figures"]) == (4, 1, 2)
+    assert (r["volume"]["tweets"], r["volume"]["retweets"], r["volume"]["figures"]) == (4, 2, 2)
+    assert (r["une"][0]["n_tweets"], r["une"][0]["n_retweets"]) == (3, 0)
     assert all(p["post_type"] != "retweet" for p in r["plus_vus"])
 
 
@@ -89,3 +93,10 @@ def test_la_semaine_se_compare_a_la_moyenne_des_quatre_precedentes(tmp_path, mon
 def test_une_declaration_douteuse_reste_hors_de_la_revue(tmp_path, monkeypatch):
     r = _construire(tmp_path, monkeypatch)
     assert r["declarations"] == 1 and r["enjeux"][0]["figures"] == 1
+
+
+def test_un_sujet_porte_par_des_relais_montre_une_fois_le_texte_relaye(tmp_path, monkeypatch):
+    r = _construire(tmp_path, monkeypatch)
+    s = r["une"][1]
+    assert (s["n_tweets"], s["n_retweets"]) == (0, 2)
+    assert len(s["tweets"]) == 1 and s["tweets"][0]["post_type"] == "retweet"

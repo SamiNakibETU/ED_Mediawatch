@@ -10,7 +10,7 @@ lecteur voit ce qui a été écrit, pas ce qu'on en a compris.
 from __future__ import annotations
 
 from collections import Counter, defaultdict
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import and_, or_, select
 
@@ -20,7 +20,7 @@ from src.models.personality import Personality
 from src.models.post import Post
 from src.models.sujet_semaine import SujetSemaine
 from src.services.analysis.enjeux import HORS_LISTE, PAR_SLUG
-from src.services.analysis.themes import FAMILLE_DE, FAMILLES, GRILLE, MARQUEURS
+from src.services.analysis.themes import FAMILLE_DE, FAMILLES, GRILLE, MARQUEURS, semaine_iso
 
 SEMAINES_REFERENCE = 4  # la moyenne à laquelle une semaine se compare
 UNE = 8  # sujets à la une
@@ -92,7 +92,12 @@ async def semaines(db) -> list[str]:
 
 async def revue(db, semaine: str | None = None) -> dict:
     dispo = await semaines(db)
-    semaine = semaine if semaine in dispo else (dispo[0] if dispo else None)
+    if semaine not in dispo:
+        # Par défaut, la dernière semaine close : celle qui commence aujourd'hui
+        # n'a que quelques heures de tweets, et ses tendances ne sont que du bruit.
+        lundi_courant = semaine_iso(datetime.now(timezone.utc))[0]
+        closes = [s for s in dispo if s < lundi_courant]
+        semaine = closes[0] if closes else (dispo[0] if dispo else None)
     if semaine is None:
         return {"semaine": None, "semaines": []}
     sujets = (await db.execute(select(SujetSemaine).where(SujetSemaine.semaine == semaine)
@@ -110,10 +115,20 @@ async def revue(db, semaine: str | None = None) -> dict:
         membres = [par_id[i] for i in s.post_ids or [] if i in par_id]
         voix = Counter(f.full_name for _, f in membres)
         dates = sorted(p.published_at for p, _ in membres if p.published_at)
-        choisis = sorted((m for m in membres if _propre(m[0])), key=lambda m: -_audience(m[0]))
+        propres = [m for m in membres if _propre(m[0])]
+        choisis = sorted(propres, key=lambda m: -_audience(m[0]))
+        if not choisis:
+            # Un sujet porté seulement par des relais : on montre ce qui est relayé,
+            # une fois par texte, le plus relayé d'abord. La fiche le dit « retweet ».
+            relais = Counter(p.content for p, _ in membres)
+            vus: set = set()
+            for p, f in sorted(membres, key=lambda m: -relais[m[0].content]):
+                if p.content not in vus:
+                    vus.add(p.content)
+                    choisis.append((p, f))
         une.append({
             "id": s.id, "libelle": s.libelle, "theme": GRILLE.get(s.theme, (None,))[0],
-            "n_tweets": s.n_tweets, "n_figures": s.n_figures,
+            "n_tweets": len(propres), "n_retweets": len(membres) - len(propres), "n_figures": s.n_figures,
             "voix": [{"nom": n, "tweets": c} for n, c in voix.most_common(4)],
             "du": dates[0] if dates else None, "au": dates[-1] if dates else None,
             "tweets": [_source(p, f) for p, f in choisis[:TWEETS_PAR_SUJET]],

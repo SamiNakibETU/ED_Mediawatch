@@ -39,11 +39,12 @@ function sujet(s) {
   const periode = s.du && s.au ? (jour(s.du) === jour(s.au) ? `le ${jour(s.du)}` : `du ${jour(s.du)} au ${jour(s.au)}`) : "";
   return `<article class="une">
     <h2 class="card-title">${escapeHtml(majuscule(s.libelle))}</h2>
-    <p class="sujet__meta">${pluriel(s.n_tweets, "tweet")} de ${pluriel(s.n_figures, "figure")}, ${periode}.
+    <p class="sujet__meta">${[s.n_tweets ? pluriel(s.n_tweets, "tweet") : "", s.n_retweets ? pluriel(s.n_retweets, "retweet") : ""]
+      .filter(Boolean).join(" et ")} de ${pluriel(s.n_figures, "figure")}, ${periode}.
       ${s.voix.length ? `Surtout ${voix(s)}.` : ""}</p>
     ${s.tweets.map(sourceCard).join("")}
-    ${s.n_tweets > s.tweets.length ? `<p class="une__plus"><button class="btn btn--ghost btn--sm" data-sujet="${s.id}"
-        aria-expanded="false">Les ${fmtNum(s.n_tweets)} tweets du sujet</button></p>
+    ${s.n_tweets + s.n_retweets > s.tweets.length ? `<p class="une__plus"><button class="btn btn--ghost btn--sm" data-sujet="${s.id}"
+        aria-expanded="false">Tout le sujet (${fmtNum(s.n_tweets + s.n_retweets)})</button></p>
       <div class="une__tous" id="tous-${s.id}" hidden></div>` : ""}
   </article>`;
 }
