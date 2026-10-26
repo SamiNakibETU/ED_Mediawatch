@@ -81,7 +81,7 @@ class CohereEmbedder:
         s = get_settings()
         self._model = s.cohere_embed_model
         self._client = (
-            cohere.AsyncClientV2(api_key=s.cohere_api_key)
+            cohere.AsyncClientV2(api_key=s.cohere_api_key.strip())
             if (cohere and s.cohere_api_key)
             else None
         )

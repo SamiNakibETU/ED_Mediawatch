@@ -271,10 +271,14 @@ class ClaimLLM:
         self._openai: dict[str, object] = {}
 
         if s.anthropic_api_key and AsyncAnthropic is not None:
-            self._anthropic = AsyncAnthropic(api_key=s.anthropic_api_key)
+            self._anthropic = AsyncAnthropic(api_key=s.anthropic_api_key.strip())
         if AsyncOpenAI is not None:
             for prov, base in _OPENAI_BASE.items():
-                key = getattr(s, f"{prov}_api_key", "")
+                # Une clé collée dans un tableau de bord emporte souvent son
+                # retour à la ligne : l'en-tête devient invalide et chaque appel
+                # échoue en « Connection error », sans jamais atteindre le
+                # fournisseur. Vu en production le 26/10/2026, 1 488 échecs.
+                key = (getattr(s, f"{prov}_api_key", "") or "").strip()
                 if key:
                     self._openai[prov] = AsyncOpenAI(api_key=key, base_url=base)
 
