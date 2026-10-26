@@ -70,5 +70,31 @@ async def seed() -> dict:
     return stats
 
 
+# Comptes X renommés depuis la constitution du pool : ancien handle -> nouveau.
+# `seed` reconnaît une figure à son handle ; sans ce renommage en base, le
+# nouveau handle du pool créerait une seconde fiche au lieu de corriger la
+# première, et les tweets resteraient rattachés à l'ancienne.
+RENOMMES = {
+    "MessihaOfficiel": "JeanMessiha",  # 26/10/2026 : 404 sur l'ancien, 322 000 abonnés sur le nouveau
+}
+
+
+async def ensure_renommes() -> dict:
+    """Applique `RENOMMES` aux fiches qui portent encore l'ancien handle."""
+    factory = get_session_factory()
+    faits = {}
+    async with factory() as db:
+        for ancien, nouveau in RENOMMES.items():
+            p = await db.scalar(select(Personality).where(Personality.handle == ancien))
+            if p is None or await db.scalar(select(Personality.id).where(Personality.handle == nouveau)):
+                continue
+            p.handle = nouveau
+            # L'audience lue sous l'ancien handle n'était pas la sienne.
+            p.followers_count = p.statuses_count = p.x_user_id = None
+            faits[ancien] = nouveau
+        await db.commit()
+    return faits
+
+
 if __name__ == "__main__":
     asyncio.run(seed())

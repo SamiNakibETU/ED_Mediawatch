@@ -291,6 +291,11 @@ async def run_collection(use_html: bool | None = None) -> dict:
                 #    engagement, quote/RT distingués — sans compte ni proxy. C'est
                 #    la voie primaire depuis la mise en demeure contre Nitter.
                 posts = await synd.collect(p.handle) if p.handle else None
+                # Lu tout de suite : le client est partagé entre les workers, et
+                # le premier `await` laisse un autre compte écraser `last_profile`.
+                # Le 26/10/2026, des comptes disparus portaient ainsi l'audience
+                # de Jordan Bardella.
+                prof = synd.last_profile
                 if posts is not None:
                     new = await _insert_new(db, p.id, posts)
                     total_new += new
@@ -312,15 +317,19 @@ async def run_collection(use_html: bool | None = None) -> dict:
                             logger.warning("collect.backfill_fallback_error", handle=p.handle, error=str(exc)[:120])
                         status = "ok" if new else "empty"
                         error = None if new else "syndication : aucune entrée"
-                    prof = synd.last_profile
-                    if prof:
+                    if prof or not posts:
                         obj = await db.get(Personality, p.id)
-                        if obj is not None:
+                        if obj is not None and prof:
                             obj.x_user_id = prof.get("x_user_id") or obj.x_user_id
                             obj.followers_count = prof.get("followers_count")
                             obj.statuses_count = prof.get("statuses_count")
                             obj.x_protected = prof.get("x_protected")
                             obj.profile_refreshed_at = datetime.now(timezone.utc)
+                            await db.commit()
+                        elif obj is not None and obj.followers_count is not None:
+                            # Aucun tweet, donc aucun profil : l'audience est inconnue,
+                            # et celle d'avant venait peut-être d'un autre compte.
+                            obj.followers_count = obj.statuses_count = None
                             await db.commit()
                     await _record_handle_health(db, p.id, status, error, got_new=new > 0)
                     return

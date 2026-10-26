@@ -59,6 +59,10 @@ async def lifespan(app: FastAPI):
 
     logger.info("affiliations.ready", **await ensure_seeded())
 
+    from src.scripts.seed_pool import ensure_renommes
+
+    logger.info("handles.renommes", **await ensure_renommes())
+
     # Le programme, chargé depuis `data/programme/*.json` quand le fichier a
     # changé. Un échec ici ne doit pas empêcher le site de démarrer.
     try:
