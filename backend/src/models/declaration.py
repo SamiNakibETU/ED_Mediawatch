@@ -11,7 +11,7 @@ pour mot dans son tweet n'existe pas.
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, Float, ForeignKey, Index, String, Text
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Index, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from src.models.base import Base, TimestampMixin
@@ -38,6 +38,13 @@ class Declaration(Base, TimestampMixin):
     unite: Mapped[str | None] = mapped_column(String(40))
     verbatim: Mapped[str] = mapped_column(Text, nullable=False)
 
+    # Douteuse : le second avis ou un juge a relevé une lecture fausse. Elle
+    # reste en base, mais sort des fiches, des écarts et des divergences.
+    douteuse: Mapped[bool | None] = mapped_column(Boolean, default=False, index=True)
+    doute_motif: Mapped[str | None] = mapped_column(String(300))
+    # Second avis : « conforme » ou « douteuse », et qui l'a donné.
+    verification: Mapped[str | None] = mapped_column(String(12))
+    verification_par: Mapped[str | None] = mapped_column(String(120))
     # Signature de la lecture : référentiel, consignes, modèle.
     lecteur: Mapped[str | None] = mapped_column(String(160))
     # Clé de dédoublonnage : un même fragment d'un même tweet sur un même enjeu.

@@ -630,7 +630,8 @@ class ClaimLLM:
         return self._s.claim_tier1_model if tier == 1 else self._s.claim_tier2_model
 
     async def ask_json(self, *, tier: int, system: str, prompt: str, schema,
-                       task: str, max_tokens: int = 2000, raisonnement: str | None = "off"):
+                       task: str, max_tokens: int = 2000, raisonnement: str | None = "off",
+                       model: str | None = None):
         """Une question à réponse JSON, validée contre `schema`, au tier choisi.
 
         Le système passe en premier et ne change jamais d'un appel à l'autre :
@@ -651,7 +652,7 @@ class ClaimLLM:
         client = self._openai.get(prov)
         if client is None:
             raise RuntimeError(f"aucun client pour le fournisseur {prov}")
-        model = self.model_for(tier)
+        model = model or self.model_for(tier)
         budget = get_llm_budget()
         await budget.check_or_raise()
         try:

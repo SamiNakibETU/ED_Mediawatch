@@ -131,6 +131,9 @@ class Settings(BaseSettings):
     # GPT-5.6 Luna : 0,20/1,20 $/M, JSON strict, éprouvé sur PMO.
     claim_tier2_provider: str = "openrouter"
     claim_tier2_model: str = "openai/gpt-5.6-luna"
+    # Second juge des écarts, d'une autre famille que le premier : deux modèles
+    # qui se trompent rarement de la même façon.
+    juge2_model: str = "google/gemini-3.7-flash"
 
     # Budgets LLM ($ ; 0 = désactivé). Sommés depuis les tokens réels
     # (table llm_usage_events) — voir services/analysis/llm_usage.py.

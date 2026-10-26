@@ -96,6 +96,11 @@ async def _ecarts() -> dict:
     return await detecter()
 
 
+async def _second_avis() -> dict:
+    from src.services.analysis.ecarts import second_avis
+    return await second_avis(limit=80)
+
+
 async def _juge_ecarts() -> dict:
     from src.services.analysis.ecarts import juger
     return await juger(limit=40)
@@ -220,8 +225,10 @@ STAGES: tuple[Stage, ...] = (
     # Les confrontations : par requête sur le registre, puis relues par le juge.
     Stage("ecarts", "Écarts entre positions", FREE, _ecarts,
           depends_on=("registre",), produces="écarts à relire"),
-    Stage("juge_ecarts", "Juge des écarts", PAID, _juge_ecarts,
-          depends_on=("ecarts",), produces="écarts qualifiés"),
+    Stage("second_avis", "Second avis sur les déclarations en écart", PAID, _second_avis,
+          depends_on=("ecarts",), produces="déclarations vérifiées"),
+    Stage("juge_ecarts", "Deux juges des écarts", PAID, _juge_ecarts,
+          depends_on=("second_avis",), produces="écarts qualifiés"),
     Stage("themes", "Thème de chaque tweet", PAID, _themes,
           depends_on=("enrich_truncated",), produces="tweets classés"),
     Stage("vecteurs", "Vecteurs des tweets", FREE, _vecteurs,

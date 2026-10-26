@@ -1,10 +1,11 @@
 """Un écart : deux positions qui ne coïncident pas sur un même enjeu.
 
-Trois types, tous déduits par requête sur le registre, jamais par similarité :
+Quatre types, tous déduits par requête sur le registre, jamais par similarité :
 
 * `temps` : une même figure à deux crans différents, à plus d'un mois d'écart ;
 * `programme` : une figure à un autre cran que le programme de son parti ;
-* `parti` : deux figures du même parti, au même moment, à deux crans différents.
+* `parti` : deux figures du même parti, au même moment, à deux crans différents ;
+* `chiffre` : une même mesure annoncée avec deux chiffres différents.
 
 L'écart est gardé en base avec son statut, pour que la relecture humaine
 survive aux passes suivantes : une détection nouvelle ne rouvre jamais un écart
@@ -49,6 +50,16 @@ class Ecart(Base, TimestampMixin):
     juge_justification: Mapped[str | None] = mapped_column(String(10))  # oui | non | inconnue
     juge_explication: Mapped[str | None] = mapped_column(Text)
     juge_lecteur: Mapped[str | None] = mapped_column(String(120))
+    # Second juge, d'une autre famille de modèles. Sans relecture humaine, un
+    # écart n'est « retenu » que si les deux juges le tiennent pour réel.
+    juge2_type: Mapped[str | None] = mapped_column(String(20))
+    juge2_force: Mapped[int | None] = mapped_column(Integer)
+    juge2_explication: Mapped[str | None] = mapped_column(Text)
+    juge2_lecteur: Mapped[str | None] = mapped_column(String(120))
+    # Décision automatique : retenu | faible | ecarte.
+    auto: Mapped[str | None] = mapped_column(String(10), index=True)
+    valeur_a: Mapped[str | None] = mapped_column(String(60))
+    valeur_b: Mapped[str | None] = mapped_column(String(60))
     decision_note: Mapped[str | None] = mapped_column(Text)
     decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 

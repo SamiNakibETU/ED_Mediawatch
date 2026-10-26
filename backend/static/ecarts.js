@@ -5,15 +5,15 @@
 //
 // Helpers (common.js) : $, fetchJSON, escapeHtml, fmtNum, asDate, sourceCard.
 
-const STATUTS = [["a_relire", "À relire"], ["confirme", "Confirmés"], ["ecarte", "Écartés"]];
-const TYPES = [["", "Tous"], ["temps", "Dans le temps"], ["programme", "Contre le programme"], ["parti", "Dans le parti"]];
+const STATUTS = [["retenu", "Retenus"], ["faible", "Mouvements faibles"], ["ecarte", "Écartés"], ["attente", "En attente"]];
+const TYPES = [["", "Tous"], ["temps", "Dans le temps"], ["programme", "Contre le programme"], ["parti", "Dans le parti"], ["chiffre", "Chiffres"]];
 const JUGE = {
-  revirement: "Revirement", divergence: "Divergence", ecart_au_programme: "Écart au programme",
+  revirement: "Revirement", glissement: "Glissement", report_condition: "Report ou condition ajoutée",
+  imprecision_chiffree: "Imprécision chiffrée", divergence: "Divergence", ecart_au_programme: "Écart au programme",
   nuance: "Nuance", contexte_different: "Contexte différent", erreur_de_lecture: "Erreur de lecture",
 };
 const FORCE = ["aucun écart réel", "écart faible", "écart net", "contradiction nette"];
-const JUGES = [["reels", "Écarts réels selon le juge"], ["lectures", "Erreurs de lecture et nuances"], ["tous", "Tout"]];
-const state = { statut: "a_relire", type: "", juge: "reels", offset: 0 };
+const state = { statut: "retenu", type: "", offset: 0 };
 
 const jour = (iso) => (iso ? asDate(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }) : "date inconnue");
 const lireJeton = () => { try { return localStorage.getItem("jeton-relecture") || ""; } catch { return ""; } };
@@ -24,7 +24,8 @@ function cote(c) {
     <p class="entry__head"><span class="speaker">${escapeHtml(c.figure || "")}</span>
       ${c.parti ? `<span class="tag">${escapeHtml(c.parti)}</span>` : ""}
       <span class="spacer"></span><span class="sujet__meta">${jour(c.date)}</span></p>
-    <p class="ecart__position">${escapeHtml(c.label)}</p>
+    <p class="ecart__position">${escapeHtml(c.valeur || c.label || "")}</p>
+    ${c.douteuse ? `<p class="sujet__meta">Déclaration douteuse : ${escapeHtml(c.doute_motif || "")}</p>` : ""}
     <p class="position__q">${escapeHtml(c.verbatim)}</p>
     ${sourceCard(c.source)}
   </div>`;
@@ -41,17 +42,23 @@ function coteProgramme(p) {
   </div>`;
 }
 
-function juge(j) {
-  if (!j) return `<p class="sujet__meta">Pas encore relu par le juge.</p>`;
-  return `<div class="ecart__juge">
-    <p><span class="decl-ligne__k">${escapeHtml(JUGE[j.type] || j.type)}</span>
+function unJuge(j, nom) {
+  return `<p><span class="decl-ligne__k">${nom} : ${escapeHtml(JUGE[j.type] || j.type)}</span>
       <span class="sujet__meta">${FORCE[j.force] ?? ""}${j.justification === "oui" ? ", changement expliqué publiquement" : ""}</span></p>
-    ${j.explication ? `<p class="prose" style="margin:0">${escapeHtml(j.explication)}</p>` : ""}
+    ${j.explication ? `<p class="prose" style="margin:0">${escapeHtml(j.explication)}</p>` : ""}`;
+}
+
+function juge(e) {
+  if (!e.juge) return `<p class="sujet__meta">Pas encore relu par les juges.</p>`;
+  return `<div class="ecart__juge">
+    <p class="sujet__meta">${escapeHtml(e.auto_label || "")}, sans relecture humaine</p>
+    ${unJuge(e.juge, "Premier juge")}
+    ${e.juge2 ? unJuge(e.juge2, "Second juge") : ""}
   </div>`;
 }
 
 function ecartHtml(e) {
-  const actions = state.statut === "a_relire"
+  const actions = !e.statut || e.statut === "a_relire"
     ? `<div class="ecart__actions">
         <label class="sr-only" for="note${e.id}">Note de relecture</label>
         <input id="note${e.id}" class="field field--inline" placeholder="Note (facultative)" />
@@ -63,7 +70,7 @@ function ecartHtml(e) {
     <p class="ecart__titre">${escapeHtml(e.titre)}<span class="sujet__meta"> ${escapeHtml(e.type_label.toLowerCase())}</span></p>
     <p class="sujet__meta">${escapeHtml(e.question)}</p>
     <div class="ecart__cotes">${cote(e.a)}${e.b ? cote(e.b) : coteProgramme(e.programme)}</div>
-    ${juge(e.juge)}
+    ${juge(e)}
     ${actions}
   </article>`;
 }
@@ -88,7 +95,7 @@ async function decider(id, statut) {
 
 async function charger(suite = false) {
   if (!suite) state.offset = 0;
-  const p = new URLSearchParams({ statut: state.statut, juge: state.juge, limit: 20, offset: state.offset });
+  const p = new URLSearchParams({ juge: state.statut, limit: 20, offset: state.offset });
   if (state.type) p.set("type", state.type);
   if (!suite) $("#liste").innerHTML = '<p class="state">Chargement…</p>';
   try {
@@ -109,8 +116,8 @@ async function lecture() {
   try {
     const c = await fetchJSON("/ecarts/compte");
     const n = (s) => Object.values(c.compte).reduce((a, t) => a + (t[s] || 0), 0);
-    $("#lecture").textContent = `${fmtNum(n("a_relire"))} écarts à relire, ${fmtNum(n("confirme"))} confirmés, ${
-      fmtNum(n("ecarte"))} écartés. Un écart est relevé automatiquement quand deux positions sur la même question ne coïncident pas ; un juge relit les deux textes, puis un relecteur tranche. Seuls les écarts confirmés sont des faits.`;
+    $("#lecture").textContent = `${fmtNum(n("retenu"))} écarts retenus, ${fmtNum(n("faible"))} mouvements faibles, ${
+      fmtNum(n("ecarte"))} écartés, ${fmtNum(n("attente"))} en attente. Tout est automatique : chaque déclaration en écart reçoit un second avis, puis deux juges de modèles différents relisent les deux textes. Un écart n'est retenu que si les deux le tiennent pour réel. Aucun écart n'a encore été vérifié par un humain.`;
   } catch { $("#lecture").textContent = ""; }
 }
 
@@ -144,7 +151,6 @@ function filtres() {
   };
   monter("#statut", STATUTS, "statut");
   monter("#type", TYPES, "type");
-  monter("#juge", JUGES, "juge");
   $("#suite").onclick = () => charger(true);
   $("#jeton").value = lireJeton();
 }

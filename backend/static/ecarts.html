@@ -19,15 +19,16 @@
     <div class="controls mt-6" aria-label="Filtres">
       <div class="filters" id="statut" role="group" aria-label="Statut"></div>
       <div class="filters" id="type" role="group" aria-label="Type d’écart"></div>
-      <div class="filters" id="juge" role="group" aria-label="Avis du juge"></div>
     </div>
 
-    <p class="dek">Les écarts concentrent les erreurs de lecture : une position mal lue crée
-      mécaniquement un faux écart. Le juge relit les deux textes et sépare les écarts réels des
-      erreurs de lecture, qui signalent des déclarations à corriger.</p>
+    <p class="dek">Un écart n’est pas forcément un revirement : il peut s’agir d’un glissement
+      vers une position voisine, d’un report, d’une condition ajoutée, d’un chiffre qui change,
+      d’un décalage entre deux voix du même camp ou d’un écart au programme. Les écarts concentrent
+      aussi les erreurs de lecture : une position mal lue crée mécaniquement un faux écart, que
+      le second avis et les deux juges sont là pour écarter.</p>
 
     <section aria-labelledby="titreListe">
-      <div class="band"><h2 id="titreListe">À relire</h2><span class="spacer"></span><p id="total"></p></div>
+      <div class="band"><h2 id="titreListe">Retenus</h2><span class="spacer"></span><p id="total"></p></div>
       <div id="liste"></div>
       <p class="state" id="plus" hidden><button class="btn btn--ghost btn--sm" id="suite">Afficher la suite</button></p>
     </section>

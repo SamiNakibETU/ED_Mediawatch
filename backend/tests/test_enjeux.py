@@ -105,3 +105,17 @@ def test_le_nettoyage_recolle_les_mots_coupes_en_fin_de_ligne():
     assert nettoyer("La loi de programmation prévoi-\nra que 85.000 places\nde prison") == \
         "La loi de programmation prévoira que 85.000 places de prison"
     assert nettoyer("travaux d’in -\ntérêt général") == "travaux d’intérêt général"
+
+
+def test_un_ecart_n_est_retenu_que_si_les_deux_juges_le_tiennent_pour_reel():
+    from src.services.analysis.ecarts import Verdict, decision_auto
+    reel = Verdict(type="revirement", force=3)
+    assert decision_auto(reel, Verdict(type="glissement", force=2)) == "retenu"
+    assert decision_auto(reel, Verdict(type="nuance", force=0)) == "faible"
+    assert decision_auto(reel, None) == "faible"
+    assert decision_auto(reel, Verdict(type="erreur_de_lecture", force=0)) == "ecarte"
+
+
+def test_un_verbatim_trop_court_ne_porte_pas_de_position():
+    d = DeclLue(enjeu="ukraine", position="contre_aide", verbatim="Halte au fou !")
+    assert valider(d, "Halte au fou ! On ne fait pas la guerre à une puissance nucléaire.") is None

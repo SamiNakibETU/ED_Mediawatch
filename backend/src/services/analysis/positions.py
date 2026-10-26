@@ -7,7 +7,7 @@ le tweet de chaque point, pour qu'aucune position ne s'affiche sans sa source.
 
 from __future__ import annotations
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 
 from src.models.declaration import Declaration
 from src.models.engagement_programme import EngagementProgramme
@@ -32,7 +32,8 @@ async def fiche(db, slug: str) -> dict | None:
         select(Declaration, Post, Personality)
         .join(Post, Post.id == Declaration.post_id)
         .join(Personality, Personality.id == Declaration.personality_id)
-        .where(Declaration.enjeu == slug, Declaration.position.isnot(None))
+        .where(Declaration.enjeu == slug, Declaration.position.isnot(None),
+               or_(Declaration.douteuse.is_(None), Declaration.douteuse.is_(False)))
         .order_by(Declaration.published_at.asc())
     )).all()
 
@@ -120,7 +121,9 @@ async def sommaire(db) -> list[dict]:
     """
     counts = {slug: (n, f) for slug, n, f in (await db.execute(
         select(Declaration.enjeu, func.count(), func.count(func.distinct(Declaration.personality_id)))
-        .where(Declaration.position.isnot(None)).group_by(Declaration.enjeu)
+        .where(Declaration.position.isnot(None),
+               or_(Declaration.douteuse.is_(None), Declaration.douteuse.is_(False)))
+        .group_by(Declaration.enjeu)
     )).all()}
     return [
         {"slug": e.slug, "titre": e.titre, "question": e.question, "theme": e.theme,
