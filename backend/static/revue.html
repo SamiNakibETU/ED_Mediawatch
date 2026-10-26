@@ -3,16 +3,59 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Revue — ED Mediawatch</title>
+  <title>Revue de la semaine, ED Mediawatch</title>
   <link rel="stylesheet" href="design.css" />
   <script>
     try { const t = localStorage.getItem("theme"); if (t) document.documentElement.dataset.theme = t; } catch {}
   </script>
 </head>
-<body data-page="revue" data-tagline="Ce qui s’est dit cette semaine, sujet par sujet">
+<body data-page="revue" data-tagline="Ce dont l'extrême droite a parlé sur X cette semaine">
   <header id="masthead"></header>
 
-  <div class="wrap page" id="page"></div>
+  <div class="wrap page">
+    <div class="revue-tete">
+      <h1 class="hero-title lede-first" id="titre">La semaine sur X</h1>
+      <label class="sr-only" for="semaine">Semaine</label>
+      <select id="semaine" class="field field--inline"></select>
+    </div>
+    <p class="dek" id="lecture">Chargement…</p>
+
+    <section aria-labelledby="titreUne">
+      <div class="band"><h2 id="titreUne">À la une</h2><span class="spacer"></span>
+        <p>les sujets qui ont réuni le plus de figures</p></div>
+      <div id="une"></div>
+      <p class="dek" id="autres"></p>
+    </section>
+
+    <section aria-labelledby="titreTendances">
+      <div class="band"><h2 id="titreTendances">Ce qui monte, ce qui recule</h2><span class="spacer"></span>
+        <p>part des tweets, contre la moyenne des quatre semaines d’avant</p></div>
+      <div id="tendances"></div>
+    </section>
+
+    <section aria-labelledby="titreEnjeux">
+      <div class="band"><h2 id="titreEnjeux">Ce qu’ils ont affirmé</h2><span class="spacer"></span>
+        <p>déclarations relevées dans les tweets</p></div>
+      <div id="enjeux"></div>
+    </section>
+
+    <section aria-labelledby="titreEcarts">
+      <div class="band"><h2 id="titreEcarts">Écarts relevés</h2><span class="spacer"></span>
+        <a class="source-link" href="ecarts.html">tous les écarts</a></div>
+      <div id="ecarts"></div>
+    </section>
+
+    <section aria-labelledby="titreLus">
+      <div class="band"><h2 id="titreLus">Les tweets les plus lus</h2><span class="spacer"></span>
+        <p>j’aime, et partages comptés double</p></div>
+      <div id="lus"></div>
+    </section>
+
+    <p class="dek mt-6">Tout est automatique. Les sujets sont des tweets regroupés par proximité de sens, puis
+      nommés à partir de leurs propres mots&nbsp;; les thèmes suivent la grille CAP&nbsp;; les déclarations et
+      les écarts viennent du registre, relu par deux modèles et pas encore par un humain. Les retweets ne
+      comptent dans aucun chiffre. Sous chaque sujet, les tweets eux-mêmes, avec leur lien et leur archive.</p>
+  </div>
 
   <script src="common.js"></script>
   <script src="revue.js"></script>

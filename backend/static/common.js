@@ -199,6 +199,7 @@ function nomSujet(s) {
 // d'entrer, donc aucune.
 const PAGES = [
   ["index.html", "accueil", "Aujourd’hui", "observatoire"],
+  ["revue.html", "revue", "Revue", "temps"],
   ["themes.html", "themes", "Thèmes", "chiffres"],
   ["enjeux.html", "enjeux", "Enjeux", "sujets"],
   ["ecarts.html", "ecarts", "Écarts", "validation"],
@@ -207,7 +208,7 @@ const PAGES = [
   ["atelier.html", "atelier", "Coulisses", "atelier"],
 ];
 // Les pages de coulisses gardent un onglet actif : « Coulisses ».
-const COULISSES = new Set(["archive", "validation", "compteur", "engagements", "revue"]);
+const COULISSES = new Set(["archive", "validation", "compteur", "engagements"]);
 
 
 // Voyant de collecte : un observatoire doit dire s'il regarde encore. Un site

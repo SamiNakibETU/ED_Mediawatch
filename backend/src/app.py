@@ -36,6 +36,7 @@ from src.routers import (
     series,
     pledges,
     referentiel,
+    revue,
     reviews,
     subjects,
 )
@@ -117,6 +118,7 @@ app.include_router(enjeux.router)
 app.include_router(themes.router)
 app.include_router(ecarts.router)
 app.include_router(couverture.router)
+app.include_router(revue.router)
 app.include_router(pipeline_status.router)
 app.include_router(llm_costs.router)
 
