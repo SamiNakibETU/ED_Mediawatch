@@ -46,6 +46,12 @@ logger = structlog.get_logger(__name__)
 # tout, l'ancienne marque reste visible sur chaque tweet.
 CONSIGNES_VERSION = "registre-2"
 VERSION = f"{CONSIGNES_VERSION}/{ENJEUX_VERSION}"
+# Révision des consignes à version constante : des précisions qui corrigent des
+# erreurs relevées en production, sans justifier de relire tout ce qui a déjà
+# été lu. Elle figure dans la signature de chaque déclaration, pour qu'on sache
+# laquelle l'a produite. Révision b, 26/10/2026 : négations, mesures limitées à
+# un territoire, Europe « de l'intérieur » (3 erreurs sur 50 relues).
+CONSIGNES_REVISION = "b"
 
 LOT_FILTRE = 25
 LOT_EXTRACTION = 8
@@ -153,7 +159,14 @@ EXTRACTION_SYSTEM = (
     "expulsions, ni sur le libre-échange ;\n"
     "   - un texte coupé avant la fin ne se complète pas : ne range que ce qui est écrit.\n"
     "5. Approuver le vote ou la mesure de quelqu'un d'autre (« bravo à ceux qui ont voté pour "
-    "supprimer… ») est une déclaration de l'auteur, de modalité « soutient ».\n\n"
+    "supprimer… ») est une déclaration de l'auteur, de modalité « soutient ».\n"
+    "6. Attention aux négations. « Sans nous, pas de baisse de la TVA » veut dire que "
+    "l'auteur veut la baisse. « Le texte ne prévoit aucun moratoire » reproché à un adversaire "
+    "veut dire que l'auteur veut le moratoire.\n"
+    "7. Une mesure limitée à un territoire ou à une catégorie (le droit du sol à Mayotte, "
+    "l'AME pour les adultes) se range sur le cran restreint, jamais sur le cran général.\n"
+    "8. Dire qu'on peut appartenir à l'Union européenne tout en défendant ses intérêts, c'est "
+    "« la transformer de l'intérieur », pas « rester sans réserve ».\n\n"
     "# Les champs\n"
     "- verbatim : la phrase du tweet qui porte la déclaration, recopiée à l'identique, sans "
     "rien corriger, une phrase au plus. Jamais une phrase du tweet cité.\n"
@@ -271,7 +284,7 @@ async def lire(*, limit: int = 1000, plus_recents: bool = False) -> dict:
     from src.services.analysis.claim_llm import get_claim_llm
 
     llm = get_claim_llm()
-    lecteur = f"{VERSION}/{llm.model_for(1)}+{llm.model_for(2)}"[:160]
+    lecteur = f"{VERSION}{CONSIGNES_REVISION}/{llm.model_for(1)}+{llm.model_for(2)}"[:160]
     stats = {"ecartes": 0, "filtres": 0, "retenus": 0, "lus": 0, "declarations": 0,
              "rejetees": 0, "echecs": 0, "budget_atteint": False}
 
