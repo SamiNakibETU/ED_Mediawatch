@@ -31,15 +31,100 @@ from src.database import get_session_factory
 from src.models.personality import Personality
 from src.models.post import Post
 from src.models.sujet_semaine import SujetSemaine
-from src.services.analysis.enjeux import THEMES
+from src.services.analysis.cap import MAJOR
 from src.services.analysis.llm_usage import BudgetExceeded, ProviderRefused
 
 logger = structlog.get_logger(__name__)
 
-THEME_VERSION = "themes-1"
-AUTRE = "autre"
-CODES = tuple(THEMES) + (AUTRE,)
+THEME_VERSION = "themes-2"
 LOT_THEMES = 40
+
+# ── La grille, en trois couches ──────────────────────────────────────────
+#
+# 1. L'axe principal, exclusif : les 21 topiques du Comparative Agendas
+#    Project, la grille qu'Agendas France emploie pour le Parlement, le
+#    gouvernement et la presse, plus trois catégories pour ce qui n'est pas de
+#    la politique publique. Un tweet, un thème : les courbes s'additionnent.
+# 2. Des marqueurs, non exclusifs : ce que CAP ne nomme pas et qui fait la
+#    signature du discours. Un tweet « Immigration » peut porter « islamisme »
+#    et « identité ».
+# 3. La correspondance avec les livrets du programme, en code : ce dont ils
+#    parlent, face à ce qu'ils promettent.
+#
+# Fiabilité : le codage CAP de ce projet a été mesuré à 0,6 d'accord avec une
+# annotation humaine (voir `cap.py`), sous le seuil publiable. Les courbes sont
+# une lecture automatique, jusqu'à une validation à deux annotateurs.
+
+HORS_POLITIQUE = {
+    "campagne": ("Campagne et vie du parti",
+                 "meetings, adhésions, soutiens, élections internes, appels à voter, agenda"),
+    "attaques": ("Attaques et polémiques",
+                 "attaques contre un adversaire, un média, un juge, sans objet de politique publique"),
+    "actualite": ("Hommages et actualité",
+                  "hommages, condoléances, sport, fêtes, réactions à un fait sans objet politique"),
+}
+THEMES_CAP = {f"cap{k}": v for k, v in MAJOR.items()}
+GRILLE = {**THEMES_CAP, **HORS_POLITIQUE}
+CODES = tuple(GRILLE)
+AUTRE = "actualite"
+
+# Familles, pour la vue d'ensemble : quelques regroupements de topiques CAP.
+FAMILLES = {
+    "economie": ("Économie et travail", ("cap1", "cap5", "cap15", "cap18")),
+    "social": ("Social, santé, éducation", ("cap3", "cap6", "cap13", "cap14")),
+    "immigration": ("Immigration", ("cap9",)),
+    "securite": ("Sécurité et justice", ("cap12",)),
+    "identite": ("Libertés, culture, religion", ("cap2", "cap23")),
+    "institutions": ("Institutions et vie politique", ("cap20",)),
+    "international": ("International et défense", ("cap16", "cap19")),
+    "territoires": ("Énergie, environnement, territoires",
+                    ("cap4", "cap7", "cap8", "cap10", "cap21", "cap17")),
+    "campagne": ("Campagne et vie du parti", ("campagne",)),
+    "attaques": ("Attaques et polémiques", ("attaques",)),
+    "actualite": ("Hommages et actualité", ("actualite",)),
+}
+FAMILLE_DE = {code: fam for fam, (_, codes) in FAMILLES.items() for code in codes}
+
+MARQUEURS = {
+    "islamisme": ("Islam et islamisme", "islam, islamisme, voile, mosquées, Frères musulmans, entrisme"),
+    "identite": ("Identité et civilisation",
+                 "identité nationale, civilisation, déclin, « grand remplacement », racines"),
+    "souverainete": ("Souveraineté", "Bruxelles, souveraineté nationale, frontières, primauté du droit national"),
+    "insecurite": ("Insécurité du quotidien",
+                   "agressions, faits divers, « ensauvagement », narcotrafic dans les quartiers"),
+    "pouvoir_achat": ("Pouvoir d'achat", "prix, carburant, factures d'énergie, salaires"),
+    "fraude": ("Fraude et assistanat", "fraude sociale ou fiscale, assistanat, aides aux étrangers"),
+    "wokisme": ("« Wokisme » et culture",
+                "wokisme, genre à l'école, cancel culture, bien-pensance, déconstruction"),
+    "systeme": ("Médias, juges, « système »", "attaques contre les médias, les juges, les élites, le « système »"),
+    "ecologie_punitive": ("« Écologie punitive »",
+                          "ZFE, normes, éoliennes, taxes vertes présentées comme punitives"),
+    "extreme_gauche": ("Extrême gauche et LFI", "LFI, extrême gauche, antifas, « islamo-gauchisme »"),
+    "ruralite": ("France rurale", "ruralité, agriculteurs, villages, services publics des campagnes"),
+    "outre_mer": ("Outre-mer", "Mayotte, Nouvelle-Calédonie, Antilles, Guyane, Réunion"),
+}
+
+# Les livrets du programme RN 2022 qui parlent de chaque thème ou marqueur.
+LIVRETS = {
+    "cap9": ["projet-controle-de-limmigration"],
+    "cap12": ["projet-la-securite", "projet-la-lutte-contre-la-fraude"],
+    "cap6": ["projet-l-ecole", "projet-la-jeunesse"],
+    "cap3": ["projet-la-sante"],
+    "cap4": ["projet-l-agriculture"],
+    "cap7": ["projet-lecologie"],
+    "cap8": ["projet-lecologie"],
+    "cap13": ["projet-la-famille", "projet-les-porteurs-de-handicap", "projet-la-protection-de-lenfance"],
+    "cap17": ["projet-le-numerique"],
+    "cap15": ["projet-le-tourisme"],
+    "cap23": ["projet-le-patrimoine"],
+    "cap21": ["projet-outre-mer", "projet-la-protection-des-animaux"],
+    "fraude": ["projet-la-lutte-contre-la-fraude"],
+    "outre_mer": ["projet-outre-mer"],
+    "ruralite": ["projet-l-agriculture"],
+    "ecologie_punitive": ["projet-lecologie"],
+    "islamisme": ["projet-la-securite"],
+    "identite": ["projet-controle-de-limmigration", "projet-le-patrimoine"],
+}
 
 
 def _texte(post: Post) -> str:
@@ -47,24 +132,31 @@ def _texte(post: Post) -> str:
     return re.sub(r"\s+", " ", t).strip()
 
 
-# ── Le thème ────────────────────────────────────────────────────────────
+# ── Le classement ───────────────────────────────────────────────────────
 
 THEME_SYSTEM = (
-    "Tu ranges des tweets de responsables politiques français par thème. Pour chaque tweet, "
-    "donne UN code parmi :\n"
-    + "\n".join(f"- {code} : {nom}" for code, nom in THEMES.items())
-    + f"\n- {AUTRE} : vie du parti, campagne, agenda, hommages, polémiques sans objet "
-    "politique, tout le reste.\n\n"
-    "Le thème est ce dont le tweet parle, pas ce qu'il défend. Une attaque contre "
-    "un adversaire sur l'immigration est « immigration ». Un tweet cité, écrit par quelqu'un "
-    "d'autre, aide à comprendre de quoi il s'agit.\n\n"
-    'Réponds par un JSON : {"themes": ["code du tweet 1", "code du tweet 2", ...]}, un code '
-    "par tweet, dans l'ordre, autant de codes que de tweets."
+    "Tu ranges des tweets de responsables politiques français. Pour chaque tweet, tu donnes "
+    "UN thème principal et de zéro à trois marqueurs.\n\n"
+    "# Thème principal (un seul code)\n"
+    + "\n".join(f"- {code} : {nom} ({desc})" for code, (nom, desc) in GRILLE.items())
+    + "\n\nLe thème est ce dont le tweet parle, pas ce qu'il défend. Une attaque contre un "
+    "adversaire sur l'immigration est cap9. Une attaque sans objet de politique publique est "
+    "« attaques ». Un appel à voter ou à adhérer est « campagne ».\n\n"
+    "# Marqueurs (zéro à trois, seulement s'ils sont nettement présents)\n"
+    + "\n".join(f"- {code} : {nom} ({desc})" for code, (nom, desc) in MARQUEURS.items())
+    + "\n\nUn tweet cité, écrit par quelqu'un d'autre, aide seulement à comprendre.\n\n"
+    'Réponds par un JSON : {"tweets": [{"t": "cap9", "m": ["islamisme"]}, ...]}, un objet par '
+    "tweet, dans l'ordre, autant d'objets que de tweets."
 )
 
 
+class Classe(BaseModel):
+    t: str = ""
+    m: list[str] = Field(default_factory=list)
+
+
 class Themes(BaseModel):
-    themes: list[str] = Field(default_factory=list)
+    tweets: list[Classe] = Field(default_factory=list)
 
 
 def prompt_themes(posts: list[Post]) -> str:
@@ -78,7 +170,7 @@ def prompt_themes(posts: list[Post]) -> str:
 
 
 async def classer(*, limit: int = 4000) -> dict:
-    """Pose un thème sur les tweets qui n'en ont pas sous la version courante."""
+    """Pose un thème et des marqueurs sur les tweets qui n'en ont pas sous la version courante."""
     from src.services.analysis.claim_llm import get_claim_llm
 
     llm = get_claim_llm()
@@ -95,7 +187,7 @@ async def classer(*, limit: int = 4000) -> dict:
     async with factory() as db:
         for p in vides:
             o = await db.get(Post, p.id)
-            o.theme_ed, o.theme_lu = AUTRE, THEME_VERSION
+            o.theme_ed, o.marqueurs, o.theme_lu = AUTRE, [], THEME_VERSION
         await db.commit()
     stats["vides"] = len(vides)
 
@@ -104,22 +196,23 @@ async def classer(*, limit: int = 4000) -> dict:
             lot = pleins[i:i + LOT_THEMES]
             try:
                 r = await llm.ask_json(tier=1, system=THEME_SYSTEM, prompt=prompt_themes(lot),
-                                       schema=Themes, task="themes", max_tokens=600, raisonnement="off")
+                                       schema=Themes, task="themes", max_tokens=1200, raisonnement="off")
             except (BudgetExceeded, ProviderRefused):
                 raise
             except Exception as exc:  # noqa: BLE001
                 logger.warning("themes.echec", error=str(exc)[:160])
                 stats["echecs"] += len(lot)
                 continue
-            if len(r.themes) != len(lot):
+            if len(r.tweets) != len(lot):
                 # Une liste décalée attribuerait à chaque tweet le thème du
                 # voisin : on ne garde rien, le lot repassera.
                 stats["echecs"] += len(lot)
                 continue
             async with factory() as db:
-                for p, code in zip(lot, r.themes):
+                for p, c in zip(lot, r.tweets):
                     o = await db.get(Post, p.id)
-                    o.theme_ed = code if code in CODES else AUTRE
+                    o.theme_ed = c.t if c.t in GRILLE else AUTRE
+                    o.marqueurs = [m for m in dict.fromkeys(c.m) if m in MARQUEURS][:3]
                     o.theme_lu = THEME_VERSION
                 await db.commit()
             stats["classes"] += len(lot)
@@ -348,10 +441,25 @@ def _case(d: datetime, pas: str) -> str:
     return d.strftime("%Y-%m")
 
 
-async def serie(db, *, pas: str, debut: datetime, fin: datetime, parti: str | None = None,
-                figure_id: int | None = None, retweets: bool = True) -> dict:
-    """Le nombre de tweets par thème et par case de temps, sur une période."""
-    stmt = (select(Post.published_at, Post.theme_ed, Post.post_type, Post.is_retweet)
+VUES = {"familles", "themes", "marqueurs"}
+
+
+def _series_de(vue: str) -> list[tuple[str, str]]:
+    if vue == "familles":
+        return [(k, nom) for k, (nom, _) in FAMILLES.items()]
+    if vue == "marqueurs":
+        return [(k, nom) for k, (nom, _) in MARQUEURS.items()]
+    return [(k, nom) for k, (nom, _) in GRILLE.items()]
+
+
+async def serie(db, *, pas: str, debut: datetime, fin: datetime, vue: str = "familles",
+                parti: str | None = None, figure_id: int | None = None, retweets: bool = True) -> dict:
+    """Le nombre de tweets par série et par case de temps, sur une période.
+
+    Familles et thèmes s'additionnent : chaque tweet compte une fois. Les
+    marqueurs, non exclusifs, se lisent chacun pour soi : leur somme n'a pas de sens.
+    """
+    stmt = (select(Post.published_at, Post.theme_ed, Post.marqueurs, Post.post_type, Post.is_retweet)
             .join(Personality, Personality.id == Post.personality_id)
             .where(Post.published_at >= debut, Post.published_at < fin, Post.theme_ed.isnot(None)))
     if parti:
@@ -359,10 +467,22 @@ async def serie(db, *, pas: str, debut: datetime, fin: datetime, parti: str | No
     if figure_id:
         stmt = stmt.where(Post.personality_id == figure_id)
     cases: dict[str, Counter] = {}
-    for d, theme, ptype, rt in (await db.execute(stmt)).all():
+    total: Counter = Counter()
+    for d, theme, marqueurs, ptype, rt in (await db.execute(stmt)).all():
         if not retweets and (rt or ptype == "retweet"):
             continue
-        cases.setdefault(_case(d, pas), Counter())[theme] += 1
+        k = _case(d, pas)
+        total[k] += 1
+        c = cases.setdefault(k, Counter())
+        if vue == "marqueurs":
+            for m in marqueurs or []:
+                c[m] += 1
+        elif vue == "familles":
+            c[FAMILLE_DE.get(theme, "actualite")] += 1
+        else:
+            c[theme] += 1
+    series = _series_de(vue)
     ordre = sorted(cases)
-    return {"pas": pas, "themes": [{"code": c, "label": THEMES.get(c, "Autre")} for c in CODES],
-            "cases": [{"case": k, **{c: cases[k].get(c, 0) for c in CODES}} for k in ordre]}
+    return {"pas": pas, "vue": vue, "additives": vue != "marqueurs",
+            "series": [{"code": c, "label": nom, "livrets": LIVRETS.get(c, [])} for c, nom in series],
+            "cases": [{"case": k, "total": total[k], **{c: cases[k].get(c, 0) for c, _ in series}} for k in ordre]}

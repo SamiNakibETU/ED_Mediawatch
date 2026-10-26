@@ -93,6 +93,8 @@ class Post(Base, TimestampMixin):
     # « autre ». Posé sur TOUS les tweets, retweets compris : il sert à suivre
     # de quoi parle l'extrême droite, pas seulement ce qu'elle déclare.
     theme_ed: Mapped[str | None] = mapped_column(String(20), index=True)
+    # Marqueurs non exclusifs (islamisme, identité, souveraineté...), 0 à 3.
+    marqueurs: Mapped[list | None] = mapped_column(JSON)
     theme_lu: Mapped[str | None] = mapped_column(String(60))
     # Vecteur du texte (même espace que les futurs vecteurs d'articles, pour
     # comparer un jour discours politique et discours médiatique) et l'étiquette

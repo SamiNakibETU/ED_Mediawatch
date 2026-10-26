@@ -11,7 +11,8 @@
 const PAS = [
   ["heure", "Heure"], ["jour", "Jour"], ["semaine", "Semaine"], ["mois", "Mois"],
 ];
-const state = { pas: "jour", parti: "", retweets: true, serie: null };
+const VUES = [["familles", "Familles"], ["themes", "Thèmes CAP"], ["marqueurs", "Marqueurs"]];
+const state = { pas: "jour", vue: "familles", parti: "", retweets: true, serie: null };
 const majuscule = (t) => (t ? t.charAt(0).toUpperCase() + t.slice(1) : "");
 
 const fmtCase = (k, pas) => {
@@ -32,23 +33,31 @@ function bornes(k, pas) {
   return [iso(d), iso(f)];
 }
 
+const HORS = new Set(["campagne", "attaques", "actualite"]);
+
 function lecture(s) {
-  const totaux = s.themes.map((t) => ({ ...t, n: s.cases.reduce((a, c) => a + c[t.code], 0) }));
-  const tout = totaux.reduce((a, t) => a + t.n, 0);
+  const tout = s.cases.reduce((a, c) => a + c.total, 0);
   if (!tout) return "Aucun tweet classé sur cette période pour l’instant.";
-  const politiques = totaux.filter((t) => t.code !== "autre").sort((a, b) => b.n - a.n);
+  const totaux = s.series.map((t) => ({ ...t, n: s.cases.reduce((a, c) => a + c[t.code], 0) }))
+    .sort((a, b) => b.n - a.n);
   const pct = (n) => `${Math.round((100 * n) / tout)} %`;
-  const [a, b] = politiques;
+  if (!s.additives) {
+    const [a, b] = totaux;
+    return `${fmtNum(tout)} tweets sur la période. Le marqueur le plus fréquent est « ${a.label} » (${pct(a.n)} des tweets)${
+      b ? `, puis « ${b.label} » (${pct(b.n)})` : ""}. Un tweet peut porter plusieurs marqueurs.`;
+  }
+  const [a, b] = totaux.filter((t) => !HORS.has(t.code));
+  const hors = totaux.filter((t) => HORS.has(t.code)).reduce((x, t) => x + t.n, 0);
   return `${fmtNum(tout)} tweets sur la période. ${a ? `${a.label} vient en tête (${pct(a.n)})` : ""}${
-    b ? `, devant ${b.label.toLowerCase()} (${pct(b.n)})` : ""}. Le reste de la parole (campagne, vie du parti, réactions) pèse ${
-    pct(totaux.find((t) => t.code === "autre")?.n || 0)}.`;
+    b ? `, devant ${b.label.toLowerCase()} (${pct(b.n)})` : ""}. Campagne, attaques et actualité, hors politique publique, pèsent ${pct(hors)}.`;
 }
 
 function multiples(s) {
-  const totaux = s.themes.map((t) => ({ ...t, n: s.cases.reduce((a, c) => a + c[t.code], 0) }));
-  totaux.sort((a, b) => (a.code === "autre") - (b.code === "autre") || b.n - a.n);
-  const max = Math.max(1, ...s.cases.flatMap((c) => s.themes.map((t) => c[t.code])));
-  const tout = totaux.reduce((a, t) => a + t.n, 0) || 1;
+  const totaux = s.series.map((t) => ({ ...t, n: s.cases.reduce((a, c) => a + c[t.code], 0) }))
+    .filter((t) => t.n > 0);
+  totaux.sort((a, b) => HORS.has(a.code) - HORS.has(b.code) || b.n - a.n);
+  const max = Math.max(1, ...s.cases.flatMap((c) => s.series.map((t) => c[t.code])));
+  const tout = s.cases.reduce((a, c) => a + c.total, 0) || 1;
   const n = s.cases.length || 1;
   const W = 1000, H = 56, gap = n > 120 ? 0 : 1, bw = Math.max(1, W / n - gap);
 
@@ -80,7 +89,9 @@ function tweetHtml(t) {
     </p>`).join("");
   return `<article class="entry entry--plain">
     <p class="entry__head"><span class="speaker">${escapeHtml(t.figure)}</span>
-      ${t.groupe ? `<span class="tag">${escapeHtml(t.groupe)}</span>` : ""}</p>
+      ${t.groupe ? `<span class="tag">${escapeHtml(t.groupe)}</span>` : ""}
+      <span class="spacer"></span>
+      <span class="sujet__meta">${escapeHtml([t.theme_label, ...(t.marqueurs || [])].filter(Boolean).join(", "))}</span></p>
     ${sourceCard(t.source)}
     ${decls}
   </article>`;
@@ -88,9 +99,9 @@ function tweetHtml(t) {
 
 async function ouvrirMoment(k, theme) {
   const [debut, fin] = bornes(k, state.pas);
-  const p = new URLSearchParams({ debut, fin, theme, limit: 80 });
+  const p = new URLSearchParams({ debut, fin, theme, vue: state.vue, limit: 80 });
   if (state.parti) p.set("parti", state.parti);
-  const label = state.serie.themes.find((t) => t.code === theme)?.label || theme;
+  const label = state.serie.series.find((t) => t.code === theme)?.label || theme;
   $("#moment").hidden = false;
   $("#titreMoment").textContent = `${label}, ${fmtCase(k, state.pas)}`;
   $("#tweetsMoment").innerHTML = '<p class="state">Chargement…</p>';
@@ -107,7 +118,7 @@ async function ouvrirMoment(k, theme) {
 }
 
 async function chargerSerie() {
-  const p = new URLSearchParams({ pas: state.pas, retweets: state.retweets });
+  const p = new URLSearchParams({ pas: state.pas, vue: state.vue, retweets: state.retweets });
   if (state.parti) p.set("parti", state.parti);
   $("#multiples").innerHTML = '<p class="state">Chargement…</p>';
   try {
@@ -145,6 +156,14 @@ async function chargerSujets(semaine) {
 }
 
 function reglages() {
+  $("#vue").innerHTML = VUES.map(([k, l]) =>
+    `<button class="filter" data-vue="${k}" aria-pressed="${k === state.vue}">${l}</button>`).join("");
+  document.querySelectorAll("#vue .filter").forEach((b) => (b.onclick = () => {
+    state.vue = b.dataset.vue;
+    document.querySelectorAll("#vue .filter").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+    $("#moment").hidden = true;
+    chargerSerie();
+  }));
   $("#pas").innerHTML = PAS.map(([k, l]) =>
     `<button class="filter" data-pas="${k}" aria-pressed="${k === state.pas}">${l}</button>`).join("");
   document.querySelectorAll("#pas .filter").forEach((b) => (b.onclick = () => {
