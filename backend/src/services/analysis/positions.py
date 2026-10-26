@@ -10,6 +10,7 @@ from __future__ import annotations
 from sqlalchemy import func, select
 
 from src.models.declaration import Declaration
+from src.models.engagement_programme import EngagementProgramme
 from src.models.personality import Personality
 from src.models.post import Post
 from src.services.analysis.enjeux import ENJEUX, HORS_LISTE, PAR_SLUG, THEMES, Point, ecarts
@@ -63,7 +64,41 @@ async def fiche(db, slug: str) -> dict | None:
             points.append(Point(pers.id, d.position, d.published_at, d.id))
 
     liste = sorted(figures.values(), key=lambda f: -len(f["positions"]))
+
+    # Le programme de chaque parti sur cet enjeu, et les déclarations de ses
+    # figures qui s'en écartent. On ne compare qu'à son propre camp, et
+    # seulement après la publication du programme : avant, il n'existait pas.
+    prog_rows = (await db.execute(
+        select(EngagementProgramme)
+        .where(EngagementProgramme.enjeu == slug, EngagementProgramme.position.isnot(None))
+        .order_by(EngagementProgramme.annee, EngagementProgramme.livret, EngagementProgramme.page)
+    )).scalars().all()
+    programme = [
+        {"parti": e.parti, "annee": e.annee, "source": e.source, "position": e.position,
+         "label": enjeu.cran(e.position).label, "rang": enjeu.cran(e.position).rang,
+         "verbatim": e.verbatim, "livret": e.livret, "page": e.page, "modalite": e.modalite}
+        for e in prog_rows if enjeu.cran(e.position)
+    ]
+    crans_programme: dict[tuple[str, int], set[str]] = {}
+    for e in programme:
+        crans_programme.setdefault((e["parti"], e["annee"]), set()).add(e["position"])
+    ecarts_programme = []
+    for f in liste:
+        for (parti, annee), crans in crans_programme.items():
+            if f["groupe"] != parti:
+                continue
+            for p in f["positions"]:
+                if p["position"] not in crans and p["date"] and int(p["date"][:4]) >= annee:
+                    ecarts_programme.append({
+                        "figure": f["nom"], "figure_id": f["id"], "parti": parti, "annee": annee,
+                        "declaration": p,
+                        "programme": [e for e in programme if e["parti"] == parti and e["annee"] == annee],
+                    })
+    ecarts_programme.sort(key=lambda x: x["declaration"]["date"] or "", reverse=True)
+
     return {
+        "programme": programme,
+        "ecarts_programme": ecarts_programme,
         "slug": enjeu.slug, "titre": enjeu.titre, "question": enjeu.question,
         "theme": enjeu.theme, "theme_label": THEMES.get(enjeu.theme, enjeu.theme),
         "echelle": [{"code": c.code, "label": c.label, "rang": c.rang} for c in enjeu.echelle],

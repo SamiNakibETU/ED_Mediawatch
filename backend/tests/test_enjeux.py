@@ -98,3 +98,10 @@ def test_le_prompt_ne_donne_ni_le_nom_ni_le_compte_de_l_auteur():
     p = prompt_extraction([_Post(TWEET, cite="Texte cité")])
     assert TWEET in p and "écrit par quelqu'un d'autre" in p and "2022-03-01" in p
     assert "@" not in p
+
+
+def test_le_nettoyage_recolle_les_mots_coupes_en_fin_de_ligne():
+    from src.services.analysis.programme import nettoyer
+    assert nettoyer("La loi de programmation prévoi-\nra que 85.000 places\nde prison") == \
+        "La loi de programmation prévoira que 85.000 places de prison"
+    assert nettoyer("travaux d’in -\ntérêt général") == "travaux d’intérêt général"

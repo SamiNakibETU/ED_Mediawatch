@@ -56,6 +56,15 @@ async def lifespan(app: FastAPI):
 
     logger.info("affiliations.ready", **await ensure_seeded())
 
+    # Le programme, chargé depuis `data/programme/*.json` quand le fichier a
+    # changé. Un échec ici ne doit pas empêcher le site de démarrer.
+    try:
+        from src.services.analysis.programme import ensure_programme
+
+        logger.info("programme.ready", **{k: str(v) for k, v in (await ensure_programme()).items()})
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("programme.echec", error=str(exc)[:200])
+
     # Le cadencement suffit : la première passe part 2 minutes après le
     # démarrage. Il y avait ici un `await run_collection()` conditionnel qui
     # bloquait le `lifespan` — l'API ne répondait pas tant que la collecte

@@ -86,6 +86,35 @@ function trajectoires(f) {
   <div class="peek" id="peek" hidden></div>`;
 }
 
+// Ce que dit le programme, livret et page à l'appui : la référence contre
+// laquelle les déclarations d'un parti se lisent.
+function programmeHtml(f) {
+  const prog = f.programme || [];
+  if (!prog.length) {
+    return `<p class="state state--inline">Le programme lu ne dit rien de précis sur cette question.</p>`;
+  }
+  return prog.map((e) => `<article class="position">
+      <div class="position__head">
+        <span class="tag">${escapeHtml(e.parti)} ${e.annee}</span>
+        <span class="tag">${escapeHtml(e.label)}</span>
+        <span class="spacer"></span>
+        <span class="stamp">livret « ${escapeHtml(e.livret.replace(/^projet-/, "").replace(/-/g, " "))} », p.&nbsp;${e.page ?? "?"}</span>
+      </div>
+      <p class="position__q">${escapeHtml(e.verbatim)}</p>
+    </article>`).join("");
+}
+
+function ecartsProgrammeHtml(f) {
+  const items = f.ecarts_programme || [];
+  if (!items.length) return "";
+  return `<div class="band"><h2>Écarts au programme</h2><span class="spacer"></span><p>${items.length}</p></div>
+    ${items.map((x) => `<div class="card mb-3">
+      <p class="kicker">${escapeHtml(x.figure)}<span class="kicker__sep">${escapeHtml(x.declaration.label)}, quand le programme ${x.annee} dit : ${
+        escapeHtml([...new Set(x.programme.map((e) => e.label))].join(" / "))}</span></p>
+      ${citation(x.declaration)}
+    </div>`).join("")}`;
+}
+
 function render() {
   const f = state.fiche;
   const nPos = f.figures.reduce((a, g) => a + g.positions.length, 0);
@@ -93,6 +122,11 @@ function render() {
     <h1 class="hero-title mt-6">${escapeHtml(f.question)}</h1>
     <p class="dek">${fmtNum(nPos)} prise${nPos > 1 ? "s" : ""} de position, ${f.figures.length} figure${
       f.figures.length > 1 ? "s" : ""}.${f.jalons.length ? ` Repère&nbsp;: ${f.jalons.map(escapeHtml).join(" ; ")}.` : ""}</p>
+
+    <div class="band"><h2>Ce que dit le programme</h2></div>
+    ${programmeHtml(f)}
+
+    ${ecartsProgrammeHtml(f)}
 
     <div class="band"><h2>Les écarts</h2><span class="spacer"></span><p>${f.ecarts.length}</p></div>
     ${ecartsHtml(f)}
