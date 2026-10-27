@@ -133,3 +133,16 @@ def test_un_tweet_deja_collecte_n_est_pas_importe_deux_fois(tmp_path, monkeypatc
         for c in caches:
             c.cache_clear()
     assert (premier["nouveaux"], premier["hors_panel"], second["nouveaux"]) == (1, 1, 0)
+
+
+def test_la_copie_locale_fait_foi_quand_l_etat_a_oublie_des_tweets(tmp_path, monkeypatch):
+    # 27/10/2026 : mai 2022 de Le Pen revenu vide d'une relecture, noté vide et complet.
+    import json
+    monkeypatch.setattr(hx, "DOSSIER", tmp_path)
+    lignes = [{"auteur": "MLP_officiel", "url": f"https://x.com/MLP_officiel/status/{i}", "mois": "2022-05"}
+              for i in (1, 2, 2)]  # le tweet 2 relu deux fois
+    (tmp_path / "MLP_officiel.ndjson").write_text("\n".join(json.dumps(t) for t in lignes) + "\n", encoding="utf-8")
+    etat = {"MLP_officiel": {"2022-05": {"n": 0, "fin": "complet", "envoye": True}}}
+    hx.reparer(etat)
+    assert etat["MLP_officiel"]["2022-05"] == {"n": 2, "fin": "complet", "envoye": False}
+    assert len(hx.archive("MLP_officiel")["2022-05"]) == 2

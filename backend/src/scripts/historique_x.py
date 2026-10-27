@@ -54,6 +54,10 @@ PAGES_VIDES_MAX = 5  # Nitter rend parfois une page vide au milieu : la suivante
 PAGE_PLEINE = 15
 PAGES_MAX = 400  # garde-fou par mois
 LOT_ENVOI = 400
+# Un mois est fait quand sa recherche est allée au bout. « pages vides » en est une fin normale :
+# relus le 27/10/2026, 31 mois finis ainsi ont rendu exactement les mêmes tweets.
+FAITS = ("complet", "introuvable", "pages vides")
+MOIS_ACTIF = 10  # un mois vide juste après un mois d'au moins 10 tweets est suspect
 VIA = "xitter"
 UA = "Mozilla/5.0 (compatible; ED-Mediawatch-recherche/1.0; Terra Nova Jeunes; historique de comptes publics)"
 
@@ -182,15 +186,46 @@ def envoyer(tweets: list[dict], jeton: str) -> int:
     return nouveaux
 
 
+def archive(compte: str) -> dict[str, list[dict]]:
+    """La copie locale d'un compte, par mois, un tweet par adresse (un mois relu y figure deux fois)."""
+    f = DOSSIER / f"{compte}.ndjson"
+    par: dict[str, dict[str, dict]] = {}
+    if f.exists():
+        for ligne in f.open(encoding="utf-8"):
+            t = json.loads(ligne)
+            par.setdefault(t["mois"], {})[t["url"]] = t
+    return {m: list(v.values()) for m, v in par.items()}
+
+
+def reparer(etat: dict) -> None:
+    """Remet dans l'état ce que la copie locale contient et que l'état a oublié.
+
+    Le 27/10/2026, mai 2022 de Marine Le Pen est revenu vide d'une relecture (288 tweets
+    au premier passage) et l'état l'avait noté vide et complet. La copie locale, écrite
+    en ajout seulement, gardait les tweets : elle fait foi.
+    """
+    for compte, par_mois in etat.items():
+        for m, tweets in archive(compte).items():
+            e = par_mois.get(m)
+            if e is not None and len(tweets) > (e.get("n") or 0):
+                print(f"{compte} {m} : l'état disait {e.get('n') or 0} tweets, la copie locale en a {len(tweets)}",
+                      flush=True)
+                e.update(n=len(tweets), fin="complet", envoye=False)
+    sauver_etat(etat)
+
+
 def envoyer_archives(etat: dict, jeton: str) -> None:
     """Envoie les mois archivés mais pas encore envoyés (jeton absent, plateforme injoignable)."""
     for compte, par_mois in etat.items():
-        a_envoyer = {m for m, e in par_mois.items() if not e.get("envoye") and e.get("n")}
+        a_envoyer = {m for m, e in par_mois.items() if not e.get("envoye")}
         if not a_envoyer:
             continue
-        lignes = [json.loads(l) for l in (DOSSIER / f"{compte}.ndjson").open(encoding="utf-8")]
+        copie = archive(compte)
         for m in sorted(a_envoyer):
-            tweets = [t for t in lignes if t.get("mois") == m]
+            tweets = copie.get(m, [])
+            if not tweets:
+                par_mois[m]["envoye"] = True
+                continue
             par_mois[m]["nouveaux"] = envoyer(tweets, jeton)
             par_mois[m]["envoye"] = True
             sauver_etat(etat)
@@ -228,6 +263,7 @@ def main() -> int:
         import ctypes
         ctypes.windll.kernel32.SetThreadExecutionState(0x80000000 | 0x00000001)
 
+    reparer(etat)
     lecteur = Lecteur(a.instance, max(a.pause, 1.0))
     fenetres = mois(a.depuis, a.jusqua)
     debut_session = time.monotonic()
@@ -235,9 +271,12 @@ def main() -> int:
     try:
         for compte in a.comptes:
             par_mois = etat.setdefault(compte, {})
+            precedent = 0  # tweets du mois traité juste avant (le mois suivant dans le temps)
             for cle, since, until in fenetres:
-                if not a.refaire and par_mois.get(cle, {}).get("fin") in ("complet", "introuvable"):
+                if not a.refaire and par_mois.get(cle, {}).get("fin") in FAITS:
+                    precedent = par_mois[cle].get("n") or 0
                     continue
+                avant = par_mois.get(cle, {})
                 t0 = time.monotonic()
                 r = lecteur.mois(compte, since, until)
                 if r["fin"] == "introuvable":
@@ -245,7 +284,26 @@ def main() -> int:
                     sauver_etat(etat)
                     print(f"{compte} : compte introuvable sur l'instance, on passe au suivant", flush=True)
                     break
+                if not r["tweets"] and avant.get("n"):
+                    # L'instance cale parfois en rendant des pages vides, sans erreur : un mois qui
+                    # avait des tweets ne devient pas vide. On garde le passage précédent.
+                    avant["fin"] = "complet"
+                    sauver_etat(etat)
+                    print(f"{compte} {cle} : vide cette fois, {avant['n']} tweets au passage précédent, gardés",
+                          flush=True)
+                    precedent = avant["n"]
+                    continue
+                if not r["tweets"] and precedent >= MOIS_ACTIF:
+                    # Vide juste après un mois actif : sans doute l'instance qui cale. Une seconde
+                    # chance après une minute ; vide encore, le mois sera relu à la prochaine relance.
+                    print(f"{compte} {cle} : vide après un mois de {precedent} tweets, nouvel essai dans 60 s",
+                          flush=True)
+                    time.sleep(60)
+                    r = lecteur.mois(compte, since, until)
+                    if not r["tweets"]:
+                        r["fin"] = "vide"
                 tweets = r["tweets"]
+                precedent = len(tweets)
                 archiver(compte, cle, tweets)
                 dates = sorted(t["published_at"] for t in tweets if t.get("published_at"))
                 e = {"n": len(tweets), "retweets": r["retweets"], "pages": r["pages"], "fin": r["fin"],
