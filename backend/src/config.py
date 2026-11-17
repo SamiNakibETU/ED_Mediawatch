@@ -82,6 +82,12 @@ class Settings(BaseSettings):
     # removepaywall.com : repli paywall (format variable → désactivé par défaut).
     removepaywall_enabled: bool = False
     removepaywall_url: str = "https://www.removepaywall.com"
+    # Contournement des murs payants : coupé par défaut (décision du 17/11/2026, risque de réputation pour
+    # Terra Nova relevé à l'audit ; la presse ne sert qu'à la revue). Coupé, on ne lit que la page publique
+    # (trafilatura, Jina Reader) : un article payant reste à son chapô. Les voies cookies d'abonné,
+    # scraper-service, ladder, removepaywall et le repli Wayback sur une page devenue payante ne servent
+    # que si PAYWALL_BYPASS_ENABLED=true.
+    paywall_bypass_enabled: bool = False
     # Cookies d'abonné par domaine (SECRET, env uniquement, jamais committé).
     # JSON {"lemonde.fr": "ssid=…; …", "lefigaro.fr": "…"} → on récupère l'article
     # COMPLET en tant qu'abonné (la façon la plus fiable de passer un paywall dur).

@@ -353,13 +353,14 @@ async def extract_fulltext(url: str) -> Extraction:
             best_clean = ext
         return bool(best_clean and len(best_clean.text or "") >= _MIN_LEN)
 
+    bypass = settings.paywall_bypass_enabled   # coupé par défaut : la page publique seulement
     # 0) cookies d'abonné (le plus fiable pour les paywalls durs souscrits)
-    if consider(build_extraction(await _via_cookies(url, t * 2), "cookies")):
+    if bypass and consider(build_extraction(await _via_cookies(url, t * 2), "cookies")):
         return best_clean
-    if settings.extractor_url.strip():
+    if bypass and settings.extractor_url.strip():
         if consider(await _via_service(url, settings.extractor_url, t * 4)):
             return best_clean
-    if settings.ladder_url.strip() and consider(
+    if bypass and settings.ladder_url.strip() and consider(
         build_extraction(await _via_ladder(url, t * 2), "ladder")
     ):
         return best_clean
@@ -369,10 +370,10 @@ async def extract_fulltext(url: str) -> Extraction:
         build_extraction(await _via_jina(url, t * 2), "jina_ai")
     ):
         return best_clean
-    if settings.removepaywall_enabled and consider(
+    if bypass and settings.removepaywall_enabled and consider(
         build_extraction(await _via_removepaywall(url, t * 2), "removepaywall")
     ):
         return best_clean
-    if consider(build_extraction(await _via_wayback(url, t * 2), "wayback")):
+    if bypass and consider(build_extraction(await _via_wayback(url, t * 2), "wayback")):
         return best_clean
     return best_clean or best_any or Extraction()
