@@ -21,8 +21,15 @@ Les retweets ne sont pas récupérés (Nitter n'en donne pas l'identifiant), ni 
 réponses à autrui (la recherche Nitter les exclut).
 
 Politesse. L'instance est un service bénévole. Une requête à la fois, PAUSE secondes
-entre deux, attente croissante au premier refus (429, 5xx, défi anti-robot), arrêt
-net au-delà de cinq refus de suite. Le script se présente comme un outil de recherche.
+entre deux, attente croissante au premier refus (429, 5xx), arrêt net au-delà de cinq
+refus de suite, arrêt immédiat devant un défi anti-robot, qu'on ne franchit jamais.
+Le script se présente comme un outil de recherche.
+
+Contrôles. Avant toute collecte, deux pages d'un historique connu prouvent que l'instance
+rend des tweets et qu'elle pagine (`--controle` s'arrête là). Un mois d'au moins une page
+pleine sans rien dans ses premiers jours est noté « tronqué » et relu à la relance ; trois
+de suite arrêtent la collecte. Le 2/11/2026, une instance rendait la première page puis
+plus rien : le mois était noté complet avec 20 tweets, tous du jour suivant.
 
 Le jeton est lu dans API_TOKEN, l'adresse de la plateforme dans ED_URL.
 """
@@ -36,7 +43,7 @@ import random
 import re
 import sys
 import time
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from urllib.parse import urlencode
 
@@ -56,8 +63,11 @@ PAGES_MAX = 400  # garde-fou par mois
 LOT_ENVOI = 400
 # Un mois est fait quand sa recherche est allée au bout. « pages vides » en est une fin normale :
 # relus le 27/10/2026, 31 mois finis ainsi ont rendu exactement les mêmes tweets.
-FAITS = ("complet", "introuvable", "pages vides")
+FAITS = ("complet", "introuvable", "pages vides", "vide confirmé")
 MOIS_ACTIF = 10  # un mois vide juste après un mois d'au moins 10 tweets est suspect
+JOURS_TETE = 5  # un mois dense dont le plus ancien tweet tombe après ce jour a été coupé
+TRONQUES_MAX = 3  # mois tronqués de suite : c'est l'instance qui ne pagine pas, on s'arrête
+ETALON = "from:MLP_officiel since:2024-06-01 until:2024-07-15"  # 258 tweets originaux et citations
 VIA = "xitter"
 UA = "Mozilla/5.0 (compatible; ED-Mediawatch-recherche/1.0; Terra Nova Jeunes; historique de comptes publics)"
 
@@ -66,9 +76,17 @@ DOSSIER = Path(__file__).resolve().parents[4] / "donnees" / "x-historique"  # é
 # Les comptes du jeu d'or, dans l'ordre où leurs mouvements comptent le plus.
 JEU_OR = ["MLP_officiel", "J_Bardella", "MarionMarechal", "ZemmourEric", "eciotti", "sebchenu",
           "louis_aliot", "JphTanguy", "HeleneLaporteRN", "Thomas_Mng", "BallardPhilippe", "ChudeauR"]
+POOL = Path(__file__).resolve().parents[2] / "data" / "pool_rn_udr.json"  # les 168 figures suivies
+
+
+def comptes_du_pool() -> list[str]:
+    """Le jeu d'or d'abord, puis les autres figures du pool qui ont un compte X."""
+    pool = json.loads(POOL.read_text(encoding="utf-8"))["personalities"]
+    autres = [p["handle"] for p in pool if p.get("handle") and p["handle"] not in JEU_OR]
+    return JEU_OR + list(dict.fromkeys(autres))
 
 DEFI = re.compile(r"anubis|making sure you'?re not a bot|cf-challenge|just a moment|checking your browser|"
-                  r"challenge-platform|to defend nitter", re.I)
+                  r"challenge-platform|to defend nitter|turnstile|confirm this search", re.I)
 
 
 class Arret(Exception):
@@ -104,8 +122,11 @@ class Lecteur:
             self.requetes += 1
             try:
                 r = self.http.get(url)
-                motif = (f"HTTP {r.status_code}" if r.status_code in (429, 403) or r.status_code >= 500
-                         else "défi anti-robot" if DEFI.search(r.text[:5000]) else None)
+                # Avant le code HTTP : le 1/11/2026, le défi de xitter.cf passait pour un simple 403.
+                if "timeline-item" not in r.text and DEFI.search(r.text[:8000]):
+                    raise Arret(f"défi anti-robot sur {self.instance} (HTTP {r.status_code}), à ne pas franchir : "
+                                "changer de voie (skill collecte-x)")
+                motif = f"HTTP {r.status_code}" if r.status_code in (429, 403) or r.status_code >= 500 else None
                 if motif is None:
                     return r.text
             except httpx.HTTPError as exc:
@@ -154,6 +175,27 @@ class Lecteur:
             curseurs.add(suite)
             url = self.instance + suite.replace("&amp;", "&")
         return {"tweets": list(vus.values()), "retweets": retweets, "pages": pages, "fin": fin}
+
+    def controle(self) -> None:
+        """Prouve sur un historique connu que l'instance rend des tweets et qu'elle pagine."""
+        url = f"{self.instance}/search?" + urlencode({"f": "tweets", "q": ETALON})
+        tweets, suite, rt = lire_page_recherche(self.page(url))
+        if len(tweets) + rt < PAGE_PLEINE or not suite:
+            raise Arret(f"contrôle de {self.instance} : {len(tweets) + rt} tweets sur la première page de l'étalon")
+        for _ in range(3):  # une page vide au milieu arrive : la suivante repart
+            tweets, suite, rt = lire_page_recherche(self.page(self.instance + suite.replace("&amp;", "&")))
+            if tweets or rt:
+                return
+            if not suite:
+                break
+        raise Arret(f"contrôle de {self.instance} : la pagination ne rend plus rien après la première page")
+
+
+def tronque(tweets: list[dict], since: str) -> bool:
+    """Au moins une page pleine, et rien dans les premiers jours du mois : la lecture a été coupée."""
+    dates = sorted(str(t["published_at"]) for t in tweets if t.get("published_at"))
+    tete = (date.fromisoformat(since) + timedelta(days=JOURS_TETE)).isoformat()
+    return len(tweets) >= PAGE_PLEINE and bool(dates) and dates[0][:10] > tete
 
 
 def charger_etat() -> dict:
@@ -207,11 +249,22 @@ def reparer(etat: dict) -> None:
     for compte, par_mois in etat.items():
         for m, tweets in archive(compte).items():
             e = par_mois.get(m)
-            if e is not None and len(tweets) > (e.get("n") or 0):
+            if e is not None and e.get("fin") != "tronqué" and len(tweets) > (e.get("n") or 0):
                 print(f"{compte} {m} : l'état disait {e.get('n') or 0} tweets, la copie locale en a {len(tweets)}",
                       flush=True)
                 e.update(n=len(tweets), fin="complet", envoye=False)
+    # Un mois sans tweet noté fait au premier passage est à relire : le 28/10/2026, juillet 2022
+    # de Chudeau (43 tweets) et de Marion Maréchal (10) étaient notés vides et complets.
+    for compte, par_mois in etat.items():
+        for e in par_mois.values():
+            if not e.get("n") and e.get("fin") in ("complet", "pages vides"):
+                e["fin"] = "vide"
     sauver_etat(etat)
+
+
+def fin_vide(avant: dict) -> str:
+    """Un mois vide n'est tenu pour vide qu'à la seconde relance qui le trouve vide."""
+    return "vide confirmé" if avant.get("fin") in ("vide", "vide confirmé") else "vide"
 
 
 def envoyer_archives(etat: dict, jeton: str) -> None:
@@ -235,6 +288,7 @@ def envoyer_archives(etat: dict, jeton: str) -> None:
 def main() -> int:
     p = argparse.ArgumentParser(description="historique X des figures suivies, par une instance Nitter")
     p.add_argument("--comptes", nargs="*", default=JEU_OR)
+    p.add_argument("--pool", action="store_true", help="toutes les figures du pool qui ont un compte X")
     p.add_argument("--depuis", default="2022-01", help="premier mois, AAAA-MM")
     p.add_argument("--jusqua", default="2026-05", help="dernier mois, AAAA-MM (la suite est collectée chaque heure)")
     p.add_argument("--instance", default=INSTANCE)
@@ -242,7 +296,10 @@ def main() -> int:
     p.add_argument("--sans-envoi", action="store_true", help="archive locale seulement")
     p.add_argument("--envoyer-archives", action="store_true", help="envoie les mois archivés non envoyés, puis s'arrête")
     p.add_argument("--refaire", action="store_true", help="relit aussi les mois déjà faits")
+    p.add_argument("--controle", action="store_true", help="contrôle l'instance, puis s'arrête")
     a = p.parse_args()
+    if a.pool:
+        a.comptes = comptes_du_pool()
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     DOSSIER.mkdir(parents=True, exist_ok=True)
     jeton = os.environ.get("API_TOKEN", "").strip()
@@ -267,8 +324,12 @@ def main() -> int:
     lecteur = Lecteur(a.instance, max(a.pause, 1.0))
     fenetres = mois(a.depuis, a.jusqua)
     debut_session = time.monotonic()
-    total = 0
+    total = tronques = 0
     try:
+        lecteur.controle()
+        print(f"Contrôle : {a.instance} rend des tweets et pagine.", flush=True)
+        if a.controle:
+            return 0
         for compte in a.comptes:
             par_mois = etat.setdefault(compte, {})
             precedent = 0  # tweets du mois traité juste avant (le mois suivant dans le temps)
@@ -287,7 +348,8 @@ def main() -> int:
                 if not r["tweets"] and avant.get("n"):
                     # L'instance cale parfois en rendant des pages vides, sans erreur : un mois qui
                     # avait des tweets ne devient pas vide. On garde le passage précédent.
-                    avant["fin"] = "complet"
+                    if avant.get("fin") != "tronqué":
+                        avant["fin"] = "complet"
                     sauver_etat(etat)
                     print(f"{compte} {cle} : vide cette fois, {avant['n']} tweets au passage précédent, gardés",
                           flush=True)
@@ -300,9 +362,13 @@ def main() -> int:
                           flush=True)
                     time.sleep(60)
                     r = lecteur.mois(compte, since, until)
-                    if not r["tweets"]:
-                        r["fin"] = "vide"
+                if not r["tweets"]:
+                    # Même après un mois calme : l'instance peut caler sur n'importe quel mois.
+                    r["fin"] = fin_vide(avant)
                 tweets = r["tweets"]
+                if r["fin"] in ("complet", "pages vides") and tronque(tweets, since):
+                    r["fin"] = "tronqué"
+                tronques = tronques + 1 if r["fin"] == "tronqué" else 0
                 precedent = len(tweets)
                 archiver(compte, cle, tweets)
                 dates = sorted(t["published_at"] for t in tweets if t.get("published_at"))
@@ -323,6 +389,8 @@ def main() -> int:
                       + (f", {e['nouveaux']} nouveaux en base" if "nouveaux" in e else "")
                       + f" [{time.monotonic() - t0:.0f} s ; session {duree / 60:.0f} min, {total} tweets, "
                         f"{lecteur.requetes} requêtes]", flush=True)
+                if tronques >= TRONQUES_MAX:
+                    raise Arret(f"{tronques} mois tronqués de suite, l'instance ne pagine plus")
     except Arret as exc:
         print(f"Arrêt : l'instance refuse ({exc}). Rien n'est perdu : relancer plus tard reprend ici.", flush=True)
         return 2

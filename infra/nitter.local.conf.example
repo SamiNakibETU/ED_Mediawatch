@@ -1,0 +1,50 @@
+# Copier en nitter.conf (gitignoré) et remplacer hmacKey :
+#   openssl rand -hex 32
+# Clés reprises de nitter.example.conf du fork shitter (octobre 2026).
+
+[Server]
+hostname = "localhost:8082"
+title = "nitter"
+address = "0.0.0.0"
+port = 8080
+https = false
+httpMaxConnections = 100
+staticDir = "./public"
+
+[Cache]
+listMinutes = 240
+rssMinutes = 10
+redisHost = "nitter-redis"
+redisPort = 6379
+redisPassword = ""
+redisConnections = 20
+redisMaxConnections = 30
+
+[Config]
+hmacKey = "A-CHANGER"
+base64Media = false
+enableRSS = true
+enableRSSUserTweets = true
+enableRSSUserReplies = true
+enableRSSUserMedia = true
+enableRSSUserArticles = true
+enableRSSSearch = true
+enableRSSList = true
+enableDebug = false
+proxy = ""
+proxyAuth = ""
+apiProxy = ""
+disableTid = false
+# une seule requête à la fois par compte : moins de risque de suspension
+maxConcurrentReqs = 1
+maxRetries = 1
+retryDelayMs = 150
+
+[Preferences]
+theme = "Nitter"
+replaceTwitter = ""
+proxyVideos = false
+disableVideoPreload = true
+hlsPlayback = false
+# les pages paginées par le lien « suite », comme sur xitter.cf : les scripts en dépendent
+infiniteScroll = false

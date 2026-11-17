@@ -60,3 +60,7 @@ DEPLOY*.md
 /Analyse-discursive-sur-le-conflit-Israelo-Palestinien/
 /Analyse_discursive_depute_fr_sur_conflit_Israelo_Palestinien/
 /Trend_Analysis_candidates_Paris/
+
+# Clés et certificats (règle commune)
+*.pem
+*.key

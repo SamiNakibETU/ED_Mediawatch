@@ -3,6 +3,7 @@
 import asyncio
 
 import httpx
+import pytest
 
 from src.scripts import historique_x as hx
 from src.services.collection.x_html_parser import lire_page_recherche
@@ -95,6 +96,58 @@ def test_des_refus_repetes_arretent_sans_rien_perdre(monkeypatch):
         assert "429" in str(exc)
 
 
+def test_un_defi_arrete_tout_de_suite_meme_derriere_un_403(monkeypatch):
+    # 1/11/2026 : la case Turnstile de xitter.cf passait pour un 403, avec 18 minutes d'attente pour rien.
+    vues = []
+
+    def repondre(req):
+        vues.append(req)
+        return httpx.Response(403, text='<h1>Confirm this search</h1><div class="cf-turnstile"></div>')
+    lecteur = hx.Lecteur("https://instance.test", 0, transport=httpx.MockTransport(repondre))
+    monkeypatch.setattr(hx.time, "sleep", lambda s: pytest.fail("aucune attente devant un défi"))
+    with pytest.raises(hx.Arret, match="défi anti-robot"):
+        lecteur.mois("MLP_officiel", "2024-06-01", "2024-07-01")
+    assert len(vues) == 1
+
+
+def test_un_tweet_qui_parle_de_turnstile_n_est_pas_un_defi():
+    lecteur, _ = _lecteur([_page([_item("MLP_officiel", "1", "Cloudflare Turnstile, just a moment")], suite=False)])
+    r = lecteur.mois("MLP_officiel", "2024-06-01", "2024-07-01")
+    assert len(r["tweets"]) == 1
+
+
+def test_le_controle_refuse_une_instance_qui_ne_pagine_pas():
+    # 2/11/2026 : nitter.mie.foundation rendait la première page, puis plus rien.
+    lecteur, vues = _lecteur([_pleine(0)])
+    with pytest.raises(hx.Arret, match="pagination"):
+        lecteur.controle()
+    assert len(vues) == 4
+
+
+def test_le_controle_accepte_une_instance_qui_pagine_meme_avec_une_page_vide():
+    lecteur, vues = _lecteur([_pleine(0), _page([]), _pleine(20)])
+    lecteur.controle()
+    assert len(vues) == 3 and "MLP_officiel" in vues[0]
+
+
+def test_un_mois_dense_sans_ses_premiers_jours_est_tronque():
+    tous = [{"published_at": f"2026-08-01 09:{i:02d}:00+00:00"} for i in range(20)]
+    assert hx.tronque(tous, "2026-07-01")
+    assert not hx.tronque(tous, "2026-08-01")
+    assert not hx.tronque(tous[:5], "2026-07-01")  # compte peu actif : rien à conclure
+
+
+def test_un_mois_tronque_n_est_pas_fait_et_la_copie_locale_ne_le_rend_pas_complet(tmp_path, monkeypatch):
+    import json
+    monkeypatch.setattr(hx, "DOSSIER", tmp_path)
+    assert "tronqué" not in hx.FAITS
+    lignes = [{"auteur": "a", "url": f"https://x.com/a/status/{i}", "mois": "2026-07"} for i in range(3)]
+    (tmp_path / "a.ndjson").write_text("\n".join(json.dumps(t) for t in lignes) + "\n", encoding="utf-8")
+    etat = {"a": {"2026-07": {"n": 2, "fin": "tronqué", "envoye": False}}}
+    hx.reparer(etat)
+    assert etat["a"]["2026-07"]["fin"] == "tronqué"
+
+
 def test_le_lot_ne_peut_ecrire_que_des_champs_connus_et_les_ecrit_tous():
     from src.services.collection.x_zeeschuimer import CHAMPS_LOT, normaliser_lot
     lot = normaliser_lot([
@@ -146,3 +199,43 @@ def test_la_copie_locale_fait_foi_quand_l_etat_a_oublie_des_tweets(tmp_path, mon
     hx.reparer(etat)
     assert etat["MLP_officiel"]["2022-05"] == {"n": 2, "fin": "complet", "envoye": False}
     assert len(hx.archive("MLP_officiel")["2022-05"]) == 2
+
+
+def test_un_mois_vide_n_est_tenu_pour_vide_qu_a_la_seconde_relance(tmp_path, monkeypatch):
+    # 28/10/2026 : juillet 2022 de Chudeau noté vide et complet, 43 tweets à la relecture.
+    monkeypatch.setattr(hx, "DOSSIER", tmp_path)
+    etat = {"ChudeauR": {"2022-07": {"n": 0, "fin": "complet", "envoye": True},
+                         "2022-06": {"n": 100, "fin": "complet", "envoye": False}}}
+    hx.reparer(etat)
+    assert etat["ChudeauR"]["2022-07"]["fin"] == "vide"
+    assert etat["ChudeauR"]["2022-06"]["fin"] == "complet"
+    assert hx.fin_vide(etat["ChudeauR"]["2022-07"]) == "vide confirmé"
+    assert hx.fin_vide({}) == "vide"
+    assert "vide" not in hx.FAITS and "vide confirmé" in hx.FAITS
+
+
+def test_dans_un_fil_chaque_reponse_repond_a_celle_d_avant():
+    from src.services.collection.x_html_parser import lire_page_statut
+    html = ("<html><body><div class='main-tweet'>" + _item("MLP_officiel", "100", "Le tweet.") + "</div>"
+            "<div class='replies'>"
+            "<div class='reply thread thread-line'>" + _item("Alice", "101", "Réponse directe.")
+            + _item("Bob", "102", "Réponse à Alice.") + "</div>"
+            "<div class='reply thread thread-line'>" + _item("Carla", "103", "Autre réponse directe.") + "</div>"
+            "<div class='show-more'><a href='/MLP_officiel/status/100?cursor=X'>Load more</a></div>"
+            "</div></body></html>")
+    p = lire_page_statut(html)
+    assert p["principal"][1]["id"] == "100" and p["suite"].endswith("cursor=X")
+    parents = {d["id"]: d["parent_id"] for _, d in p["reponses"]}
+    assert parents == {"101": "100", "102": "101", "103": "100"}
+
+
+def test_un_profil_donne_les_compteurs_exacts_et_la_date_de_creation():
+    from src.services.collection.x_html_parser import lire_profil
+    html = ("<div class='profile-card'><a class='profile-card-fullname'>Jean-Luc Mélenchon</a>"
+            "<a class='profile-card-username'>@JLMelenchon</a><div class='profile-bio'><p>Candidat.</p></div>"
+            "<div class='profile-joindate'><span title='10:50 AM - 8 Oct 2009'>Joined October 2009</span></div>"
+            "<ul class='profile-statlist'>"
+            "<li class='posts'><span class='profile-stat-num' title='55,936'>55.9K</span></li>"
+            "<li class='followers'><span class='profile-stat-num' title='2,720,215'>2.7M</span></li></ul></div>")
+    p = lire_profil(html)
+    assert (p["handle"], p["abonnes"], p["tweets"], p["cree_le"]) == ("JLMelenchon", 2720215, 55936, "10:50 AM - 8 Oct 2009")

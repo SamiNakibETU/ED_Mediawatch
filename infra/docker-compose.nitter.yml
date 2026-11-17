@@ -1,31 +1,34 @@
-# Nitter auto-hébergé — débloque l'ENGAGEMENT (likes/RT/réponses/citations) et le
-# BACKFILL (pagination HTML). Les instances publiques challengent le HTML des
-# profils ; la page de statut recommande explicitement de self-host pour scraper.
+# Nitter auto-hébergé, en local dans WSL, avec nos propres comptes X.
+# Code : le fork « shitter » (codeberg.org/shitter/shitter) ; zedeus/nitter est archivé
+# depuis le 9 octobre 2026 et son image Docker ne suit plus les changements d'X.
 #
-# Prérequis : un fichier sessions Nitter (comptes X jetables). Nitter 2026 exige
-# de vrais comptes (les guest tokens ont été supprimés). Générer guest_accounts /
-# sessions.jsonl selon la doc zedeus/nitter, puis :
-#   docker compose -f infra/docker-compose.nitter.yml up -d
+# Mode d'emploi complet : infra/NITTER-LOCAL.md. En bref, depuis WSL :
+#   git clone https://codeberg.org/shitter/shitter ~/shitter
+#   docker build -t shitter:local ~/shitter
+#   cp nitter.local.conf.example nitter.conf          # puis changer hmacKey
+#   (écrire sessions.jsonl à la main, cf. NITTER-LOCAL.md)
+#   docker compose -f docker-compose.nitter.yml up -d
 #
-# Côté backend (.env) :
-#   NITTER_SELF_HOSTED=http://localhost:8082
-# → la collecte live passe alors en HTML (avec engagement) et
-#   `python -m src.scripts.backfill_x` devient opérationnel.
+# nitter.conf et sessions.jsonl sont gitignorés : ils ne quittent jamais la machine.
+# Le port n'écoute que sur 127.0.0.1 : l'instance n'est pas visible du réseau local.
+#
+# Côté collecte :
+#   python -m src.scripts.historique_x --instance http://localhost:8082 --pause 9
 
 services:
   nitter-redis:
-    image: redis:7-alpine
+    image: valkey/valkey:8-alpine
     container_name: edmw-nitter-redis
-    command: redis-server --save 60 1 --loglevel warning
+    command: valkey-server --save 60 1 --loglevel warning
     volumes:
       - ./nitter_redis:/data
     restart: unless-stopped
 
   nitter:
-    image: zedeus/nitter:latest
+    image: shitter:local
     container_name: edmw-nitter
     ports:
-      - "8082:8080"
+      - "127.0.0.1:8082:8080"
     volumes:
       - ./nitter.conf:/src/nitter.conf:ro
       - ./sessions.jsonl:/src/sessions.jsonl:ro

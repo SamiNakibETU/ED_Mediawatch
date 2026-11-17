@@ -230,6 +230,114 @@ def _texte_complet(node) -> str:
     return "".join(morceaux).strip()
 
 
+def _medias(item) -> list[dict]:
+    """Images en pleine résolution, vidéos (fichier et vignette), GIF. Hors tweet cité."""
+    out: list[dict] = []
+    for att in item.cssselect(".attachments"):
+        if any("quote" in (a.get("class") or "") for a in att.iterancestors()):
+            continue
+        for a in att.cssselect("a.still-image"):
+            href = a.get("href") or ""
+            out.append({"type": "image", "url": href if href.startswith("http") else None})
+        for v in att.cssselect("video"):
+            src = next((s.get("src") for s in v.cssselect("source") if s.get("src")), None) or v.get("data-url")
+            out.append({"type": "gif" if "gif" in (att.get("class") or "") else "video", "url": src,
+                        "vignette": v.get("poster")})
+    return [m for m in out if m.get("url")]
+
+
+def tweet_de_item(item) -> tuple[str, dict] | None:
+    """Un `.timeline-item` Nitter au format de la collecte, avec son identifiant et ses médias."""
+    m = _STATUS_RE.match(_tweet_link(item))
+    contenu = item.cssselect(".tweet-content")
+    if not m or not contenu:
+        return None
+    auteur, tid = m.group(1), m.group(2)
+    texte = _texte_complet(contenu[0])
+    url = f"https://x.com/{auteur}/status/{tid}"
+    quote = _quote_info(item, "https://x.com")
+    is_reply = bool(item.cssselect(".replying-to"))
+    return auteur, {
+        "id": tid, "guid": tweet_guid(auteur, url), "url": url, "content": texte,
+        "published_at": _parse_date(item, auteur),
+        "is_retweet": False, "is_reply": is_reply,
+        "post_type": "quote" if quote else "reply" if is_reply else "original",
+        "reply_to_handle": _reply_target(item) if is_reply else None,
+        "quoted_url": quote.get("quoted_url"), "quoted_handle": quote.get("quoted_handle"),
+        "quoted_content": (quote.get("quoted_content") or "")[:2000] or None,
+        "replies": _stat_value(item, "icon-comment"), "retweets": _stat_value(item, "icon-retweet"),
+        "quotes": _stat_value(item, "icon-quote"), "likes": _stat_value(item, "icon-heart"),
+        "views": _stat_value(item, "icon-views"),
+        # Nitter ne donne pas la langue : « und », que le prétri du registre laisse passer.
+        "lang": "und", "text_truncated": False, "word_count": len(texte.split()),
+        "medias": _medias(item),
+    }
+
+
+def lire_page_statut(html_text: str) -> dict:
+    """La page d'un tweet : le tweet, ce qui le précède s'il répond, et ses fils de réponses.
+
+    Chaque réponse porte `parent_id`, l'identifiant du tweet auquel elle répond. Dans un
+    fil (« reply thread »), la première répond au tweet principal et chacune des
+    suivantes à celle d'avant : c'est ainsi que Nitter les range.
+    """
+    doc = lxml_html.fromstring(html_text)
+    principal = next((t for i in doc.cssselect(".main-tweet .timeline-item") if (t := tweet_de_item(i))), None)
+    avant = [t for i in doc.cssselect(".before-tweet .timeline-item") if (t := tweet_de_item(i))]
+    for k, (_, d) in enumerate(avant):
+        d["parent_id"] = avant[k - 1][1]["id"] if k else None
+    if principal and avant:
+        principal[1]["parent_id"] = avant[-1][1]["id"]
+    reponses = []
+    racine = principal[1]["id"] if principal else None
+    for fil in doc.cssselect(".replies .reply"):
+        parent = racine
+        for item in fil.cssselect(".timeline-item"):
+            t = tweet_de_item(item)
+            if not t:
+                continue
+            t[1]["parent_id"] = parent
+            reponses.append(t)
+            parent = t[1]["id"]
+    suite = next((a.get("href") for a in doc.cssselect(".replies .show-more a, .show-more a")
+                  if "cursor=" in (a.get("href") or "")), None)
+    return {"principal": principal, "avant": avant, "reponses": reponses, "suite": suite}
+
+
+def _nombre_exact(el) -> int | None:
+    """« 2.7M » s'affiche, « 2,720,215 » est dans le titre."""
+    brut = (el.get("title") or el.text_content() or "").replace(",", "").replace(" ", "").strip()
+    return int(brut) if brut.isdigit() else _parse_count(el.text_content())
+
+
+def lire_profil(html_text: str) -> dict | None:
+    """La carte de profil d'un compte : nom, bio, lieu, site, création, et les quatre compteurs exacts."""
+    doc = lxml_html.fromstring(html_text)
+    carte = doc.cssselect(".profile-card")
+    if not carte:
+        return None
+    c = carte[0]
+    texte = lambda sel: (c.cssselect(sel)[0].text_content().strip() if c.cssselect(sel) else None) or None
+    stats = {}
+    for li in c.cssselect(".profile-statlist li"):
+        num = li.cssselect(".profile-stat-num")
+        if num:
+            stats[li.get("class")] = _nombre_exact(num[0])
+    cree = c.cssselect(".profile-joindate span")
+    site = c.cssselect(".profile-website a")
+    return {
+        "handle": (texte(".profile-card-username") or "").lstrip("@") or None,
+        "nom": texte(".profile-card-fullname"), "bio": texte(".profile-bio"),
+        "lieu": texte(".profile-location"),
+        "site": (site[0].get("href") or site[0].text_content().strip()) if site else None,
+        "cree_le": cree[0].get("title") if cree else None,
+        "tweets": stats.get("posts"), "abonnements": stats.get("following"),
+        "abonnes": stats.get("followers"), "jaime": stats.get("likes"),
+        "certifie": bool(c.cssselect(".verified-icon")),
+        "protege": bool(c.cssselect(".icon-lock")),
+    }
+
+
 def lire_page_recherche(html_text: str) -> tuple[list[tuple[str, dict]], str | None, int]:
     """Une page de recherche Nitter : (tweets, lien de la page suivante, retweets vus).
 
