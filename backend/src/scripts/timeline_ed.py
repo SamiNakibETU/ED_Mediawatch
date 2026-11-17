@@ -11,6 +11,7 @@ Limite connue : X borne la profondeur d'un profil ; un compte très actif peut s
 avant la borne. Le statut de chaque compte le dit dans ``etat.json``.
 
 Usage :  python -m src.scripts.timeline_ed [--borne 2022-01-01] [--comptes a b c]
+         python -m src.scripts.timeline_ed --envoyer      (ED_URL et API_TOKEN dans l environnement)
 """
 
 from __future__ import annotations
@@ -45,7 +46,38 @@ def ordre() -> list[str]:
     return [c for c in pool if c.lower() not in faits] + [c for c in pool if c.lower() in faits]
 
 
+ENVOI = SORTIE / "envoi.json"     # lignes de chaque fichier déjà envoyées
+
+
+def envoyer_tout(jeton: str) -> int:
+    """Envoie à la plateforme (ED_URL, /collect/tweets) ce qui n'est pas encore parti ; la plateforme écarte
+    les doublons, et ``envoi.json`` garde le nombre de lignes déjà envoyées par compte : relancer est sûr."""
+    from src.scripts import historique_x as hx
+
+    hx.VIA = "xitter-profil"          # provenance distincte de l'historique par recherche
+    fait = json.loads(ENVOI.read_text(encoding="utf-8")) if ENVOI.exists() else {}
+    total = 0
+    for f in sorted(SORTIE.glob("*.ndjson")):
+        lignes = [json.loads(x) for x in f.read_text(encoding="utf-8").splitlines() if x.strip()]
+        deja = fait.get(f.stem, 0)
+        if len(lignes) <= deja:
+            continue
+        nouveaux = hx.envoyer(lignes[deja:], jeton)
+        fait[f.stem] = len(lignes)
+        ENVOI.write_text(json.dumps(fait, indent=1), encoding="utf-8")
+        total += nouveaux
+        print(f"{f.stem} : {len(lignes) - deja} envoyés, {nouveaux} nouveaux", flush=True)
+    return total
+
+
 def main() -> int:
+    if "--envoyer" in sys.argv:
+        import os
+        jeton = os.environ.get("API_TOKEN", "").strip()
+        if not jeton:
+            sys.exit("API_TOKEN manquant (et ED_URL pour l'adresse de la plateforme).")
+        print(f"{envoyer_tout(jeton)} tweets nouveaux en base.")
+        return 0
     mod = charger_lecteur()
     if "--comptes" not in sys.argv:
         sys.argv += ["--comptes", *ordre()]

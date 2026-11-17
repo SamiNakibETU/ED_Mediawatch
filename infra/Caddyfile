@@ -1,0 +1,22 @@
+# HTTPS automatique (Let's Encrypt) et accès réservé : la v1 d'ED Mediawatch est interne à Terra Nova.
+# SITE_ADDRESS : un nom de domaine, ou à défaut <ip-du-serveur>.sslip.io (résolu vers l'IP, certificat valide).
+#
+# /collect/* (envoi des archives depuis le PC) passe sans mot de passe : le backend y exige X-API-Token
+# (src/security.py::require_token). Tout le reste demande le mot de passe.
+{$SITE_ADDRESS} {
+	encode gzip
+	header {
+		X-Robots-Tag "noindex, nofollow"
+		Referrer-Policy "same-origin"
+	}
+	@collect path /collect/*
+	handle @collect {
+		reverse_proxy backend:8000
+	}
+	handle {
+		basic_auth {
+			{$BASIC_AUTH_USER} {$BASIC_AUTH_HASH}
+		}
+		reverse_proxy backend:8000
+	}
+}

@@ -1,0 +1,88 @@
+# ED Mediawatch en production sur un serveur Hetzner (CX23, Ubuntu 24.04). Mode d'emploi : infra/MISE-EN-SERVICE.md.
+#
+# Tout tourne sur la même machine :
+#   caddy    : HTTPS automatique et accès par mot de passe (la v1 est interne)
+#   backend  : API, pages, collecte planifiée (APScheduler)
+#   db       : PostgreSQL, volume persistant
+#   backup   : sauvegarde de la base chaque nuit, 56 jours gardés
+#   nitter   : Nitter local (fork « shitter ») avec les sessions X créées par Sami, joignable du seul backend
+#
+# Secrets : infra/.env.prod (gitignoré, copié à la main par Sami). Modèle : infra/env.prod.example.
+
+services:
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS}
+      BASIC_AUTH_USER: ${BASIC_AUTH_USER}
+      BASIC_AUTH_HASH: ${BASIC_AUTH_HASH}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+    depends_on:
+      - backend
+
+  backend:
+    build: ../backend
+    restart: unless-stopped
+    env_file: .env.prod
+    environment:
+      DATABASE_URL: postgresql+asyncpg://edmw:${POSTGRES_PASSWORD}@db:5432/edmw
+      NITTER_SELF_HOSTED: http://nitter:8080
+      PAYWALL_BYPASS_ENABLED: "false"
+    volumes:
+      - snapshots:/app/data/snapshots
+    depends_on:
+      - db
+
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: edmw
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: edmw
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  backup:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ./backups:/backups
+    entrypoint: >
+      sh -c 'while true; do
+        f=/backups/edmw_$$(date +%Y-%m-%d).dump;
+        pg_dump -h db -U edmw -Fc edmw > $$f.tmp && mv $$f.tmp $$f;
+        find /backups -name "edmw_*.dump" -mtime +56 -exec mv {} /backups/expirees/ \; 2>/dev/null;
+        sleep 86400; done'
+    depends_on:
+      - db
+
+  nitter-redis:
+    image: valkey/valkey:8-alpine
+    restart: unless-stopped
+    command: valkey-server --save 60 1 --loglevel warning
+    volumes:
+      - nitter_redis:/data
+
+  nitter:
+    image: shitter:local
+    restart: unless-stopped
+    volumes:
+      - ./nitter.conf:/src/nitter.conf:ro
+      - ./sessions.jsonl:/src/sessions.jsonl:ro
+    depends_on:
+      - nitter-redis
+
+volumes:
+  caddy_data:
+  pgdata:
+  snapshots:
+  nitter_redis:

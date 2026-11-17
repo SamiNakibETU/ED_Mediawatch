@@ -64,3 +64,7 @@ DEPLOY*.md
 # Clés et certificats (règle commune)
 *.pem
 *.key
+
+# Déploiement : secrets et sauvegardes du serveur
+infra/.env.prod
+infra/backups/
