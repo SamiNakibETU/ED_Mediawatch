@@ -2,6 +2,11 @@
 // Le masthead est monté ici et non répété dans les 4 pages : une seule source.
 
 const API = ""; // même origine : le backend FastAPI sert ce front
+// Site statique (Cloudflare Pages, `exporter_site.py`) : chaque réponse de l'API est un
+// fichier `api/<clé>.json`. La clé se calcule comme `cle()` côté Python.
+const STATIQUE = document.documentElement.dataset.statique === "1";
+const cle = (p) => p.replace(/^\//, "").replace(/[^A-Za-z0-9.-]/g,
+  (c) => "_" + c.charCodeAt(0).toString(16).padStart(2, "0"));
 const $ = (s) => document.querySelector(s);
 
 const escapeHtml = (s) =>
@@ -131,8 +136,13 @@ function sourceCard(src) {
 }
 
 async function fetchJSON(path) {
-  const res = await fetch(`${API}${path}`);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const url = STATIQUE ? `/api/${cle(path)}.json` : `${API}${path}`;
+  const res = await fetch(url);
+  if (!res.ok) {
+    // Hors serveur, une requête que l'export n'a pas figée (recherche libre, moment cliqué)
+    if (STATIQUE && res.status === 404) throw new Error("non disponible dans la version en ligne, figée chaque semaine");
+    throw new Error(`HTTP ${res.status}`);
+  }
   return res.json();
 }
 

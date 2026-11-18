@@ -76,17 +76,28 @@ function ecartHtml(e) {
 }
 
 async function decider(id, statut) {
-  const jeton = $("#jeton").value.trim();
-  if (!jeton) { $("#jeton").focus(); return; }
-  try { localStorage.setItem("jeton-relecture", jeton); } catch {}
   const note = $(`#note${id}`)?.value || null;
-  const res = await fetch(`/ecarts/${id}/decision`, {
-    method: "POST", headers: { "Content-Type": "application/json", "X-API-Token": jeton },
-    body: JSON.stringify({ statut, note }),
-  });
+  let res;
+  if (STATIQUE) {
+    // Version en ligne : le relecteur est identifié par Cloudflare Access, la décision
+    // attend dans un espace KV que `rapatrier_decisions` la ramène en base.
+    res = await fetch("/decision", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ecart: id, statut, note }),
+    });
+  } else {
+    const jeton = $("#jeton").value.trim();
+    if (!jeton) { $("#jeton").focus(); return; }
+    try { localStorage.setItem("jeton-relecture", jeton); } catch {}
+    res = await fetch(`/ecarts/${id}/decision`, {
+      method: "POST", headers: { "Content-Type": "application/json", "X-API-Token": jeton },
+      body: JSON.stringify({ statut, note }),
+    });
+  }
   const bloc = $(`#ecart${id}`);
   if (res.ok) {
-    bloc.innerHTML = `<p class="sujet__meta">${statut === "confirme" ? "Confirmé" : "Écarté"}.</p>`;
+    bloc.innerHTML = `<p class="sujet__meta">${statut === "confirme" ? "Confirmé" : "Écarté"}${
+      STATIQUE ? ", enregistré. La page le montrera à la mise à jour du lundi." : "."}</p>`;
   } else {
     bloc.insertAdjacentHTML("beforeend", `<p class="state state--error">La décision n’a pas été enregistrée (${
       res.status === 401 ? "jeton refusé" : `erreur ${res.status}`}).</p>`);
@@ -153,6 +164,7 @@ function filtres() {
   monter("#type", TYPES, "type");
   $("#suite").onclick = () => charger(true);
   $("#jeton").value = lireJeton();
+  if (STATIQUE) $("#jeton").hidden = true;
 }
 
 filtres();

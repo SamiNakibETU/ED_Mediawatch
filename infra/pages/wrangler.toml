@@ -1,0 +1,17 @@
+# Site en ligne d'ED Mediawatch : pages figées (`code/site/`, produit par exporter_site)
+# et une fonction pour les décisions des relecteurs (`functions/decision.js`).
+# Publier : depuis code\backend, `python -m src.scripts.publier_site`.
+name = "ed-mediawatch"
+pages_build_output_dir = "../../site"
+compatibility_date = "2026-11-01"
+
+[[kv_namespaces]]
+binding = "DECISIONS"
+# rempli par `publier_site --creer` (identifiant d'espace, pas un secret)
+id = "A-CREER"
+
+[vars]
+# Équipe Cloudflare Access (xxx pour xxx.cloudflareaccess.com) et, facultatif, l'AUD de
+# l'application Access. Vides, la fonction refuse toute décision.
+ACCESS_TEAM = ""
+ACCESS_AUD = ""

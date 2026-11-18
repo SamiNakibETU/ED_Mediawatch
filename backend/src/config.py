@@ -50,6 +50,7 @@ class Settings(BaseSettings):
 
     # Scheduler
     collection_interval_hours: int = 4
+    scheduler_enabled: bool = True
     # Obsolète : la première passe du scheduler part 2 minutes après le
     # démarrage. Le faire dans le `lifespan` bloquait l'API pendant toute la
     # collecte. Conservé pour ne pas casser un déploiement qui définit encore
@@ -140,6 +141,16 @@ class Settings(BaseSettings):
     # Second juge des écarts, d'une autre famille que le premier : deux modèles
     # qui se trompent rarement de la même façon.
     juge2_model: str = "google/gemini-3.7-flash"
+    # Lecture par l'abonnement ChatGPT (Codex CLI connecté au compte) : fournisseur
+    # « codex » aux tiers 1 et 2. Coût nul, quota d'abonnement. Modèles ouverts au
+    # compte ChatGPT le 18/11/2026 : gpt-6-luna, gpt-5.6-luna, gpt-5.6-terra.
+    codex_model: str = "gpt-6-luna"
+    # Second juge quand OpenRouter n'est pas joignable : un autre modèle du même
+    # fournisseur, faute d'une autre famille. À dire dans la méthode.
+    codex_juge2_model: str = "gpt-5.6-luna"
+    codex_effort: str = "low"
+    codex_binary: str = "codex"
+    codex_timeout_s: float = 900
 
     # Budgets LLM ($ ; 0 = désactivé). Sommés depuis les tokens réels
     # (table llm_usage_events) — voir services/analysis/llm_usage.py.

@@ -287,6 +287,9 @@ class ClaimLLM:
         prov = self._s.claim_tier2_provider
         if prov == "anthropic":
             return self._anthropic is not None
+        if prov == "codex":
+            import shutil
+            return shutil.which(self._s.codex_binary) is not None
         return prov in self._openai
 
     async def _tier1_gate(self, sentence: str, referent_label: str) -> bool:
@@ -627,6 +630,9 @@ class ClaimLLM:
         return None
 
     def model_for(self, tier: int) -> str:
+        prov = self._s.claim_tier1_provider if tier == 1 else self._s.claim_tier2_provider
+        if prov == "codex":
+            return f"codex/{self._s.codex_model}"
         return self._s.claim_tier1_model if tier == 1 else self._s.claim_tier2_model
 
     async def ask_json(self, *, tier: int, system: str, prompt: str, schema,
@@ -649,6 +655,14 @@ class ClaimLLM:
         « low » la garde courte ; None laisse le réglage du fournisseur.
         """
         prov = self._s.claim_tier1_provider if tier == 1 else self._s.claim_tier2_provider
+        if prov == "codex":
+            # Un modèle d'OpenRouter demandé nommément (« google/… », le second juge)
+            # part chez OpenRouter si la clé y est ; sinon un autre modèle de l'abonnement.
+            if model and "/" in model and "openrouter" in self._openai:
+                prov = "openrouter"
+            else:
+                return await self._ask_codex(system=system, prompt=prompt, schema=schema, task=task,
+                                             model=self._s.codex_juge2_model if model else None)
         client = self._openai.get(prov)
         if client is None:
             raise RuntimeError(f"aucun client pour le fournisseur {prov}")
@@ -675,6 +689,24 @@ class ClaimLLM:
         await budget.record(provider=prov, model=model, task=task,
                             input_tokens=tin, output_tokens=tout)
         content = resp.choices[0].message.content or ""
+        return schema.model_validate_json(content[content.find("{"): content.rfind("}") + 1])
+
+    async def _ask_codex(self, *, system: str, prompt: str, schema, task: str, model: str | None = None):
+        """`ask_json` par Codex CLI (abonnement ChatGPT) : voir `codex_client`."""
+        from src.services.analysis import codex_client
+
+        model = model or self._s.codex_model
+        budget = get_llm_budget()
+        await budget.check_or_raise()
+        try:
+            r = await codex_client.demander(system, prompt, model=model, effort=self._s.codex_effort,
+                                            timeout=self._s.codex_timeout_s, codex=self._s.codex_binary)
+        except codex_client.CodexRefus as exc:
+            raise ProviderRefused(str(exc)) from exc
+        # Codex ne donne qu'un total : on le range en entrée, où il pèse presque tout.
+        await budget.record(provider="codex", model=f"codex/{model}", task=task,
+                            input_tokens=r.tokens, output_tokens=0)
+        content = r.texte
         return schema.model_validate_json(content[content.find("{"): content.rfind("}") + 1])
 
     async def read_position(self, *, prompt: str, system: str, schema):

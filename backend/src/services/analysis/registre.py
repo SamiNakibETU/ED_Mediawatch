@@ -55,6 +55,17 @@ CONSIGNES_REVISION = "b"
 
 LOT_FILTRE = 25
 LOT_EXTRACTION = 8
+
+
+def tailles_de_lot() -> tuple[int, int]:
+    """(filtre, extraction). Par Codex, le préambule (~20 000 tokens) se paie à chaque
+    appel : des lots plus gros l'amortissent (`codex_client.LOTS`)."""
+    from src.config import get_settings
+    from src.services.analysis.codex_client import LOTS
+
+    s = get_settings()
+    return (LOTS["filtre"] if s.claim_tier1_provider == "codex" else LOT_FILTRE,
+            LOTS["extraction"] if s.claim_tier2_provider == "codex" else LOT_EXTRACTION)
 # Réflexion des modèles qui raisonnent : coupée au filtre (une question de tri
 # n'en a pas besoin, et elle multipliait la facture de sortie par 30).
 RAISONNEMENT_FILTRE = "off"
@@ -285,7 +296,7 @@ async def _ecrire(post: Post, decls: list[DeclLue], lecteur: str) -> int:
     return n
 
 
-async def lire(*, limit: int = 1000, plus_recents: bool = False) -> dict:
+async def lire(*, limit: int = 1000, plus_recents: bool = False, ids: list[int] | None = None) -> dict:
     """Une passe du registre. Idempotente, reprenable, bornée par le budget."""
     from src.services.analysis.claim_llm import get_claim_llm
 
@@ -297,7 +308,8 @@ async def lire(*, limit: int = 1000, plus_recents: bool = False) -> dict:
     async with get_session_factory()() as db:
         ordre = Post.published_at.desc() if plus_recents else Post.published_at.asc()
         posts = list((await db.execute(
-            select(Post).where(or_(Post.decl_lu.is_(None), ~Post.decl_lu.startswith(VERSION)))
+            select(Post).where(or_(Post.decl_lu.is_(None), ~Post.decl_lu.startswith(VERSION)),
+                               Post.id.in_(ids) if ids is not None else True)
             .order_by(ordre.nullslast()).limit(limit)
         )).scalars().all())
 
@@ -317,8 +329,9 @@ async def lire(*, limit: int = 1000, plus_recents: bool = False) -> dict:
     try:
         # Étage 2
         a_extraire: list[Post] = []
-        for i in range(0, len(a_filtrer), LOT_FILTRE):
-            lot = a_filtrer[i:i + LOT_FILTRE]
+        lot_f, lot_e = tailles_de_lot()
+        for i in range(0, len(a_filtrer), lot_f):
+            lot = a_filtrer[i:i + lot_f]
             try:
                 f = await llm.ask_json(tier=1, system=FILTRE_SYSTEM, prompt=prompt_filtre(lot),
                                        schema=Filtre, task="registre_filtre", max_tokens=400,
@@ -336,8 +349,8 @@ async def lire(*, limit: int = 1000, plus_recents: bool = False) -> dict:
             stats["retenus"] += len(gardes)
 
         # Étage 3
-        for i in range(0, len(a_extraire), LOT_EXTRACTION):
-            lot = a_extraire[i:i + LOT_EXTRACTION]
+        for i in range(0, len(a_extraire), lot_e):
+            lot = a_extraire[i:i + lot_e]
             try:
                 r = await llm.ask_json(tier=2, system=EXTRACTION_SYSTEM, prompt=prompt_extraction(lot),
                                        schema=Lot, task="registre_extraction", max_tokens=4000,

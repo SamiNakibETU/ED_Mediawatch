@@ -78,13 +78,19 @@ async def lifespan(app: FastAPI):
     # bloquait le `lifespan` — l'API ne répondait pas tant que la collecte
     # n'était pas finie, soit potentiellement une heure d'attente de quota X,
     # de quoi faire échouer la sonde de santé au déploiement.
-    scheduler = create_scheduler()
-    scheduler.start()
+    # SCHEDULER_ENABLED=false : le serveur sert les pages sans collecter (poste de
+    # Sami, relecture locale) ; la collecte X tourne alors par ses propres scripts,
+    # une seule à la fois par instance Nitter.
+    scheduler = None
+    if get_settings().scheduler_enabled:
+        scheduler = create_scheduler()
+        scheduler.start()
     app.state.scheduler = scheduler
 
     yield
 
-    scheduler.shutdown(wait=False)
+    if scheduler is not None:
+        scheduler.shutdown(wait=False)
 
 
 app = FastAPI(title="ED_Mediawatch API", version="0.1.0", lifespan=lifespan)

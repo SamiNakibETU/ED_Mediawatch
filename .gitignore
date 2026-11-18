@@ -68,3 +68,7 @@ DEPLOY*.md
 # Déploiement : secrets et sauvegardes du serveur
 infra/.env.prod
 infra/backups/
+
+# Site figé, régénéré par exporter_site (pas versionné)
+site/
+infra/pages/.wrangler/

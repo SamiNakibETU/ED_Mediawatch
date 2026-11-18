@@ -67,7 +67,8 @@ _PRICES: list[tuple[str, tuple[float, float]]] = [
 # Fournisseurs dont l'accès est gratuit (quota par minute, pas de facture).
 # Le prix ne dépend alors pas du modèle : DeepSeek chez NVIDIA ne coûte rien,
 # le même chez OpenRouter se paie.
-FREE_PROVIDERS = frozenset({"nvidia"})
+# « codex » : l'abonnement ChatGPT de Sami, payé au forfait.
+FREE_PROVIDERS = frozenset({"nvidia", "codex"})
 
 # Grille prudente pour un modèle inconnu : surestime plutôt que sous-estime.
 _UNKNOWN_PRICE = (1.0, 5.0)

@@ -1,5 +1,8 @@
 # Mettre ED Mediawatch en service sur un serveur Hetzner
 
+> **18/11/2026 : voie abandonnée au profit d'une mise en ligne gratuite, sans serveur**
+> (`pages/README.md`). Ce document reste comme option si un serveur devenait nécessaire.
+
 Décision du 17 novembre 2026 : l'application Railway a disparu (« Application not found ») sans sauvegarde de sa base.
 ED Mediawatch passe sur un serveur à soi, qui fait tout tourner : l'application, sa base PostgreSQL, le Nitter local,
 la sauvegarde de nuit et l'accès protégé. Coût : environ 7 € par mois.
