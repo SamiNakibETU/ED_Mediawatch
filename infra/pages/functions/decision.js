@@ -4,10 +4,11 @@
 // dans l'espace KV `DECISIONS`, une clé par décision (l'historique reste), jusqu'à ce que
 // `python -m src.scripts.rapatrier_decisions` les ramène sur le poste de Sami.
 //
-// Le relecteur est identifié par Cloudflare Access, jamais par ce que la page envoie : on
+// Le relecteur est identifié par son compte (`_middleware.js`) ou par Cloudflare Access,
+// jamais par ce que la page envoie. Pour Access, on
 // vérifie le jeton signé `Cf-Access-Jwt-Assertion` contre les clés publiques de l'équipe
 // Access (variable ACCESS_TEAM, ex. « terranova » pour terranova.cloudflareaccess.com).
-// Sans Access configuré, la fonction refuse tout : elle ne s'ouvre jamais par défaut.
+// Sans l'un ni l'autre, la fonction refuse tout : elle ne s'ouvre jamais par défaut.
 
 const STATUTS = ["a_relire", "confirme", "ecarte"];
 
@@ -31,9 +32,10 @@ async function relecteur(request, env) {
   return charge.email || null;
 }
 
-export async function onRequestPost({ request, env }) {
-  const qui = await relecteur(request, env).catch(() => null);
-  if (!qui) return new Response("relecteur non identifié (Cloudflare Access)", { status: 401 });
+export async function onRequestPost({ request, env, data }) {
+  // Le compte du relecteur, vérifié par `_middleware.js` ; à défaut, Cloudflare Access.
+  const qui = data.relecteur || await relecteur(request, env).catch(() => null);
+  if (!qui) return new Response("relecteur non identifié", { status: 401 });
   let d;
   try { d = await request.json(); } catch { return new Response("JSON attendu", { status: 400 }); }
   const ecart = Number(d.ecart);
