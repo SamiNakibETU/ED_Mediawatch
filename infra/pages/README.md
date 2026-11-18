@@ -1,8 +1,8 @@
 # Mettre ED Mediawatch en ligne sans serveur
 
 Décision du 18 novembre 2026 : pas de serveur loué. Tout se calcule sur le poste de Sami, comme
-Mot de la semaine, et le site part chaque semaine sur Cloudflare Pages, gratuit, derrière
-Cloudflare Access.
+Mot de la semaine, et le site part chaque semaine sur Cloudflare Pages, gratuit, fermé par un
+compte par relecteur.
 
 ## Ce qui tourne où
 
@@ -17,18 +17,20 @@ Cloudflare Access.
 Ce que la version en ligne ne fait pas : les recherches libres, et le détail d'un moment cliqué
 dans la série des thèmes. La page l'indique au lieu de rester bloquée.
 
-## Mise en place, une fois
+## Mise en place, une fois (faite le 18/11/2026)
 
-1. **Créer le projet et l'espace des décisions** (gratuit, depuis `code\backend`) :
-   `python -m src.scripts.publier_site --creer`
-2. **Sami, 5 minutes** : tableau de bord Cloudflare, Zero Trust, Access, Applications.
-   Ajouter une application « self-hosted » pour `ed-mediawatch.pages.dev` (et
-   `*.ed-mediawatch.pages.dev`), avec une politique qui liste les adresses des relecteurs.
-   C'est la même démarche que pour Mot de la semaine.
-3. Recopier dans `infra/pages/wrangler.toml` le nom d'équipe Access (`ACCESS_TEAM`, la partie
-   avant `.cloudflareaccess.com`) et, si possible, l'AUD de l'application (`ACCESS_AUD`).
-   Sans `ACCESS_TEAM`, la fonction refuse toute décision et `publier_site` refuse d'envoyer.
-4. Première publication : `python -m src.scripts.publier_site`.
+1. Projet Pages `ed-mediawatch` et espace KV des décisions : `python -m src.scripts.publier_site --creer`.
+2. Un compte par relecteur : `python -m src.scripts.publier_site --relecteur NOM`. Le mot de passe
+   est tiré au hasard et noté dans `admin/acces-relecteurs.txt` de l'étude (hors du dépôt) ; seule
+   son empreinte part chez Cloudflare (secret `RELECTEURS`). Le nom du compte signe les décisions.
+   Relancer la commande pour un nom existant renouvelle son mot de passe.
+3. Cloudflare Access reste possible en plus (`ACCESS_TEAM` dans `wrangler.toml`), pas nécessaire.
+
+Adresse : https://ed-mediawatch.pages.dev (le navigateur demande nom et mot de passe).
+
+**Envoi par morceaux.** Le VPN du poste coupe les envois de plus d'environ 1 Mo vers Cloudflare
+(constaté le 18/11/2026 : « other side closed »). `publier_site` envoie donc le site par morceaux
+de 4 Mo par défaut ; avec le VPN actif, passer `--morceau-mo 0.4`.
 
 ## Chaque semaine
 
