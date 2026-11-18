@@ -24,6 +24,7 @@ Le parti de chaque propos est celui du jour où il a été tenu (`party_of`).
 
 from __future__ import annotations
 
+import asyncio
 import re
 from collections import Counter, defaultdict
 from datetime import datetime, timedelta, timezone
@@ -247,8 +248,8 @@ class Avis(BaseModel):
     raison: str = ""
 
 
-async def second_avis(*, limit: int = 80) -> dict:
-    """Relit seule chaque déclaration qui crée un écart encore ouvert."""
+async def second_avis(*, limit: int = 80, parallele: int = 1) -> dict:
+    """Relit seule chaque déclaration qui crée un écart encore ouvert (``parallele`` appels de front)."""
     from src.services.analysis.claim_llm import get_claim_llm
 
     llm = get_claim_llm()
@@ -264,43 +265,50 @@ async def second_avis(*, limit: int = 80) -> dict:
             select(Declaration).where(Declaration.id.in_(ids), Declaration.verification.is_(None))
             .limit(limit))).scalars().all()) if ids else []
     stats = {"verifiees": 0, "douteuses": 0, "echecs": 0, "budget_atteint": False}
-    for d in decls:
-        enjeu = PAR_SLUG.get(d.enjeu)
-        if enjeu is None:
-            continue
-        async with factory() as db:
-            post = await db.get(Post, d.post_id)
-        echelle = "\n".join(f"- {c.code} : {c.label}" for c in enjeu.echelle)
-        cran = enjeu.cran(d.position)
-        valeur = f"\nChiffre retenu : {d.valeur:g} {d.unite}" if d.valeur is not None else ""
-        prompt = (f"Question : {enjeu.question}\nÉchelle :\n{echelle}\n\n"
-                  f"Position attribuée : {d.position} ({cran.label if cran else '?'}){valeur}\n"
-                  f"Phrase retenue : « {d.verbatim} »\n\nTweet complet :\n«««\n{post.content[:1500]}\n»»»")
-        try:
-            a = await llm.ask_json(tier=2, system=AVIS_SYSTEM, prompt=prompt, schema=Avis,
-                                   task="second_avis", max_tokens=1500, raisonnement="low")
-        except BudgetExceeded:
-            stats["budget_atteint"] = True
-            break
-        except ProviderRefused:
-            raise
-        except Exception as exc:  # noqa: BLE001
-            logger.warning("ecarts.avis_echec", decl=d.id, error=str(exc)[:160])
-            stats["echecs"] += 1
-            continue
-        async with factory() as db:
-            o = await db.get(Declaration, d.id)
-            o.verification_par = f"avis-1/{llm.model_for(2)}"[:120]
-            if a.avis == "conforme":
-                o.verification = "conforme"
-            else:
-                o.verification, o.douteuse = "douteuse", True
-                o.doute_motif = (f"second avis : {a.avis}"
-                                 + (f", plutôt {a.position}" if a.position else "")
-                                 + (f". {a.raison}" if a.raison else ""))[:300]
-                stats["douteuses"] += 1
-            await db.commit()
-        stats["verifiees"] += 1
+    sem = asyncio.Semaphore(max(1, parallele))
+
+    async def une(d: Declaration) -> None:
+        async with sem:
+            if stats["budget_atteint"]:
+                return
+            enjeu = PAR_SLUG.get(d.enjeu)
+            if enjeu is None:
+                return
+            async with factory() as db:
+                post = await db.get(Post, d.post_id)
+            echelle = "\n".join(f"- {c.code} : {c.label}" for c in enjeu.echelle)
+            cran = enjeu.cran(d.position)
+            valeur = f"\nChiffre retenu : {d.valeur:g} {d.unite}" if d.valeur is not None else ""
+            prompt = (f"Question : {enjeu.question}\nÉchelle :\n{echelle}\n\n"
+                      f"Position attribuée : {d.position} ({cran.label if cran else '?'}){valeur}\n"
+                      f"Phrase retenue : « {d.verbatim} »\n\nTweet complet :\n«««\n{post.content[:1500]}\n»»»")
+            try:
+                a = await llm.ask_json(tier=2, system=AVIS_SYSTEM, prompt=prompt, schema=Avis,
+                                       task="second_avis", max_tokens=1500, raisonnement="low")
+            except BudgetExceeded:
+                stats["budget_atteint"] = True
+                return
+            except ProviderRefused:
+                raise
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("ecarts.avis_echec", decl=d.id, error=str(exc)[:160])
+                stats["echecs"] += 1
+                return
+            async with factory() as db:
+                o = await db.get(Declaration, d.id)
+                o.verification_par = f"avis-1/{llm.model_for(2)}"[:120]
+                if a.avis == "conforme":
+                    o.verification = "conforme"
+                else:
+                    o.verification, o.douteuse = "douteuse", True
+                    o.doute_motif = (f"second avis : {a.avis}"
+                                     + (f", plutôt {a.position}" if a.position else "")
+                                     + (f". {a.raison}" if a.raison else ""))[:300]
+                    stats["douteuses"] += 1
+                await db.commit()
+            stats["verifiees"] += 1
+
+    await asyncio.gather(*(une(d) for d in decls))
     if stats["douteuses"]:
         stats["ecarts_ecartes"] = await _ecarter_douteux()
     logger.info("ecarts.second_avis", **stats)
@@ -399,8 +407,10 @@ async def _prompt_ecart(db, e: Ecart) -> tuple[str, Declaration, Declaration | N
     return prompt, da, db_
 
 
-async def juger(*, limit: int = 40) -> dict:
-    """Fait relire par les deux juges les écarts ouverts, puis décide automatiquement."""
+async def juger(*, limit: int = 40, parallele: int = 1) -> dict:
+    """Fait relire par les deux juges les écarts ouverts, puis décide automatiquement.
+
+    Les deux juges d'un écart sont interrogés ensemble ; ``parallele`` écarts de front."""
     from src.services.analysis.claim_llm import get_claim_llm
 
     llm = get_claim_llm()
@@ -412,42 +422,50 @@ async def juger(*, limit: int = 40) -> dict:
             .order_by(Ecart.ampleur.desc(), Ecart.date_b.desc().nullslast()).limit(limit)
         )).scalars().all())
     stats = {"juges": 0, "retenus": 0, "faibles": 0, "ecartes": 0, "echecs": 0, "budget_atteint": False}
-    for e in a_juger:
-        async with factory() as db:
-            prompt, da, db_ = await _prompt_ecart(db, e)
-        try:
-            v1 = await llm.ask_json(tier=2, system=JUGE_SYSTEM, prompt=prompt, schema=Verdict,
-                                    task="juge_ecarts", max_tokens=2500, raisonnement="low")
-            v2 = await llm.ask_json(tier=2, system=JUGE_SYSTEM, prompt=prompt, schema=Verdict,
-                                    task="juge2_ecarts", max_tokens=2500, raisonnement="low", model=juge2)
-        except BudgetExceeded:
-            stats["budget_atteint"] = True
-            break
-        except ProviderRefused:
-            raise
-        except Exception as exc:  # noqa: BLE001
-            logger.warning("ecarts.juge_echec", ecart=e.id, error=str(exc)[:160])
-            stats["echecs"] += 1
-            continue
-        auto = decision_auto(v1, v2)
-        async with factory() as db:
-            o = await db.get(Ecart, e.id)
-            o.juge_type, o.juge_force = v1.type[:20], max(0, min(3, int(v1.force)))
-            o.juge_justification = v1.justification if v1.justification in ("oui", "non", "inconnue") else "inconnue"
-            o.juge_explication, o.juge_lecteur = v1.explication[:1500], f"juge-2/{llm.model_for(2)}"[:120]
-            o.juge2_type, o.juge2_force = v2.type[:20], max(0, min(3, int(v2.force)))
-            o.juge2_explication, o.juge2_lecteur = v2.explication[:1500], f"juge-2/{juge2}"[:120]
-            o.auto = auto
-            # Une lecture jugée fausse par les deux juges rend la déclaration douteuse.
-            for cote, decl in (("a", da), ("b", db_)):
-                if decl is None:
-                    continue
-                if getattr(v1, f"lecture_{cote}") == "fausse" and getattr(v2, f"lecture_{cote}") == "fausse":
-                    od = await db.get(Declaration, decl.id)
-                    od.douteuse = True
-                    od.doute_motif = f"les deux juges de l'écart {e.id} jugent la lecture fausse"
-            await db.commit()
-        stats["juges"] += 1
-        stats[{"retenu": "retenus", "faible": "faibles", "ecarte": "ecartes"}[auto]] += 1
+    sem = asyncio.Semaphore(max(1, parallele))
+
+    async def un(e: Ecart) -> None:
+        async with sem:
+            if stats["budget_atteint"]:
+                return
+            async with factory() as db:
+                prompt, da, db_ = await _prompt_ecart(db, e)
+            try:
+                v1, v2 = await asyncio.gather(
+                    llm.ask_json(tier=2, system=JUGE_SYSTEM, prompt=prompt, schema=Verdict,
+                                 task="juge_ecarts", max_tokens=2500, raisonnement="low"),
+                    llm.ask_json(tier=2, system=JUGE_SYSTEM, prompt=prompt, schema=Verdict,
+                                 task="juge2_ecarts", max_tokens=2500, raisonnement="low", model=juge2))
+            except BudgetExceeded:
+                stats["budget_atteint"] = True
+                return
+            except ProviderRefused:
+                raise
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("ecarts.juge_echec", ecart=e.id, error=str(exc)[:160])
+                stats["echecs"] += 1
+                return
+            auto = decision_auto(v1, v2)
+            async with factory() as db:
+                o = await db.get(Ecart, e.id)
+                o.juge_type, o.juge_force = v1.type[:20], max(0, min(3, int(v1.force)))
+                o.juge_justification = v1.justification if v1.justification in ("oui", "non", "inconnue") else "inconnue"
+                o.juge_explication, o.juge_lecteur = v1.explication[:1500], f"juge-2/{llm.model_for(2)}"[:120]
+                o.juge2_type, o.juge2_force = v2.type[:20], max(0, min(3, int(v2.force)))
+                o.juge2_explication, o.juge2_lecteur = v2.explication[:1500], f"juge-2/{juge2}"[:120]
+                o.auto = auto
+                # Une lecture jugée fausse par les deux juges rend la déclaration douteuse.
+                for cote, decl in (("a", da), ("b", db_)):
+                    if decl is None:
+                        continue
+                    if getattr(v1, f"lecture_{cote}") == "fausse" and getattr(v2, f"lecture_{cote}") == "fausse":
+                        od = await db.get(Declaration, decl.id)
+                        od.douteuse = True
+                        od.doute_motif = f"les deux juges de l'écart {e.id} jugent la lecture fausse"
+                await db.commit()
+            stats["juges"] += 1
+            stats[{"retenu": "retenus", "faible": "faibles", "ecarte": "ecartes"}[auto]] += 1
+
+    await asyncio.gather(*(un(e) for e in a_juger))
     logger.info("ecarts.juges", **stats)
     return stats
