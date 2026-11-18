@@ -248,7 +248,7 @@ class Avis(BaseModel):
     raison: str = ""
 
 
-async def second_avis(*, limit: int = 80, parallele: int = 1) -> dict:
+async def second_avis(*, limit: int = 80, parallele: int = 1, types: tuple[str, ...] | None = None) -> dict:
     """Relit seule chaque déclaration qui crée un écart encore ouvert (``parallele`` appels de front)."""
     from src.services.analysis.claim_llm import get_claim_llm
 
@@ -257,12 +257,14 @@ async def second_avis(*, limit: int = 80, parallele: int = 1) -> dict:
     async with factory() as db:
         ids: set[int] = set()
         for a, b in (await db.execute(
-                select(Ecart.decl_a_id, Ecart.decl_b_id).where(Ecart.auto.is_(None)))).all():
+                select(Ecart.decl_a_id, Ecart.decl_b_id).where(
+                    Ecart.auto.is_(None), *([Ecart.type.in_(types)] if types else [])))).all():
             ids.add(a)
             if b:
                 ids.add(b)
         decls = list((await db.execute(
-            select(Declaration).where(Declaration.id.in_(ids), Declaration.verification.is_(None))
+            select(Declaration).where(Declaration.id.in_(ids), Declaration.verification.is_(None),
+                                      Declaration.enjeu.in_(list(PAR_SLUG)))
             .limit(limit))).scalars().all()) if ids else []
     stats = {"verifiees": 0, "douteuses": 0, "echecs": 0, "budget_atteint": False}
     sem = asyncio.Semaphore(max(1, parallele))
@@ -407,7 +409,7 @@ async def _prompt_ecart(db, e: Ecart) -> tuple[str, Declaration, Declaration | N
     return prompt, da, db_
 
 
-async def juger(*, limit: int = 40, parallele: int = 1) -> dict:
+async def juger(*, limit: int = 40, parallele: int = 1, types: tuple[str, ...] | None = None) -> dict:
     """Fait relire par les deux juges les écarts ouverts, puis décide automatiquement.
 
     Les deux juges d'un écart sont interrogés ensemble ; ``parallele`` écarts de front."""
@@ -418,7 +420,8 @@ async def juger(*, limit: int = 40, parallele: int = 1) -> dict:
     factory = get_session_factory()
     async with factory() as db:
         a_juger = list((await db.execute(
-            select(Ecart).where(Ecart.auto.is_(None), Ecart.statut == "a_relire")
+            select(Ecart).where(Ecart.auto.is_(None), Ecart.statut == "a_relire",
+                                *([Ecart.type.in_(types)] if types else []))
             .order_by(Ecart.ampleur.desc(), Ecart.date_b.desc().nullslast()).limit(limit)
         )).scalars().all())
     stats = {"juges": 0, "retenus": 0, "faibles": 0, "ecartes": 0, "echecs": 0, "budget_atteint": False}

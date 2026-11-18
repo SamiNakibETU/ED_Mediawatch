@@ -19,6 +19,10 @@ import os
 import time
 
 TRANCHE = 40
+# Les écarts de chiffre (deux nombres différents pour une même mesure) sont laissés de côté par
+# défaut : le 18/11/2026, 11 sur 11 jugés étaient des faux écarts (un 76 % de sondage comparé à un
+# taux de TVA de 5,5 %). La détection est à revoir avant de les juger : ``--types chiffre`` pour forcer.
+TYPES = "temps,programme,parti"
 
 
 def _fournisseur_codex(parallele: int) -> None:
@@ -42,7 +46,7 @@ async def compter() -> dict:
     return {a or "ouverts": n for a, n in rows}
 
 
-async def passer(limit: int | None, parallele: int, essai: bool) -> dict:
+async def passer(limit: int | None, parallele: int, essai: bool, types: tuple[str, ...] | None = None) -> dict:
     from src.database import init_db
     from src.services.analysis.ecarts import detecter, juger, second_avis
     from src.services.analysis.llm_usage import ProviderRefused
@@ -60,7 +64,7 @@ async def passer(limit: int | None, parallele: int, essai: bool) -> dict:
         fait = 0
         while limit is None or fait < limit:
             try:
-                s = await etape(limit=min(TRANCHE, limit - fait) if limit else TRANCHE, parallele=parallele)
+                s = await etape(limit=min(TRANCHE, limit - fait) if limit else TRANCHE, parallele=parallele, types=types)
             except ProviderRefused as exc:
                 print(f"Arrêt : {exc}. Relancer plus tard reprend où on en est.", flush=True)
                 total["arret"] = str(exc)[:200]
@@ -88,10 +92,11 @@ def main() -> int:
     p.add_argument("--limit", type=int, default=None, help="nombre de déclarations puis d'écarts à passer")
     p.add_argument("--parallele", type=int, default=4, help="appels de front")
     p.add_argument("--fournisseur", default="codex", help="codex (abonnement) ou openrouter (clé)")
+    p.add_argument("--types", default=TYPES, help="types d'écarts à vérifier, séparés par des virgules")
     a = p.parse_args()
     if a.fournisseur == "codex":
         _fournisseur_codex(a.parallele)
-    print(asyncio.run(passer(a.limit, a.parallele, a.essai)), flush=True)
+    print(asyncio.run(passer(a.limit, a.parallele, a.essai, tuple(a.types.split(",")) if a.types else None)), flush=True)
     return 0
 
 
