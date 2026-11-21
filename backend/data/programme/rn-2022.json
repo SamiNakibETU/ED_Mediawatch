@@ -33,7 +33,10 @@
    "modalite": "promet",
    "valeur": null,
    "unite": null,
-   "verbatim": "C’est la raison pour laquelle un référendum soumettra aux Français une réforme de la Constitution et des modifications des lois relatives à la situation des étrangers, à la nationalité et à l’identité françaises."
+   "verbatim": "C’est la raison pour laquelle un référendum soumettra aux Français une réforme de la Constitution et des modifications des lois relatives à la situation des étrangers, à la nationalité et à l’identité françaises.",
+   "avis": "conforme",
+   "avis_raison": "Le passage prévoit explicitement l'organisation d'un référendum portant sur les lois relatives à la situation des étrangers et à la nationalité.",
+   "position_lue": "oui"
   },
   {
    "livret": "projet-controle-de-limmigration",
@@ -44,7 +47,10 @@
    "modalite": "propose",
    "valeur": null,
    "unite": null,
-   "verbatim": "Pour ces raisons, il est indispensable de modifier la Constitution pour y intégrer des dispositions portant sur le statut des étrangers et la nationalité et pour faire prévaloir le droit national sur le droit international."
+   "verbatim": "Pour ces raisons, il est indispensable de modifier la Constitution pour y intégrer des dispositions portant sur le statut des étrangers et la nationalité et pour faire prévaloir le droit national sur le droit international.",
+   "avis": "conforme",
+   "avis_raison": "Le texte prévoit explicitement une modification de la Constitution pour faire primer le droit national sur le droit international.",
+   "position_lue": "primer_toujours"
   },
   {
    "livret": "projet-controle-de-limmigration",
@@ -55,18 +61,24 @@
    "modalite": "promet",
    "valeur": null,
    "unite": null,
-   "verbatim": "L’adoption par le peuple français du texte qui lui sera soumis permettra de décider qui peut entrer sur le territoire national et y demeurer, réformera les modalités des demandes d’asile, facilitera l’expulsion des étrangers en situation irrégulière menaçant l’ordre public ou condamnés par la Justice."
+   "verbatim": "L’adoption par le peuple français du texte qui lui sera soumis permettra de décider qui peut entrer sur le territoire national et y demeurer, réformera les modalités des demandes d’asile, facilitera l’expulsion des étrangers en situation irrégulière menaçant l’ordre public ou condamnés par la Justice.",
+   "avis": "conforme",
+   "avis_raison": "Le passage indique vouloir faciliter l'expulsion de certains étrangers en situation irrégulière (ceux menaçant l'ordre public ou condamnés), ce qui correspond à la position de renforcement des expulsions.",
+   "position_lue": "renforcer"
   },
   {
    "livret": "projet-controle-de-limmigration",
    "page": 10,
    "enjeu": "priorite_nationale",
-   "position": "partielle",
+   "position": "generale",
    "objet": null,
    "modalite": "promet",
    "valeur": null,
    "unite": null,
-   "verbatim": "Ce référendum permettra également au peuple français de se prononcer sur l’instauration de la priorité nationale pour l’emploi et le logement, sur les conditions d’acquisition de la nationalité française et assurera la protection de la nationalité française et de l’identité de la France."
+   "verbatim": "Ce référendum permettra également au peuple français de se prononcer sur l’instauration de la priorité nationale pour l’emploi et le logement, sur les conditions d’acquisition de la nationalité française et assurera la protection de la nationalité française et de l’identité de la France.",
+   "avis": "autre",
+   "avis_raison": "Le passage prévoit l'instauration de la priorité nationale pour l'emploi et le logement, ce qui relève d'une priorité générale et non limitée à certaines aides seulement.",
+   "position_lue": "partielle"
   },
   {
    "livret": "projet-controle-de-limmigration",
@@ -77,7 +89,10 @@
    "modalite": "promet",
    "valeur": null,
    "unite": null,
-   "verbatim": "Ainsi, la nouvelle politique migratoire que les Français seront appelés à décider n’implique pas la dénonciation de la Convention européenne des droits de l’homme."
+   "verbatim": "Ainsi, la nouvelle politique migratoire que les Français seront appelés à décider n’implique pas la dénonciation de la Convention européenne des droits de l’homme.",
+   "avis": "conforme",
+   "avis_raison": "Le passage indique que les Français seront directement appelés à décider de la nouvelle politique migratoire, ce qui renvoie à la tenue d'un référendum sur ce sujet.",
+   "position_lue": "oui"
   },
   {
    "livret": "projet-controle-de-limmigration",
@@ -99,7 +114,10 @@
    "modalite": "promet",
    "valeur": null,
    "unite": null,
-   "verbatim": "Dès lors que ce principe sera établi - grâce à une modification de la Constitution - les juges français ne pourront plus invoquer les stipulations de traités ou d’accords internationaux contraires à la Constitution."
+   "verbatim": "Dès lors que ce principe sera établi - grâce à une modification de la Constitution - les juges français ne pourront plus invoquer les stipulations de traités ou d’accords internationaux contraires à la Constitution.",
+   "avis": "conforme",
+   "avis_raison": "Le passage prévoit explicitement d'inscrire dans la Constitution la primauté de celle-ci sur les traités et accords internationaux.",
+   "position_lue": "primer_toujours"
   },
   {
    "livret": "projet-controle-de-limmigration",
@@ -110,7 +128,10 @@
    "modalite": "promet",
    "valeur": null,
    "unite": null,
-   "verbatim": "Seront levés tous les obstacles limitant ou interdisant l’éloignement des étrangers condamnés pour des crimes ou des délits graves ou de ceux qui font peser un risque sur l’ordre public ou portent atteinte à l’ordre public."
+   "verbatim": "Seront levés tous les obstacles limitant ou interdisant l’éloignement des étrangers condamnés pour des crimes ou des délits graves ou de ceux qui font peser un risque sur l’ordre public ou portent atteinte à l’ordre public.",
+   "avis": "conforme",
+   "avis_raison": "Le passage prévoit de lever les obstacles à l'éloignement de certains profils d'étrangers, ce qui correspond à la volonté d'en expulser davantage sans pour autant affirmer une systématicité pour l'ensemble des OQTF.",
+   "position_lue": "renforcer"
   },
   {
    "livret": "projet-controle-de-limmigration",
@@ -138,12 +159,15 @@
    "livret": "projet-controle-de-limmigration",
    "page": 14,
    "enjeu": "priorite_nationale",
-   "position": "partielle",
+   "position": "generale",
    "objet": null,
    "modalite": "promet",
    "valeur": null,
    "unite": null,
-   "verbatim": "La loi permettra d’instaurer la priorité nationale dans certains domaines, notamment pour l’accès à l’emploi et au logement."
+   "verbatim": "La loi permettra d’instaurer la priorité nationale dans certains domaines, notamment pour l’accès à l’emploi et au logement.",
+   "avis": "autre",
+   "avis_raison": "Le passage mentionne explicitement la priorité nationale pour l'accès à l'emploi et au logement, ce qui correspond à la modalité générale plutôt qu'à une restriction à certaines aides uniquement.",
+   "position_lue": "partielle"
   },
   {
    "livret": "projet-controle-de-limmigration",
@@ -154,7 +178,10 @@
    "modalite": "promet",
    "valeur": null,
    "unite": null,
-   "verbatim": "Le regroupement familial sera encadré par la loi."
+   "verbatim": "Le regroupement familial sera encadré par la loi.",
+   "avis": "conforme",
+   "avis_raison": "La volonté d'encadrer le regroupement familial par la loi correspond à l'option visant à le restreindre.",
+   "position_lue": "restreindre"
   },
   {
    "livret": "projet-controle-de-limmigration",
@@ -165,7 +192,10 @@
    "modalite": "promet",
    "valeur": null,
    "unite": null,
-   "verbatim": "Les allocations familiales, qui relèvent exclusivement de la solidarité nationale, seront réservées aux Français."
+   "verbatim": "Les allocations familiales, qui relèvent exclusivement de la solidarité nationale, seront réservées aux Français.",
+   "avis": "conforme",
+   "avis_raison": "Le passage restreint explicitement les allocations familiales aux seuls Français, ce qui correspond à réserver certaines aides sans englober dans cet extrait l'emploi ou le logement.",
+   "position_lue": "partielle"
   },
   {
    "livret": "projet-controle-de-limmigration",
@@ -253,7 +283,10 @@
    "modalite": "propose",
    "valeur": null,
    "unite": null,
-   "verbatim": "Le projet de référendum permet d’assurer la protection de la nationalité française et de l’identité de la France."
+   "verbatim": "Le projet de référendum permet d’assurer la protection de la nationalité française et de l’identité de la France.",
+   "avis": "conforme",
+   "avis_raison": "Le passage mentionne explicitement un projet de référendum dans le cadre du livret thématique sur le contrôle de l'immigration pour protéger la nationalité et l'identité française.",
+   "position_lue": "oui"
   },
   {
    "livret": "projet-controle-de-limmigration",
@@ -264,7 +297,10 @@
    "modalite": "promet",
    "valeur": null,
    "unite": null,
-   "verbatim": "Le droit du sol sera supprimé."
+   "verbatim": "Le droit du sol sera supprimé.",
+   "avis": "conforme",
+   "avis_raison": "Le passage indique explicitement que le droit du sol sera supprimé, ce qui correspond directement à la position « supprimer ».",
+   "position_lue": "supprimer"
   },
   {
    "livret": "projet-controle-de-limmigration",
@@ -374,7 +410,10 @@
    "modalite": "propose",
    "valeur": null,
    "unite": null,
-   "verbatim": "Organiser un référendum sur les questions essentielles de la maîtrise de l’immigration, de la protection de la nationalité et de l’identité françaises et de la primauté du droit national permettra de rétablir, par « la voie la plus démocratique qui soit » pour reprendre l’expression du général de Gaulle, et donc de manière incontestable, la volonté souveraine du Peuple français."
+   "verbatim": "Organiser un référendum sur les questions essentielles de la maîtrise de l’immigration, de la protection de la nationalité et de l’identité françaises et de la primauté du droit national permettra de rétablir, par « la voie la plus démocratique qui soit » pour reprendre l’expression du général de Gaulle, et donc de manière incontestable, la volonté souveraine du Peuple français.",
+   "avis": "conforme",
+   "avis_raison": "Le texte prévoit explicitement l'organisation d'un référendum portant sur la maîtrise de l'immigration.",
+   "position_lue": "oui"
   },
   {
    "livret": "projet-controle-de-limmigration",
@@ -385,7 +424,10 @@
    "modalite": "propose",
    "valeur": null,
    "unite": null,
-   "verbatim": "Organiser un référendum sur les questions essentielles de la maîtrise de l’immigration, de la protection de la nationalité et de l’identité françaises et de la primauté du droit national permettra de rétablir, par « la voie la plus démocratique qui soit » pour reprendre l’expression du général de Gaulle, et donc de manière incontestable, la volonté souveraine du Peuple français."
+   "verbatim": "Organiser un référendum sur les questions essentielles de la maîtrise de l’immigration, de la protection de la nationalité et de l’identité françaises et de la primauté du droit national permettra de rétablir, par « la voie la plus démocratique qui soit » pour reprendre l’expression du général de Gaulle, et donc de manière incontestable, la volonté souveraine du Peuple français.",
+   "avis": "conforme",
+   "avis_raison": "Le texte prévoit un référendum pour consacrer la primauté du droit national, ce qui correspond à l'inscription constitutionnelle de la supériorité du droit français.",
+   "position_lue": "primer_toujours"
   },
   {
    "livret": "projet-controle-de-limmigration",
@@ -396,29 +438,38 @@
    "modalite": "promet",
    "valeur": null,
    "unite": null,
-   "verbatim": "Ces dispositions constitueront un « bouclier constitutionnel » permettant aux juges français d’écarter toute règle de droit international ou communautaire qui lui serait contraire."
+   "verbatim": "Ces dispositions constitueront un « bouclier constitutionnel » permettant aux juges français d’écarter toute règle de droit international ou communautaire qui lui serait contraire.",
+   "avis": "conforme",
+   "avis_raison": "Le passage prévoit explicitement d'instaurer un « bouclier constitutionnel » permettant d'écarter le droit communautaire contraire aux règles françaises.",
+   "position_lue": "primer_toujours"
   },
   {
    "livret": "projet-controle-de-limmigration",
    "page": 25,
    "enjeu": "frexit",
-   "position": "rester",
+   "position": "reformer",
    "objet": null,
    "modalite": "refuse",
    "valeur": null,
    "unite": null,
-   "verbatim": "Dès lors que la sortie de l’Union européenne n’est pas à l’ordre du jour, seule la situation politique nouvelle qui résultera de l’adoption par référendum d’une révision constitutionnelle permettra au président de la République et au Gouvernement d’engager une renégociation de nombreux textes de droit dérivé, voire des Traités eux-mêmes."
+   "verbatim": "Dès lors que la sortie de l’Union européenne n’est pas à l’ordre du jour, seule la situation politique nouvelle qui résultera de l’adoption par référendum d’une révision constitutionnelle permettra au président de la République et au Gouvernement d’engager une renégociation de nombreux textes de droit dérivé, voire des Traités eux-mêmes.",
+   "avis": "autre",
+   "avis_raison": "Le texte indique que la sortie de l'Union européenne n'est pas à l'ordre du jour tout en prévoyant de renégocier les textes et les Traités, ce qui correspond à une volonté de réformer l'UE de l'intérieur plutôt que d'y rester sans réserve.",
+   "position_lue": "rester"
   },
   {
    "livret": "projet-controle-de-limmigration",
    "page": 25,
    "enjeu": "expulsions",
-   "position": "renforcer",
+   "position": null,
    "objet": "faciliter l’expulsion des étrangers condamnés pour des crimes ou délits graves ou portant atteinte à l’ordre public",
    "modalite": "promet",
    "valeur": null,
    "unite": null,
-   "verbatim": "Sont levés les obstacles à l’éloignement des étrangers condamnés pour des crimes ou des délits graves ou de ceux qui portent atteinte à l’ordre public et qui n’ont par principe aucun droit au maintien sur le sol national."
+   "verbatim": "Sont levés les obstacles à l’éloignement des étrangers condamnés pour des crimes ou des délits graves ou de ceux qui portent atteinte à l’ordre public et qui n’ont par principe aucun droit au maintien sur le sol national.",
+   "avis": "aucune",
+   "avis_raison": "Le passage porte spécifiquement sur la levée des obstacles à l'éloignement des étrangers condamnés pour crimes, délits graves ou atteinte à l'ordre public, et non sur le traitement général de l'ensemble des étrangers sous obligation de quitter le territoire (OQTF).",
+   "position_lue": "renforcer"
   },
   {
    "livret": "projet-controle-de-limmigration",
@@ -440,7 +491,10 @@
    "modalite": "propose",
    "valeur": null,
    "unite": null,
-   "verbatim": "Le regroupement familial des étrangers pourra être interdit ou limité par la loi et les prestations non-assurancielles de solidarité (exemple les allocations familiales) être réservées aux nationaux ou soumises à des conditions fixées par loi (notamment en termes de durée de travail)."
+   "verbatim": "Le regroupement familial des étrangers pourra être interdit ou limité par la loi et les prestations non-assurancielles de solidarité (exemple les allocations familiales) être réservées aux nationaux ou soumises à des conditions fixées par loi (notamment en termes de durée de travail).",
+   "avis": "conforme",
+   "avis_raison": "Le passage prévoit explicitement que le regroupement familial pourra être « interdit ou limité par la loi », ce qui correspond à la volonté de le restreindre.",
+   "position_lue": "restreindre"
   },
   {
    "livret": "projet-controle-de-limmigration",
@@ -495,7 +549,10 @@
    "modalite": "promet",
    "valeur": null,
    "unite": null,
-   "verbatim": "Le droit du sol est supprimé au profit de la transmission de la nationalité par filiation."
+   "verbatim": "Le droit du sol est supprimé au profit de la transmission de la nationalité par filiation.",
+   "avis": "conforme",
+   "avis_raison": "Le passage indique explicitement que le droit du sol est supprimé au profit de la filiation.",
+   "position_lue": "supprimer"
   },
   {
    "livret": "projet-controle-de-limmigration",
@@ -506,7 +563,10 @@
    "modalite": "propose",
    "valeur": null,
    "unite": null,
-   "verbatim": "La loi pourra également interdire l’accès à des emplois dans l’administration, des entreprises publiques et des personnes morales chargées d’une mission de service public aux personnes qui possèdent la nationalité d’un autre État."
+   "verbatim": "La loi pourra également interdire l’accès à des emplois dans l’administration, des entreprises publiques et des personnes morales chargées d’une mission de service public aux personnes qui possèdent la nationalité d’un autre État.",
+   "avis": "conforme",
+   "avis_raison": "Le passage prévoit explicitement la possibilité d'interdire l'accès à certains emplois publics aux personnes possédant la nationalité d'un autre État, ce qui correspond à la position 'interdire'.",
+   "position_lue": "interdire"
   },
   {
    "livret": "projet-controle-de-limmigration",
@@ -517,7 +577,10 @@
    "modalite": "propose",
    "valeur": null,
    "unite": null,
-   "verbatim": "De poser solennellement le principe de supériorité de la Constitution sur toute autre norme, même internationale ;"
+   "verbatim": "De poser solennellement le principe de supériorité de la Constitution sur toute autre norme, même internationale ;",
+   "avis": "conforme",
+   "avis_raison": "Le passage affirme explicitement la supériorité de la Constitution sur toute norme internationale, ce qui correspond à la position « primer_toujours ».",
+   "position_lue": "primer_toujours"
   },
   {
    "livret": "projet-controle-de-limmigration",
@@ -528,7 +591,10 @@
    "modalite": "propose",
    "valeur": null,
    "unite": null,
-   "verbatim": "De renvoyer à la loi organique le soin de décider de l’autorité des traités en droit interne, et non plus d’énoncer dans la Constitution de façon uniforme le principe de la supériorité des traités sur les lois."
+   "verbatim": "De renvoyer à la loi organique le soin de décider de l’autorité des traités en droit interne, et non plus d’énoncer dans la Constitution de façon uniforme le principe de la supériorité des traités sur les lois.",
+   "avis": "conforme",
+   "avis_raison": "Le passage propose de moduler l'autorité des traités en droit interne via une loi organique plutôt que de fixer une supériorité systématique dans la Constitution, ce qui correspond à une primauté au cas par cas.",
+   "position_lue": "primer_parfois"
   },
   {
    "livret": "projet-controle-de-limmigration",
@@ -550,7 +616,10 @@
    "modalite": "propose",
    "valeur": null,
    "unite": null,
-   "verbatim": "Afin de protéger l’identité et la sécurité du peuple français, l’action des pouvoirs publics poursuit les objectifs de la maîtrise de l’entrée des étrangers sur le territoire national, du développement des mesures d’éloignement en cas d’immigration illégale, de la répression des entrées illégales et des aides qui lui sont apportées, et de la lutte contre la traite des êtres humains."
+   "verbatim": "Afin de protéger l’identité et la sécurité du peuple français, l’action des pouvoirs publics poursuit les objectifs de la maîtrise de l’entrée des étrangers sur le territoire national, du développement des mesures d’éloignement en cas d’immigration illégale, de la répression des entrées illégales et des aides qui lui sont apportées, et de la lutte contre la traite des êtres humains.",
+   "avis": "conforme",
+   "avis_raison": "Le passage mentionne explicitement l'objectif de développer les mesures d'éloignement en cas d'immigration illégale, ce qui correspond à la position de renforcement.",
+   "position_lue": "renforcer"
   },
   {
    "livret": "projet-controle-de-limmigration",
@@ -561,18 +630,24 @@
    "modalite": "propose",
    "valeur": null,
    "unite": null,
-   "verbatim": "Le regroupement familial des étrangers peut être interdit ou limité."
+   "verbatim": "Le regroupement familial des étrangers peut être interdit ou limité.",
+   "avis": "conforme",
+   "avis_raison": "Le passage indique que le regroupement familial peut être interdit ou limité, ce qui correspond à la position « restreindre ».",
+   "position_lue": "restreindre"
   },
   {
    "livret": "projet-controle-de-limmigration",
    "page": 32,
    "enjeu": "priorite_nationale",
-   "position": "generale",
+   "position": null,
    "objet": null,
    "modalite": "propose",
    "valeur": null,
    "unite": null,
-   "verbatim": "La loi fixe les conditions et les domaines où peut s’appliquer la priorité nationale, entendue comme la priorité accordée aux nationaux"
+   "verbatim": "La loi fixe les conditions et les domaines où peut s’appliquer la priorité nationale, entendue comme la priorité accordée aux nationaux",
+   "avis": "aucune",
+   "avis_raison": "Le passage énonce le principe général de la priorité nationale renvoyé à la loi sans préciser expressément qu'elle s'applique au logement social, à l'emploi et aux aides.",
+   "position_lue": "generale"
   },
   {
    "livret": "projet-controle-de-limmigration",
@@ -583,7 +658,10 @@
    "modalite": "propose",
    "valeur": null,
    "unite": null,
-   "verbatim": "La loi peut interdire ou limiter le regroupement familial des étrangers."
+   "verbatim": "La loi peut interdire ou limiter le regroupement familial des étrangers.",
+   "avis": "conforme",
+   "avis_raison": "Le passage prévoit explicitement que la loi puisse « limiter » le regroupement familial, ce qui correspond à la position de le restreindre.",
+   "position_lue": "restreindre"
   },
   {
    "livret": "projet-controle-de-limmigration",
@@ -688,12 +766,15 @@
    "livret": "projet-controle-de-limmigration",
    "page": 34,
    "enjeu": "expulsions",
-   "position": "renforcer",
+   "position": null,
    "objet": null,
    "modalite": "propose",
    "valeur": null,
    "unite": null,
-   "verbatim": "L’exécution des décisions d’éloignement du territoire des étrangers non titulaires d’un droit au séjour est un objectif constant de l’action des pouvoirs publics."
+   "verbatim": "L’exécution des décisions d’éloignement du territoire des étrangers non titulaires d’un droit au séjour est un objectif constant de l’action des pouvoirs publics.",
+   "avis": "aucune",
+   "avis_raison": "La phrase citée se contente d'énoncer un constat général sur l'action des pouvoirs publics sans formuler d'engagement programmatique précis sur l'augmentation ou la systématisation des expulsions.",
+   "position_lue": "renforcer"
   },
   {
    "livret": "projet-controle-de-limmigration",
@@ -781,7 +862,10 @@
    "modalite": "propose",
    "valeur": null,
    "unite": null,
-   "verbatim": "Mettre en œuvre le principe de priorité nationale énoncé au dernier alinéa de l’article 4-1 de la Constitution, y compris par l’institution de sanctions pénales ou administratives."
+   "verbatim": "Mettre en œuvre le principe de priorité nationale énoncé au dernier alinéa de l’article 4-1 de la Constitution, y compris par l’institution de sanctions pénales ou administratives.",
+   "avis": "conforme",
+   "avis_raison": "La mise en œuvre du principe général de priorité nationale correspond à la position favorable à l'accès prioritaire des Français.",
+   "position_lue": "generale"
   },
   {
    "livret": "projet-controle-de-limmigration",
@@ -924,7 +1008,10 @@
    "modalite": "propose",
    "valeur": null,
    "unite": null,
-   "verbatim": "La Constitution est la norme suprême de l’ordre juridique français."
+   "verbatim": "La Constitution est la norme suprême de l’ordre juridique français.",
+   "avis": "conforme",
+   "avis_raison": "L'affirmation de la Constitution comme norme suprême consacre la primauté absolue du droit constitutionnel français.",
+   "position_lue": "primer_toujours"
   },
   {
    "livret": "projet-controle-de-limmigration",
@@ -946,7 +1033,10 @@
    "modalite": "propose",
    "valeur": null,
    "unite": null,
-   "verbatim": "Les actes de l’Union européenne ne peuvent avoir pour effet de limiter la portée des mesures prises par les pouvoirs publics constitutionnels en application des dispositions des articles 4-1 et 53-1 en matière de contrôle effectif de l’entrée sur le territoire et de prévention et de répression de l’immigration illégale."
+   "verbatim": "Les actes de l’Union européenne ne peuvent avoir pour effet de limiter la portée des mesures prises par les pouvoirs publics constitutionnels en application des dispositions des articles 4-1 et 53-1 en matière de contrôle effectif de l’entrée sur le territoire et de prévention et de répression de l’immigration illégale.",
+   "avis": "conforme",
+   "avis_raison": "Le texte prévoit expressément que les actes de l'UE ne peuvent limiter les mesures françaises spécifiquement en matière d'immigration et de contrôle des frontières, ce qui correspond à une primauté sur certains sujets.",
+   "position_lue": "primer_parfois"
   },
   {
    "livret": "projet-controle-de-limmigration",
@@ -1155,7 +1245,10 @@
    "modalite": "promet",
    "valeur": null,
    "unite": null,
-   "verbatim": "En vertu de ce principe, la France ne ratifiera pas le traité CET A qui doit lier l’Union européenne et le Canada et mettra fin à son application provisoire qui court depuis 2017."
+   "verbatim": "En vertu de ce principe, la France ne ratifiera pas le traité CET A qui doit lier l’Union européenne et le Canada et mettra fin à son application provisoire qui court depuis 2017.",
+   "avis": "conforme",
+   "avis_raison": "Le texte indique clairement le refus de ratifier le traité de libre-échange CETA, ce qui correspond à la position de rejet des accords de libre-échange.",
+   "position_lue": "rejeter"
   },
   {
    "livret": "projet-l-agriculture",
@@ -1166,7 +1259,10 @@
    "modalite": "promet",
    "valeur": null,
    "unite": null,
-   "verbatim": "Quant aux trois projets de traités en cours de négociation entre l’Union européenne et respectivement l’Australie, la Nouvelle-Zélande et le MERCOSUR (Argentine, Brésil, Paraguay et Uruguay) je m’opposerai à la poursuite des négociations, étant entendu que la France ne les ratifiera pas."
+   "verbatim": "Quant aux trois projets de traités en cours de négociation entre l’Union européenne et respectivement l’Australie, la Nouvelle-Zélande et le MERCOSUR (Argentine, Brésil, Paraguay et Uruguay) je m’opposerai à la poursuite des négociations, étant entendu que la France ne les ratifiera pas.",
+   "avis": "conforme",
+   "avis_raison": "Le passage indique explicitement une opposition à la poursuite des négociations et le refus de ratifier l'accord avec le Mercosur.",
+   "position_lue": "rejeter"
   },
   {
    "livret": "projet-l-agriculture",
@@ -1606,7 +1702,10 @@
    "modalite": "promet",
    "valeur": null,
    "unite": null,
-   "verbatim": "Interdiction par la loi du port du voile islamique pour les accompagnantes de sorties scolaires, en inscrivant dans les textes le statut de « collaborateur occasionnel du service public », soumis au principe de laïcité, des accompagnateurs."
+   "verbatim": "Interdiction par la loi du port du voile islamique pour les accompagnantes de sorties scolaires, en inscrivant dans les textes le statut de « collaborateur occasionnel du service public », soumis au principe de laïcité, des accompagnateurs.",
+   "avis": "conforme",
+   "avis_raison": "Le passage prévoit explicitement l'interdiction du port du voile islamique pour les accompagnatrices lors des sorties scolaires, ce qui correspond à la position d'interdiction dans certains lieux.",
+   "position_lue": "certains_lieux"
   },
   {
    "livret": "projet-l-ecole",
@@ -1683,7 +1782,10 @@
    "modalite": "promet",
    "valeur": null,
    "unite": null,
-   "verbatim": "réserver les allocations familiales aux familles dont au moins un des deux parents est Français"
+   "verbatim": "réserver les allocations familiales aux familles dont au moins un des deux parents est Français",
+   "avis": "conforme",
+   "avis_raison": "Le passage propose de réserver spécifiquement les allocations familiales aux familles comptant au moins un parent français, ce qui correspond à une priorité pour certaines aides seulement.",
+   "position_lue": "partielle"
   },
   {
    "livret": "projet-la-famille",
@@ -1738,7 +1840,10 @@
    "modalite": "promet",
    "valeur": null,
    "unite": null,
-   "verbatim": "Parallèlement, la mise en place de la priorité nationale pour les foyers dont au moins l’un des parents est Français permettra de remettre rapidement sur le marché les 620 000 logements sociaux occupés par des étrangers, selon les chiffres de l’INSEE pour 2017."
+   "verbatim": "Parallèlement, la mise en place de la priorité nationale pour les foyers dont au moins l’un des parents est Français permettra de remettre rapidement sur le marché les 620 000 logements sociaux occupés par des étrangers, selon les chiffres de l’INSEE pour 2017.",
+   "avis": "conforme",
+   "avis_raison": "Le passage préconise explicitement la priorité nationale pour l'attribution des logements sociaux, ce qui correspond à une application ciblée (partielle) parmi les éléments listés dans la question.",
+   "position_lue": "partielle"
   },
   {
    "livret": "projet-la-famille",
@@ -1782,7 +1887,10 @@
    "modalite": "propose",
    "valeur": null,
    "unite": null,
-   "verbatim": "La principale mesure est la baisse de la TVA sur l’ensemble des produits énergétiques (carburants, fioul, gaz, électricité), considérant que ces produits sont des biens de première nécessité, ce que ressentent évidemment toutes les familles."
+   "verbatim": "La principale mesure est la baisse de la TVA sur l’ensemble des produits énergétiques (carburants, fioul, gaz, électricité), considérant que ces produits sont des biens de première nécessité, ce que ressentent évidemment toutes les familles.",
+   "avis": "conforme",
+   "avis_raison": "Le passage préconise explicitement une baisse de la TVA sur les produits énergétiques et carburants sans préciser de taux chiffré dans cet extrait.",
+   "position_lue": "baisser_autrement"
   },
   {
    "livret": "projet-la-famille",
@@ -1793,7 +1901,10 @@
    "modalite": "propose",
    "valeur": null,
    "unite": null,
-   "verbatim": "Les dépenses contraintes de ménages français sont nombreuses ; d’autres mesures permettront de les faire baisser : grâce à la suppression de la redevance audiovisuelle via la privatisation de l’audiovisuel public ou encore grâce à la baisse du prix des péages via la renationalisation des concessions autoroutières."
+   "verbatim": "Les dépenses contraintes de ménages français sont nombreuses ; d’autres mesures permettront de les faire baisser : grâce à la suppression de la redevance audiovisuelle via la privatisation de l’audiovisuel public ou encore grâce à la baisse du prix des péages via la renationalisation des concessions autoroutières.",
+   "avis": "conforme",
+   "avis_raison": "Le passage mentionne explicitement la baisse du prix des péages via la « renationalisation des concessions autoroutières », ce qui correspond bien à la position de nationaliser les autoroutes.",
+   "position_lue": "nationaliser"
   },
   {
    "livret": "projet-la-famille",
@@ -1903,7 +2014,10 @@
    "modalite": "promet",
    "valeur": null,
    "unite": null,
-   "verbatim": "Marine Le Pen s’engage à un moratoire de trois ans sur les sujets sociétaux ; la seule façon d’ouvrir des débats sur ces sujets ne pourra se faire pendant trois ans que par le biais du Referendum d’Initiative Citoyenne que Marine Le Pen mettra en place."
+   "verbatim": "Marine Le Pen s’engage à un moratoire de trois ans sur les sujets sociétaux ; la seule façon d’ouvrir des débats sur ces sujets ne pourra se faire pendant trois ans que par le biais du Referendum d’Initiative Citoyenne que Marine Le Pen mettra en place.",
+   "avis": "conforme",
+   "avis_raison": "Le passage indique explicitement que Marine Le Pen mettra en place le Référendum d'Initiative Citoyenne.",
+   "position_lue": "ric"
   },
   {
    "livret": "projet-la-famille",
@@ -1980,7 +2094,10 @@
    "modalite": "promet",
    "valeur": null,
    "unite": null,
-   "verbatim": "Voilà pourquoi je mettrai en place une règle simple, dès mon élection : l’exonération totale d’impôt sur le revenu avant trente ans."
+   "verbatim": "Voilà pourquoi je mettrai en place une règle simple, dès mon élection : l’exonération totale d’impôt sur le revenu avant trente ans.",
+   "avis": "conforme",
+   "avis_raison": "Le passage indique explicitement l'intention de mettre en place l'exonération totale d'impôt sur le revenu avant trente ans.",
+   "position_lue": "exonerer"
   },
   {
    "livret": "projet-la-jeunesse",
@@ -2024,7 +2141,10 @@
    "modalite": "promet",
    "valeur": null,
    "unite": null,
-   "verbatim": "Concrètement, cela signifie une chose simple : aucun étudiant étranger ne sera logé dans une résidence universitaire publique tant que toutes les demandes formulées par des Français n’auront pas été satisfaites."
+   "verbatim": "Concrètement, cela signifie une chose simple : aucun étudiant étranger ne sera logé dans une résidence universitaire publique tant que toutes les demandes formulées par des Français n’auront pas été satisfaites.",
+   "avis": "conforme",
+   "avis_raison": "Le passage instaure une priorité nationale spécifiquement pour l'accès aux résidences universitaires publiques, ce qui correspond à une application partielle de la mesure.",
+   "position_lue": "partielle"
   },
   {
    "livret": "projet-la-jeunesse",
@@ -2596,7 +2716,10 @@
    "modalite": "propose",
    "valeur": null,
    "unite": null,
-   "verbatim": "Rendre la parole aux citoyens sur la question animale, par la création du référendum d’initiative populaire en matière législative, et donc pour légiférer sur la condition animale."
+   "verbatim": "Rendre la parole aux citoyens sur la question animale, par la création du référendum d’initiative populaire en matière législative, et donc pour légiférer sur la condition animale.",
+   "avis": "conforme",
+   "avis_raison": "Le texte propose explicitement l'instauration d'un référendum d'initiative populaire en matière législative.",
+   "position_lue": "ric"
   },
   {
    "livret": "projet-la-protection-des-animaux",
@@ -2882,7 +3005,10 @@
    "modalite": "propose",
    "valeur": null,
    "unite": null,
-   "verbatim": "Rendre la parole aux citoyens sur la question animale, par la création du référendum d’initiative populaire en matière législative."
+   "verbatim": "Rendre la parole aux citoyens sur la question animale, par la création du référendum d’initiative populaire en matière législative.",
+   "avis": "conforme",
+   "avis_raison": "Le passage mentionne explicitement la création du référendum d’initiative populaire en matière législative.",
+   "position_lue": "ric"
   },
   {
    "livret": "projet-la-sante",
@@ -3201,7 +3327,10 @@
    "modalite": "propose",
    "valeur": null,
    "unite": null,
-   "verbatim": "Il convient donc de supprimer l’AME pour les adultes tout en gardant un dispositif de soins urgents, c’est-àdire ceux mettant en jeu le pronostic vital ou pouvant conduire à une altération grave et durable de l’état de santé de la personne ou d’un enfant à naître."
+   "verbatim": "Il convient donc de supprimer l’AME pour les adultes tout en gardant un dispositif de soins urgents, c’est-àdire ceux mettant en jeu le pronostic vital ou pouvant conduire à une altération grave et durable de l’état de santé de la personne ou d’un enfant à naître.",
+   "avis": "conforme",
+   "avis_raison": "Le passage indique explicitement vouloir supprimer l'AME pour les adultes tout en maintenant la prise en charge des soins urgents.",
+   "position_lue": "urgences"
   },
   {
    "livret": "projet-la-sante",
@@ -3278,7 +3407,10 @@
    "modalite": "promet",
    "valeur": null,
    "unite": null,
-   "verbatim": "Il est temps de revenir au bon sens, d’infliger des peines justes, de les mettre à exécution sans délai et d’expulser les étrangers à leur sortie de prison."
+   "verbatim": "Il est temps de revenir au bon sens, d’infliger des peines justes, de les mettre à exécution sans délai et d’expulser les étrangers à leur sortie de prison.",
+   "avis": "conforme",
+   "avis_raison": "Le passage prévoit explicitement l'expulsion des étrangers à leur sortie de prison, ce qui correspond à la position d'expulser les étrangers délinquants.",
+   "position_lue": "expulser_delinquants"
   },
   {
    "livret": "projet-la-securite",
@@ -3322,7 +3454,10 @@
    "modalite": "propose",
    "valeur": null,
    "unite": null,
-   "verbatim": "Le recours à la force au service de la sécurité des Français nécessite d’instaurer une présomption de légitime défense pour les policiers et les gendarmes."
+   "verbatim": "Le recours à la force au service de la sécurité des Français nécessite d’instaurer une présomption de légitime défense pour les policiers et les gendarmes.",
+   "avis": "conforme",
+   "avis_raison": "Le passage affirme explicitement la volonté d'instaurer une présomption de légitime défense pour les policiers et les gendarmes.",
+   "position_lue": "oui"
   },
   {
    "livret": "projet-la-securite",
@@ -3553,7 +3688,10 @@
    "modalite": "propose",
    "valeur": null,
    "unite": null,
-   "verbatim": "Il est donc nécessaire que la loi soit modifiée pour instaurer des peines minimales."
+   "verbatim": "Il est donc nécessaire que la loi soit modifiée pour instaurer des peines minimales.",
+   "avis": "conforme",
+   "avis_raison": "Le passage préconise explicitement la modification de la loi pour instaurer des peines minimales, ce qui correspond au rétablissement des peines planchers.",
+   "position_lue": "retablir"
   },
   {
    "livret": "projet-la-securite",
@@ -3575,7 +3713,10 @@
    "modalite": "propose",
    "valeur": 16.0,
    "unite": "ans",
-   "verbatim": "La réforme du droit pénal des mineurs entrée en vigueur le 30 septembre 2021 ne résout pas deux problèmes qui sont à la source des parcours délinquants des mineurs : d’une part elle ne permet pas dans tous les cas une sanction immédiate, alors que la rapidité de la sanction est un élément essentiel pour faire comprendre la gravité de l’acte commis et pour limiter la récidive, et d’autre part, elle n’abaisse pas la majorité pénale, par exemple à seize ans."
+   "verbatim": "La réforme du droit pénal des mineurs entrée en vigueur le 30 septembre 2021 ne résout pas deux problèmes qui sont à la source des parcours délinquants des mineurs : d’une part elle ne permet pas dans tous les cas une sanction immédiate, alors que la rapidité de la sanction est un élément essentiel pour faire comprendre la gravité de l’acte commis et pour limiter la récidive, et d’autre part, elle n’abaisse pas la majorité pénale, par exemple à seize ans.",
+   "avis": "conforme",
+   "avis_raison": "Le passage déplore que la réforme n'abaisse pas la majorité pénale, indiquant ainsi une position favorable à son abaissement.",
+   "position_lue": "abaisser"
   },
   {
    "livret": "projet-la-securite",
@@ -3674,7 +3815,10 @@
    "modalite": "propose",
    "valeur": null,
    "unite": null,
-   "verbatim": "Cette situation, préjudiciable à la sécurité en raison de la récidive endémique, et contraire au bon sens, plaide pour que les étrangers condamnés pour avoir commis des crimes ou des délits soient systématiquement expulsés."
+   "verbatim": "Cette situation, préjudiciable à la sécurité en raison de la récidive endémique, et contraire au bon sens, plaide pour que les étrangers condamnés pour avoir commis des crimes ou des délits soient systématiquement expulsés.",
+   "avis": "conforme",
+   "avis_raison": "Le passage préconise explicitement l'expulsion systématique des étrangers condamnés pour des crimes ou des délits.",
+   "position_lue": "expulser_delinquants"
   },
   {
    "livret": "projet-la-securite",
@@ -3685,7 +3829,10 @@
    "modalite": "propose",
    "valeur": null,
    "unite": null,
-   "verbatim": "Cette surreprésentation doit conduire à expulser dans son pays d’origine ou dans tout autre pays où il peut légalement séjourner, selon des modalités nouvelles, tout étranger en situation irrégulière le plus tôt possible après son entrée sur le territoire."
+   "verbatim": "Cette surreprésentation doit conduire à expulser dans son pays d’origine ou dans tout autre pays où il peut légalement séjourner, selon des modalités nouvelles, tout étranger en situation irrégulière le plus tôt possible après son entrée sur le territoire.",
+   "avis": "conforme",
+   "avis_raison": "Le texte prévoit d'expulser « tout étranger en situation irrégulière », ce qui correspond au caractère systématique indiqué.",
+   "position_lue": "systematique"
   },
   {
    "livret": "projet-la-securite",
@@ -4202,7 +4349,10 @@
    "modalite": "promet",
    "valeur": null,
    "unite": null,
-   "verbatim": "Par ailleurs, le patrimoine bénéficiera du moratoire sur les éoliennes puis de leur démantèlement progressif (cf. Livret M l’environnement et l’énergie)"
+   "verbatim": "Par ailleurs, le patrimoine bénéficiera du moratoire sur les éoliennes puis de leur démantèlement progressif (cf. Livret M l’environnement et l’énergie)",
+   "avis": "conforme",
+   "avis_raison": "Le passage mentionne explicitement un moratoire suivi du démantèlement progressif des éoliennes.",
+   "position_lue": "demanteler"
   },
   {
    "livret": "projet-le-patrimoine",
@@ -4329,12 +4479,15 @@
    "livret": "projet-le-patrimoine",
    "page": 14,
    "enjeu": "service_militaire",
-   "position": "volontaire",
+   "position": null,
    "objet": null,
    "modalite": "propose",
    "valeur": 6.0,
    "unite": "mois",
-   "verbatim": "Un service national du patrimoine de six mois renouvelables, ouvert aux jeunes de 18 à 24 ans sur la base du volontariat, permet"
+   "verbatim": "Un service national du patrimoine de six mois renouvelables, ouvert aux jeunes de 18 à 24 ans sur la base du volontariat, permet",
+   "avis": "aucune",
+   "avis_raison": "Le passage porte sur la création d'un service national civil dédié au patrimoine et non sur le rétablissement d'un service militaire.",
+   "position_lue": "volontaire"
   },
   {
    "livret": "projet-le-patrimoine",
@@ -5016,7 +5169,10 @@
    "modalite": "promet",
    "valeur": null,
    "unite": null,
-   "verbatim": "Nous prononcerons un moratoire sur l’éolien et le solaire ; pour l’éolien, nous lancerons le démantèlement progressif des sites en commençant par ceux qui arrivent en fin de vie."
+   "verbatim": "Nous prononcerons un moratoire sur l’éolien et le solaire ; pour l’éolien, nous lancerons le démantèlement progressif des sites en commençant par ceux qui arrivent en fin de vie.",
+   "avis": "conforme",
+   "avis_raison": "Le passage mentionne explicitement le lancement d'un démantèlement progressif des sites éoliens en plus d'un moratoire.",
+   "position_lue": "demanteler"
   },
   {
    "livret": "projet-lecologie",
@@ -5027,7 +5183,10 @@
    "modalite": "promet",
    "valeur": null,
    "unite": null,
-   "verbatim": "Afin de produire une électricité décarbonée, à bas prix, accessible à tous, nous procéderons au développement des énergies renouvelables, hydroélectricité et géothermie et à la relance du nucléaire (mise en chantier de réacteurs de 4e génération et microcentrales), et de la filière hydrogène, avec pour objectif la baisse du prix de l’électricité pour les ménages et l’industrie, condition des relocalisations industrielles et de la sortie de la précarité énergétique pour plusieurs centaines de milliers de ménages (cf. livret M l’énergie)."
+   "verbatim": "Afin de produire une électricité décarbonée, à bas prix, accessible à tous, nous procéderons au développement des énergies renouvelables, hydroélectricité et géothermie et à la relance du nucléaire (mise en chantier de réacteurs de 4e génération et microcentrales), et de la filière hydrogène, avec pour objectif la baisse du prix de l’électricité pour les ménages et l’industrie, condition des relocalisations industrielles et de la sortie de la précarité énergétique pour plusieurs centaines de milliers de ménages (cf. livret M l’énergie).",
+   "avis": "conforme",
+   "avis_raison": "Le passage prévoit explicitement la relance du nucléaire via la mise en chantier de nouveaux réacteurs de 4e génération et de microcentrales.",
+   "position_lue": "quelques"
   },
   {
    "livret": "projet-lecologie",
@@ -5214,7 +5373,10 @@
    "modalite": "promet",
    "valeur": 5.5,
    "unite": "%",
-   "verbatim": "Par la détaxation partielle de l’impôt sur les carburants ( TVA réduite de 20 % à 5.5 %), nous engagerons la baisse du prix de l’énergie."
+   "verbatim": "Par la détaxation partielle de l’impôt sur les carburants ( TVA réduite de 20 % à 5.5 %), nous engagerons la baisse du prix de l’énergie.",
+   "avis": "conforme",
+   "avis_raison": "Le passage mentionne explicitement la réduction de la TVA sur les carburants de 20 % à 5,5 %.",
+   "position_lue": "baisser_5_5"
   },
   {
    "livret": "projet-lecologie",
@@ -5473,12 +5635,15 @@
    "livret": "projet-lecologie",
    "page": 17,
    "enjeu": "libre_echange",
-   "position": "rejeter",
+   "position": null,
    "objet": null,
    "modalite": "refuse",
    "valeur": null,
    "unite": null,
-   "verbatim": "L’écologie est incompatible avec le libre-échange, course au moins-disant fiscal, social et environnemental ; l’écologie est incompatible avec l’ouverture des frontières et avec la mobilité individuelle infinie ; l’écologie est incompatible avec la croissance illimitée des quantités, au détriment de la qualité."
+   "verbatim": "L’écologie est incompatible avec le libre-échange, course au moins-disant fiscal, social et environnemental ; l’écologie est incompatible avec l’ouverture des frontières et avec la mobilité individuelle infinie ; l’écologie est incompatible avec la croissance illimitée des quantités, au détriment de la qualité.",
+   "avis": "aucune",
+   "avis_raison": "Le passage énonce un principe général d'incompatibilité entre écologie et libre-échange sans formuler d'engagement explicite sur la ratification ou le rejet d'accords spécifiques comme le Mercosur.",
+   "position_lue": "rejeter"
   },
   {
    "livret": "projet-les-porteurs-de-handicap",
@@ -5896,7 +6061,10 @@
    "modalite": "promet",
    "valeur": null,
    "unite": null,
-   "verbatim": "L’Outre-mer bénéficiera des mesures prévues dans le projet de loi sur l’immigration qui sera soumis à référendum dès l’élection de Marine Le Pen."
+   "verbatim": "L’Outre-mer bénéficiera des mesures prévues dans le projet de loi sur l’immigration qui sera soumis à référendum dès l’élection de Marine Le Pen.",
+   "avis": "conforme",
+   "avis_raison": "Le passage indique explicitement qu'un projet de loi sur l'immigration sera soumis à référendum dès l'élection de la candidate.",
+   "position_lue": "oui"
   },
   {
    "livret": "projet-outre-mer",
@@ -6149,7 +6317,10 @@
    "modalite": "promet",
    "valeur": null,
    "unite": null,
-   "verbatim": "S’agissant des produits énergétiques, les Ultramarins bénéficieront, comme en Métropole, de la baisse de la TVA."
+   "verbatim": "S’agissant des produits énergétiques, les Ultramarins bénéficieront, comme en Métropole, de la baisse de la TVA.",
+   "avis": "conforme",
+   "avis_raison": "Le passage mentionne explicitement une baisse de la TVA sur les produits énergétiques sans préciser le taux de 5,5 % dans cet extrait, ce qui correspond à la position 'baisser_autrement'.",
+   "position_lue": "baisser_autrement"
   },
   {
    "livret": "projet-outre-mer",
@@ -6435,7 +6606,10 @@
    "modalite": "propose",
    "valeur": null,
    "unite": null,
-   "verbatim": "La mise en œuvre des mesures issues du référendum sur l’immigration, et en particulier le retour des MNA clandestins de Mayotte dans leur pays d’origine."
+   "verbatim": "La mise en œuvre des mesures issues du référendum sur l’immigration, et en particulier le retour des MNA clandestins de Mayotte dans leur pays d’origine.",
+   "avis": "conforme",
+   "avis_raison": "Le passage prévoit explicitement la mise en œuvre des mesures issues d'un référendum sur l'immigration, validant ainsi la tenue de celui-ci.",
+   "position_lue": "oui"
   },
   {
    "livret": "projet-outre-mer",

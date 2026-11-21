@@ -210,6 +210,7 @@ function nomSujet(s) {
 const PAGES = [
   ["index.html", "accueil", "Accueil", "observatoire"],
   ["ecarts.html", "ecarts", "Écarts", "validation"],
+  ["coherence.html", "coherence", "Cohérence", "chiffres"],
   ["enjeux.html", "enjeux", "Enjeux", "sujets"],
   ["figure.html", "figures", "Figures", "locuteurs"],
   ["themes.html", "themes", "Thèmes", "chiffres"],

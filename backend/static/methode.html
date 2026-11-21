@@ -48,9 +48,11 @@
     <div class="texte">
       <p>Les écarts sont cherchés par requête sur le registre : une même figure à deux crans
         différents à plus de trente jours d’intervalle, une déclaration qui s’éloigne du programme de
-        son parti, deux membres d’un même parti sur des positions opposées. Le programme de référence
-        est celui du RN en 2022, lu dans ses livrets : 605 engagements, chacun avec son livret et sa
-        page.</p>
+        son parti, deux membres d’un même parti sur des positions opposées. Les programmes lus sont ceux
+        du RN : le projet présidentiel de 2022 et ses seize livrets thématiques, puis les programmes des
+        législatives et des européennes de 2024, soit 949 engagements, chacun avec sa page. Une déclaration se
+        compare au programme en vigueur à sa date. Un second modèle a relu chaque engagement rangé sur un
+        enjeu : sur 127, il en a confirmé 101, corrigé 9 et écarté 17.</p>
       <p>Chaque déclaration prise dans un écart reçoit un second avis, qui relit le tweet. Puis deux
         juges de familles différentes (GPT-5.6 Luna et Gemini 3.7 Flash) relisent les deux textes côte
         à côte. Un écart n’est retenu que si les deux le tiennent pour réel. Les paires de
@@ -58,6 +60,22 @@
         s’affiche une fois, avec les noms de chaque camp.</p>
       <p>Les écarts concentrent les erreurs de lecture : une position mal lue crée mécaniquement un
         faux écart. C’est pour cela que près de neuf écarts détectés sur dix sont écartés par les juges.</p>
+    </div>
+
+    <div class="band"><h2>L’indice de cohérence</h2></div>
+    <div class="texte">
+      <p>Pour un parti et un enjeu, trois mesures sur 100. L’alignement est la part des figures dont la
+        dernière position, dans les douze derniers mois, est la position la plus répandue du parti ; il demande
+        trois figures au moins. La constance est la part des figures qui se sont exprimées au moins deux fois,
+        à plus de trente jours d’écart, sans revirement retenu par les juges ; il en faut deux. La conformité
+        est la part des déclarations conformes au programme en vigueur à leur date ; il en faut cinq.</p>
+      <p>L’indice d’un enjeu est la moyenne des mesures disponibles, s’il y en a deux. L’indice d’un parti
+        additionne les mesures de tous ses enjeux, si bien qu’un enjeu dont parlent beaucoup de figures pèse
+        davantage, et n’est donné qu’à partir de cinq enjeux mesurés. Le parti d’une déclaration est celui de
+        son auteur le jour où il l’a écrite. Seul le RN réunit aujourd’hui assez de déclarations.</p>
+      <p>L’indice hérite des erreurs de lecture : une position mal lue fait baisser l’alignement ou la
+        conformité. Certaines échelles ont aussi des positions emboîtées, comme le moratoire et le démantèlement
+        des éoliennes, ce qui compte comme un écart ce qui n’est qu’une partie du programme.</p>
     </div>
 
     <div class="band"><h2>Ce qui a été mesuré</h2></div>

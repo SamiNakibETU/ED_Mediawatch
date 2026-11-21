@@ -146,16 +146,28 @@ function render() {
   });
 }
 
+// La cohérence du RN sur cet enjeu, telle que la page Cohérence la mesure.
+function coherenceLigne(c, slug) {
+  const x = c && c.partis.RN.enjeux.find((e) => e.enjeu === slug);
+  if (!x || x.indice == null) return "";
+  const m = (k, l) => (x[k] ? `${l} ${x[k].part} (${x[k].n} sur ${x[k].sur})` : null);
+  return `<p class="sujet__meta">Indice de cohérence du RN sur cet enjeu : ${x.indice} sur 100. ${
+    [m("alignement", "Alignement"), m("constance", "constance"), m("programme", "programme")].filter(Boolean).join(", ")}.
+    <a href="coherence.html">Définition</a></p>`;
+}
+
 // Les écarts de la fiche sont ceux que les deux juges ont retenus, regroupés par fait. Les
 // changements de cran bruts se lisent plus bas, sur les trajectoires.
 async function faits(slug) {
   try {
     const p = `enjeu=${encodeURIComponent(slug)}&limit=50&offset=0`;
-    const [r, f] = await Promise.all([fetchJSON(`/ecarts/faits?juge=retenu&${p}`), fetchJSON(`/ecarts/faits?juge=faible&${p}`)]);
+    const [r, f, c] = await Promise.all([fetchJSON(`/ecarts/faits?juge=retenu&${p}`), fetchJSON(`/ecarts/faits?juge=faible&${p}`),
+      fetchJSON("/coherence").catch(() => null)]);
     if (state.slug !== slug || !$("#faits")) return;
     $("#faitsMeta").textContent = `${r.total} retenu${r.total > 1 ? "s" : ""} par les juges, ${f.total} mouvement${f.total > 1 ? "s" : ""} faible${f.total > 1 ? "s" : ""}`;
     $("#faits").innerHTML = (r.items.map((e) => ecartCarte(e)).join("")
       || '<p class="state state--inline">Aucun écart retenu par les juges sur cet enjeu.</p>')
+      + coherenceLigne(c, slug)
       + (f.total ? `<details class="fig-enjeu"><summary><span class="fig-enjeu__titre">Mouvements faibles</span>
           <span class="sujet__meta">${f.total}, jugés réels mais ténus</span></summary>${f.items.map((e) => ecartCarte(e)).join("")}</details>` : "");
   } catch (err) {

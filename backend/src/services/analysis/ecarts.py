@@ -68,10 +68,32 @@ def _sain(d: Declaration) -> bool:
 
 # ── Détection ───────────────────────────────────────────────────────────
 
+async def perimer_programme(db) -> int:
+    """Met de côté les écarts au programme dont l'engagement n'existe plus.
+
+    Relire un programme (second avis, nouvelle source) recharge ses engagements sous de nouveaux
+    identifiants : l'écart ancien ne pointe plus sur rien, et la détection en crée un neuf, que les juges
+    relisent. Un écart déjà tranché par un relecteur n'est pas touché.
+    """
+    from sqlalchemy import update
+
+    r = await db.execute(
+        update(Ecart)
+        .where(Ecart.type == "programme", Ecart.statut == "a_relire",
+               Ecart.engagement_id.not_in(select(EngagementProgramme.id)),
+               or_(Ecart.auto.is_(None), Ecart.auto != "ecarte"))
+        .values(auto="ecarte", juge_explication="Engagement du programme relu depuis : écart recalculé."))
+    await db.commit()
+    return r.rowcount or 0
+
+
 async def detecter() -> dict:
     """Recalcule les écarts des quatre types. N'écrase jamais un écart déjà tranché."""
     factory = get_session_factory()
     async with factory() as db:
+        perimes = await perimer_programme(db)
+        if perimes:
+            logger.info("ecarts.programme_perimes", n=perimes)
         rows = (await db.execute(
             select(Declaration, Personality)
             .join(Personality, Personality.id == Declaration.personality_id)
@@ -130,14 +152,17 @@ async def detecter() -> dict:
         for g in prog:
             if g.enjeu == slug:
                 crans_prog[(g.parti, g.annee)].append(g)
+        # Une déclaration se lit contre le programme en vigueur à sa date : le plus récent qui traite
+        # l'enjeu. Sans cela, un propos de 2025 conforme au programme de 2024 sortait en écart à celui de 2022.
         for d in items:
-            for (parti, annee), engs in crans_prog.items():
-                if parti_de.get(d.id) != parti or d.published_at.year < annee:
-                    continue
-                if d.position not in {g.position for g in engs}:
-                    proche = min(engs, key=lambda g: abs(rang[g.position] - rang[d.position]))
-                    ajouter("programme", slug, d, eng=proche,
-                            ampleur=abs(rang[proche.position] - rang[d.position]))
+            en_vigueur = [a for (p, a) in crans_prog if p == parti_de.get(d.id) and a <= d.published_at.year]
+            if not en_vigueur:
+                continue
+            engs = crans_prog[(parti_de.get(d.id), max(en_vigueur))]
+            if d.position not in {g.position for g in engs}:
+                proche = min(engs, key=lambda g: abs(rang[g.position] - rang[d.position]))
+                ajouter("programme", slug, d, eng=proche,
+                        ampleur=abs(rang[proche.position] - rang[d.position]))
 
         # 3. Deux voix du même parti, au même moment : pour chaque paire de
         # figures et de crans, les deux propos les plus proches dans le temps.
