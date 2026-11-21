@@ -25,14 +25,27 @@ def _important(s: Scrutin) -> bool:
 
 
 async def noms_des_groupes(db) -> dict[str, str]:
-    """organeRef -> RN, UDR, … : le parti le plus fréquent parmi les figures suivies du groupe."""
-    rows = (await db.execute(select(Vote.groupe, Personality.group_code)
-                             .join(Personality, Personality.id == Vote.personality_id))).all()
+    """organeRef -> RN, UDR, … : le parti de la grande majorité des figures suivies du groupe.
+
+    Un groupe n'est nommé que s'il réunit au moins cinq figures suivies, dont 80 % du même parti. Sans ce
+    seuil, le groupe LR de 2022-2024, où siégeaient deux figures aujourd'hui à l'UDR, prenait le nom d'UDR.
+    Les autres groupes sont « autre » et sortent des comptes par parti.
+    """
+    from sqlalchemy import func
+
+    rows = (await db.execute(select(Vote.groupe, Personality.group_code, func.count(func.distinct(Vote.personality_id)))
+                             .join(Personality, Personality.id == Vote.personality_id)
+                             .group_by(Vote.groupe, Personality.group_code))).all()
     par: dict[str, Counter] = defaultdict(Counter)
-    for g, code in rows:
+    for g, code, n in rows:
         if g:
-            par[g][code or "?"] += 1
-    return {g: c.most_common(1)[0][0] for g, c in par.items()}
+            par[g][code or "?"] += n
+    noms = {}
+    for g, c in par.items():
+        code, n = c.most_common(1)[0]
+        total = sum(c.values())
+        noms[g] = code if total >= 5 and n / total >= 0.8 else "autre"
+    return noms
 
 
 def _scrutin(s: Scrutin) -> dict:
@@ -55,7 +68,9 @@ async def dissidences(db, *, limit: int = 40) -> dict:
     par: dict[tuple[str, str], dict] = {}
     exprimes, dissidents = Counter(), Counter()
     for uid, groupe, majorite, vote, n in rows:
-        parti = noms.get(groupe, "?")
+        parti = noms.get(groupe, "autre")
+        if parti == "autre":
+            continue
         exprimes[parti] += n
         x = par.setdefault((uid, groupe), {"parti": parti, "majorite": majorite, "alignes": 0, "contre_groupe": 0})
         if vote == majorite:

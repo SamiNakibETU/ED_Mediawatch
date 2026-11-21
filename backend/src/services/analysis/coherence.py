@@ -139,7 +139,9 @@ async def votes_par_enjeu(db) -> dict[tuple[str, str], tuple[int, int]]:
         .group_by(Vote.groupe, Scrutin.enjeu, Vote.vote == Vote.majorite_groupe))).all()
     out: dict[tuple[str, str], list[int]] = defaultdict(lambda: [0, 0])
     for groupe, enjeu, aligne, n in rows:
-        cle = (noms.get(groupe, "?"), enjeu)
+        if noms.get(groupe, "autre") == "autre":
+            continue
+        cle = (noms[groupe], enjeu)
         out[cle][1] += n
         if aligne:
             out[cle][0] += n
