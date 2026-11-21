@@ -27,6 +27,7 @@ from src.routers import (
     etat,
     figure,
     themes,
+    votes,
     health,
     llm_costs,
     meta,
@@ -127,6 +128,7 @@ app.include_router(themes.router)
 app.include_router(ecarts.router)
 app.include_router(etat.router)
 app.include_router(coherence.router)
+app.include_router(votes.router)
 app.include_router(couverture.router)
 app.include_router(revue.router)
 app.include_router(pipeline_status.router)

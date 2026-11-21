@@ -129,6 +129,9 @@ function render() {
     <div class="band"><h2>Les écarts</h2><span class="spacer"></span><p id="faitsMeta"></p></div>
     <div id="faits"><p class="state state--inline">Chargement…</p></div>
 
+    <div class="band"><h2>À l’Assemblée</h2><span class="spacer"></span><p>Scrutins dont le titre touche cet enjeu</p></div>
+    <div id="assemblee"><p class="state state--inline">Chargement…</p></div>
+
     <div class="band"><h2>Les trajectoires</h2></div>
     ${nPos ? `<div class="card">${trajectoires(f)}</div>`
       : '<p class="state state--inline">Aucune position lue sur cet enjeu pour l’instant.</p>'}`;
@@ -175,6 +178,26 @@ async function faits(slug) {
   }
 }
 
+// Les scrutins dont le titre touche l'enjeu, et comment les figures suivies ont voté, par parti.
+async function assemblee(slug) {
+  try {
+    const liste = await fetchJSON(`/votes/enjeu/${encodeURIComponent(slug)}`);
+    if (state.slug !== slug || !$("#assemblee")) return;
+    if (!liste.length) {
+      $("#assemblee").innerHTML = '<p class="state state--inline">Aucun scrutin public dont le titre touche cet enjeu depuis 2022.</p>';
+      return;
+    }
+    const panel = (p) => Object.entries(p).map(([parti, c]) => `<span class="decl-ligne__k">${escapeHtml(parti)}</span> ${
+      ["pour", "contre", "abstention", "non_votant"].filter((k) => c[k]).map((k) => `${c[k]} ${VOTE_LIB[k]}`).join(", ")}`).join(" ; ");
+    $("#assemblee").innerHTML = liste.slice(0, 8).map((x) => `<article class="position">${scrutinTete(x)}
+      <p class="sujet__meta">Figures suivies : ${panel(x.panel) || "aucune n’a pris part au vote"}</p></article>`).join("")
+      + (liste.length > 8 ? `<p class="sujet__meta">${liste.length - 8} autres scrutins, des amendements surtout.</p>` : "")
+      + '<p class="sujet__meta">Le rattachement d’un scrutin à l’enjeu se fait par les mots de son titre ; il est à vérifier.</p>';
+  } catch (err) {
+    $("#assemblee").innerHTML = `<p class="state state--error">Les scrutins ne se sont pas chargés (${escapeHtml(err.message)}).</p>`;
+  }
+}
+
 async function load() {
   const liste = await fetchJSON("/enjeux");
   // Par défaut, l'enjeu le mieux documenté : arriver sur une fiche vide ne
@@ -210,6 +233,7 @@ async function fiche() {
     state.fiche = await fetchJSON(`/enjeux/${state.slug}`);
     render();
     faits(state.slug);
+    assemblee(state.slug);
   } catch (err) {
     $("#fiche").innerHTML = `<p class="state state--error">La fiche ne s’est pas chargée (${escapeHtml(err.message)}).</p>`;
   }

@@ -39,7 +39,7 @@ SORTIE = BACKEND.parent / "site"
 FIXES = [
     "/enjeux", "/enjeux/etat", "/enjeux/recentes?limit=10", "/ecarts/faits?juge=retenu&limit=3&offset=0",
     "/figures", "/ecarts/compte", "/ecarts/divergences?jours=365", "/revue", "/themes/tree", "/themes/sujets",
-    "/etat", "/coherence",
+    "/etat", "/coherence", "/votes/dissidences?limit=12",
 ]
 STATUTS = ["retenu", "faible", "ecarte", "attente"]                 # ecarts.js
 TYPES = ["", "temps", "programme", "parti", "chiffre"]
@@ -89,11 +89,13 @@ async def exporter(sortie: Path) -> dict:
             await ex.get(f"/enjeux/{e['slug']}")
             for juge in ("retenu", "faible"):
                 await ex.get(f"/ecarts/faits?juge={juge}&enjeu={quote(e['slug'], safe='')}&limit=50&offset=0")
+            await ex.get(f"/votes/enjeu/{quote(e['slug'], safe='')}")
 
         for f in (res["/figures"] or {}).get("items", []):
             await ex.get(f"/figures/{f['id']}?limit=1&offset=0")
             await ex.get(f"/figures/{f['id']}/positions")
             await ex.get(f"/figures/{f['id']}/couverture")
+            await ex.get(f"/votes/figure/{f['id']}")
 
         for juge in STATUTS:
             for t in TYPES:

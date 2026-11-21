@@ -88,12 +88,16 @@ function render(d) {
     <div class="band"><h2>Ses positions sur les enjeux</h2><span class="spacer"></span><p id="posMeta"></p></div>
     <div id="positions"><p class="state state--inline">Chargement…</p></div>
 
+    <div class="band"><h2>Ses votes à l’Assemblée</h2><span class="spacer"></span><p id="votesMeta"></p></div>
+    <div id="votes"><p class="state state--inline">Chargement…</p></div>
+
     <div class="band"><h2>Ses tweets en base, mois par mois</h2><span class="spacer"></span>
       <p>Ce que la collecte a ramené, pas ce que la figure a publié.</p></div>
     <div id="couverture"><p class="state state--inline">Chargement…</p></div>`;
 
   renderPositions(f.id);
   renderCouverture(f.id);
+  renderVotes(f.id);
 }
 
 function positionLigne(p, avant) {
@@ -149,6 +153,27 @@ async function renderPositions(id) {
   }
 }
 
+
+// Ses votes : d'abord ceux où elle s'est séparée de son groupe, puis ceux sur les textes qui touchent un enjeu.
+async function renderVotes(id) {
+  const host = $("#votes");
+  try {
+    const d = await fetchJSON(`/votes/figure/${id}`);
+    if (state.id !== id || !$("#votes")) return;
+    if (!d.scrutins) {
+      host.innerHTML = '<p class="state state--inline">Pas de vote enregistré : cette figure ne siège pas à l’Assemblée, ou pas depuis 2022.</p>';
+      return;
+    }
+    $("#votesMeta").textContent = `${fmtNum(d.exprimes)} votes exprimés, dont ${fmtNum(d.nb_dissidents)} contre la position de son groupe`;
+    const ligne = (x) => `<article class="position">${scrutinTete(x)}
+      <p class="sujet__meta">A voté ${VOTE_LIB[x.vote]}${x.majorite && x.vote !== x.majorite ? `, quand son groupe votait ${VOTE_LIB[x.majorite] || x.majorite}` : ""}.</p></article>`;
+    host.innerHTML = (d.dissidents.length ? `<p class="section-label">Contre la position de son groupe</p>${d.dissidents.slice(0, 10).map(ligne).join("")}` : "")
+      + (d.sur_enjeu.length ? `<p class="section-label">Sur les textes qui touchent un enjeu</p>${d.sur_enjeu.slice(0, 10).map(ligne).join("")}` : "");
+    if (!host.innerHTML) host.innerHTML = '<p class="state state--inline">Aucun vote contre son groupe, aucun vote d’ensemble sur un enjeu suivi.</p>';
+  } catch (err) {
+    host.innerHTML = `<p class="state state--error">Les votes ne se sont pas chargés (${escapeHtml(err.message)}).</p>`;
+  }
+}
 
 // La couverture : sans elle, l'absence d'écart chez une figure se lit comme de la constance,
 // alors qu'elle tient souvent à un historique que la collecte n'a pas pu ramener.

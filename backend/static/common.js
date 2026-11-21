@@ -487,3 +487,15 @@ function ecartCarte(e, pied = "") {
     ${pied}
   </article>`;
 }
+
+// ── Un scrutin de l'Assemblée ───────────────────────────────────────────────
+
+const VOTE_LIB = { pour: "pour", contre: "contre", abstention: "abstention", non_votant: "non-votant" };
+
+function scrutinTete(s) {
+  return `<p class="entry__head"><a class="speaker" href="${escapeHtml(s.url)}" target="_blank" rel="noopener">Scrutin n° ${s.numero}</a>
+    <span class="tag">${s.type === "SPS" ? "solennel" : s.type === "MOC" ? "motion de censure" : "ordinaire"}</span>
+    <span class="stamp">${jourLong(s.date)}</span><span class="spacer"></span>
+    <span class="sujet__meta">${escapeHtml(s.sort || "")}${s.pour != null ? `, ${s.pour} pour, ${s.contre} contre` : ""}</span></p>
+    <p class="position__q">${escapeHtml(s.titre)}</p>`;
+}

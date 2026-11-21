@@ -40,3 +40,20 @@ fetchJSON("/coherence").then((r) => {
 }).catch((err) => {
   $("#partis").innerHTML = `<p class="state state--error">L’indice ne s’est pas chargé (${escapeHtml(err.message)}).</p>`;
 });
+
+fetchJSON("/votes/dissidences?limit=12").then((d) => {
+  const partis = Object.entries(d.par_parti).filter(([, x]) => x.votes_exprimes);
+  if (!partis.length) { $("#votesPartis").innerHTML = '<p class="state state--inline">Aucun vote importé.</p>'; return; }
+  $("#votesMeta").textContent = `${fmtNum(d.total_scrutins_partages)} scrutins où au moins un député suivi s’est séparé de son groupe`;
+  $("#votesPartis").innerHTML = `<div class="statbar">${partis.map(([p, x]) => `<span class="statbar__item"><span class="statbar__n">${
+    x.part.toLocaleString("fr-FR")} %</span> ${escapeHtml(NOMS[p] || p)} (${fmtNum(x.dissidents)} sur ${fmtNum(x.votes_exprimes)} votes)</span>`).join("")}</div>`;
+  const camps = (s) => {
+    const c = {};
+    s.dissidents.forEach((x) => { (c[x.vote] = c[x.vote] || []).push(x); });
+    return Object.entries(c).map(([vote, xs]) => `<details class="fig-enjeu"><summary><span class="fig-enjeu__titre">${xs.length} ${VOTE_LIB[vote]}</span></summary>
+      <p class="sujet__meta">${xs.map((x) => `<a href="figure.html?id=${x.id}">${escapeHtml(x.nom)}</a>`).join(", ")}</p></details>`).join("");
+  };
+  $("#votesScrutins").innerHTML = `<p class="section-label">Les scrutins les plus partagés, votes d’ensemble d’abord</p>${d.scrutins.map((s) => `<article class="position">${scrutinTete(s)}
+    <p class="sujet__meta">${escapeHtml(NOMS[s.parti] || s.parti)} : ${s.alignes} ${VOTE_LIB[s.majorite] || s.majorite}, la position la plus fréquente du groupe. Contre elle :</p>
+    ${camps(s)}</article>`).join("")}`;
+}).catch(() => { $("#votesPartis").innerHTML = ""; });
