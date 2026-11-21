@@ -41,7 +41,7 @@ function renderList() {
         ${portrait(f.full_name, f.handle)}
         <span>
           <span class="referent__label">${escapeHtml(f.full_name)}</span>
-          <span class="referent__meta">${f.n_claims ? `${fmtNum(f.n_claims)} propos` : "aucun propos"}</span>
+          <span class="referent__meta">${f.n_declarations ? `${fmtNum(f.n_declarations)} déclaration${f.n_declarations > 1 ? "s" : ""}` : "aucune déclaration"}, ${fmtNum(f.n_tweets)} tweets</span>
         </span>
       </button>`).join("")
     : '<p class="state">Aucune figure ne correspond.</p>';
@@ -273,23 +273,23 @@ function render(d) {
           ${f.handle ? `<a class="handle" href="https://x.com/${f.handle}" target="_blank" rel="noopener">@${escapeHtml(f.handle)}</a>` : ""}
         </div>
         <div class="statbar">
-          <span class="statbar__item"><span class="statbar__n">${fmtNum(s.n_claims)}</span> déclarations</span>
-          <span class="statbar__item"><span class="statbar__n statbar__n--accent">${fmtNum(conf)}</span>
-            sujets à plusieurs voix</span>
-          <span class="statbar__item"><span class="statbar__n">${months}</span> mois couverts</span>
-          <span class="statbar__item">${escapeHtml(periode(s.first_seen, s.last_seen))}</span>
+          <span class="statbar__item"><span class="statbar__n">${fmtNum(s.n_posts)}</span> tweets en base</span>
+          <span class="statbar__item"><span class="statbar__n" id="statDecl">…</span> déclarations au registre</span>
+          <span class="statbar__item"><span class="statbar__n" id="statEnjeux">…</span> enjeux</span>
+          <span class="statbar__item"><span class="statbar__n statbar__n--accent" id="statEcarts">…</span> écarts retenus</span>
         </div>
       </div>
     </header>
 
     ${collecteMuette(f)}
 
-    ${months < 24 && s.first_seen ? `<p class="caveat">
-      Un changement de position se lit sur plusieurs années. En deçà, l’absence de revirement
-      ne prouve rien, c’est une limite du corpus, pas un résultat.</p>` : ""}
-
     <div class="band"><h2>Ses positions sur les enjeux</h2><span class="spacer"></span><p id="posMeta"></p></div>
     <div id="positions"><p class="state state--inline">Chargement…</p></div>
+
+    <div class="band"><h2>Relevé de l’été 2026</h2></div>
+    <p class="dek">Ce qui suit vient de la première chaîne de lecture, arrêtée en septembre 2026 : propos
+      extraits des tweets et de la presse, sujets, chronologie. Gardé pour mémoire ; les positions
+      ci-dessus font foi.</p>
 
     <div class="band"><h2>Quand ${escapeHtml(f.full_name)} parle</h2>
       <span class="spacer"></span>
@@ -372,9 +372,13 @@ async function renderPositions(id) {
     if (state.id !== id || !$("#positions")) return;
     if (!d.enjeux.length) {
       host.innerHTML = '<p class="state state--inline">Aucune position lue dans ses tweets sur les enjeux du référentiel.</p>';
+      ["#statDecl", "#statEnjeux", "#statEcarts"].forEach((i) => ($(i).textContent = "0"));
       return;
     }
-    $("#posMeta").textContent = `${fmtNum(d.declarations)} déclarations sur ${d.enjeux.length} enjeux, lues dans ses tweets.`;
+    $("#posMeta").textContent = "Lues dans ses tweets, dans l’ordre du temps.";
+    $("#statDecl").textContent = fmtNum(d.declarations);
+    $("#statEnjeux").textContent = d.enjeux.length;
+    $("#statEcarts").textContent = d.ecarts.total;
     const ec = d.ecarts.items;
     host.innerHTML = `${ec.length ? `<p class="section-label">Écarts retenus par les juges</p>${ec.map((e) => ecartCarte(e)).join("")}` : ""}
       ${d.mouvements_faibles ? `<p class="sujet__meta">${fmtNum(d.mouvements_faibles)} mouvement${d.mouvements_faibles > 1 ? "s" : ""} faible${d.mouvements_faibles > 1 ? "s" : ""} relevé${d.mouvements_faibles > 1 ? "s" : ""} par ailleurs, à voir sur <a href="ecarts.html">la page des écarts</a>.</p>` : ""}

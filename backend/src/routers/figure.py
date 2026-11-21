@@ -37,21 +37,21 @@ async def list_figures(
     limit: int = Query(200, ge=1, le=500),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
-    """Répertoire des figures, ordonné par volume de propos consignés.
+    """Répertoire des figures, ordonné par nombre de déclarations au registre.
 
     Une figure sans déclaration n'est pas masquée : son absence est une
     information (collecte muette, compte introuvable) et le compteur à zéro la
     rend visible plutôt que de la faire disparaître.
     """
-    counts = dict(
-        (
-            await db.execute(
-                select(Claim.personality_id, func.count())
-                .where(Claim.personality_id.isnot(None))
-                .group_by(Claim.personality_id)
-            )
-        ).all()
-    )
+    # Le registre des déclarations, lu dans les tweets : c'est lui que les fiches montrent.
+    from src.models.declaration import Declaration
+
+    counts = dict((await db.execute(
+        select(Declaration.personality_id, func.count())
+        .where(Declaration.position.isnot(None),
+               or_(Declaration.douteuse.is_(None), Declaration.douteuse.is_(False)))
+        .group_by(Declaration.personality_id))).all())
+    tweets = dict((await db.execute(select(Post.personality_id, func.count()).group_by(Post.personality_id))).all())
     stmt = select(Personality).where(Personality.is_active.is_(True))
     if q:
         like = f"%{q.strip()}%"
@@ -66,6 +66,7 @@ async def list_figures(
                 "id": p.id, "full_name": p.full_name, "handle": p.handle,
                 "group_code": p.group_code, "famille": p.famille, "role": p.role,
                 "photo_url": p.photo_url, "n_claims": counts.get(p.id, 0),
+                "n_declarations": counts.get(p.id, 0), "n_tweets": tweets.get(p.id, 0),
                 "last_status": p.last_status,
             }
             for p in people[:limit]
