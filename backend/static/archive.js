@@ -117,7 +117,7 @@ function postRow(it) {
       ${role.length ? `<p class="entry__role">${role.map(escapeHtml).join(" · ")}</p>` : ""}
       <p class="prose">${linkify(it.content)}</p>
       ${it.quoted_content
-        ? `<blockquote class="quoted">${escapeHtml(it.quoted_content)}${it.quoted_handle ? ` — @${escapeHtml(it.quoted_handle)}` : ""}</blockquote>` : ""}
+        ? `<blockquote class="quoted">${escapeHtml(it.quoted_content)}${it.quoted_handle ? `, @${escapeHtml(it.quoted_handle)}` : ""}</blockquote>` : ""}
       ${it.media_url
         ? `<a href="${it.url}" target="_blank" rel="noopener"><img class="entry__media" src="${it.media_url}" alt="" loading="lazy" onerror="this.remove()" /></a>` : ""}
       <div class="entry__foot">${foot}<span class="spacer"></span>
@@ -181,7 +181,7 @@ async function openArticle(id) {
       a.author ? `par ${a.author}` : "", exactDate(a.published_at), `${fmtNum(a.word_count || 0)} mots`,
     ].filter(Boolean).join(" · ");
     $("#readerPeople").innerHTML = people(a.matched_personalities, 12);
-    $("#readerBody").textContent = a.content || "Texte non disponible — voir la source.";
+    $("#readerBody").textContent = a.content || "Texte non disponible : voir la source.";
     $("#readerFoot").innerHTML =
       `<a class="btn btn--primary" href="${a.url}" target="_blank" rel="noopener">Article original ↗</a>` +
       (a.snapshot_url ? `<a class="btn" href="${a.snapshot_url}" target="_blank" rel="noopener">Copie archivée ↗</a>` : "");

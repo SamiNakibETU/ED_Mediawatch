@@ -94,7 +94,7 @@ function barresMensuelles(points, { unite = "déclarations" } = {}) {
   const barres = points.map((p, i) => {
     const cx = L + i * pas + pas / 2;
     const creux = rattrape(p);
-    const titre = `${moisLisible(p.mois)} — ${p.n} ${unite}`
+    const titre = `${moisLisible(p.mois)} : ${p.n} ${unite}`
       + (creux ? " (reconstitué après coup : au moins)" : "")
       + (p.contradictions ? ` · ${p.contradictions} rapprochement${p.contradictions > 1 ? "s" : ""}` : "");
     return `<g>
@@ -147,7 +147,7 @@ function lireSerie(d, { unite = "déclarations" } = {}) {
   if (surveilles.length < MIN_MOIS_POUR_UN_RYTHME) {
     return `<p class="chart__lecture">${
       depuis
-        ? `Veille continue depuis ${escapeHtml(depuis)} — trop court pour lire un rythme.`
+        ? `Veille continue depuis ${escapeHtml(depuis)}, trop court pour lire un rythme.`
         : "Relevé entièrement reconstitué après coup."}
       <span class="chart__portee">Les mois antérieurs ont été rattrapés source par
       source : chacun compte <em>au moins</em> ce qu’il affiche, jamais tout ce

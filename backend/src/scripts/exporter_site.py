@@ -37,7 +37,8 @@ STATIC = BACKEND / "static"
 SORTIE = BACKEND.parent / "site"
 
 FIXES = [
-    "/enjeux", "/figures", "/ecarts/compte", "/ecarts/divergences?jours=365",
+    "/enjeux", "/enjeux/etat", "/enjeux/recentes?limit=10", "/ecarts/faits?juge=retenu&limit=3&offset=0",
+    "/figures", "/ecarts/compte", "/ecarts/divergences?jours=365",
     "/declarations?jours=7&limit=10", "/subjects?limit=9&confrontable=true", "/reviews?limit=3",
     "/revue", "/themes/tree", "/themes/sujets", "/series/corpus", "/compteurs",
     "/pipeline/themes", "/pipeline/stages", "/pipeline/runs?limit=8", "/pipeline/funnel",
@@ -92,6 +93,8 @@ async def exporter(sortie: Path) -> dict:
 
         for e in res["/enjeux"] or []:
             await ex.get(f"/enjeux/{e['slug']}")
+            for juge in ("retenu", "faible"):
+                await ex.get(f"/ecarts/faits?juge={juge}&enjeu={quote(e['slug'], safe='')}&limit=50&offset=0")
 
         for f in (res["/figures"] or {}).get("items", []):
             offset = 0
@@ -101,13 +104,14 @@ async def exporter(sortie: Path) -> dict:
                 if not d or offset >= (d.get("timeline_total") or 0):
                     break
             await ex.get(f"/series/figure/{f['id']}")
+            await ex.get(f"/figures/{f['id']}/positions")
 
         for juge in STATUTS:
             for t in TYPES:
                 offset = 0
                 while True:
                     q = f"juge={juge}&limit={PAGE_ECARTS}&offset={offset}" + (f"&type={t}" if t else "")
-                    d = await ex.get(f"/ecarts?{q}")
+                    d = await ex.get(f"/ecarts/faits?{q}")
                     offset += PAGE_ECARTS
                     if not d or offset >= (d.get("total") or 0):
                         break

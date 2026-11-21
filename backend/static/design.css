@@ -1909,3 +1909,23 @@ body[data-page="revue"] select.field--inline { width: auto; max-width: 16rem; }
 .rv-tous { display: grid; gap: 0; }
 .rv-lu { padding: var(--s4) 0; border-bottom: 1px solid var(--rule); }
 .rv-lu .sujet__meta { margin: 0; }
+
+/* Les voix de chaque camp sous un écart regroupé */
+.ecart__voix { display: grid; gap: var(--s1); }
+.ecart__voix p { margin: 0; }
+.ecart__voix .decl-ligne__k { margin-right: var(--s2); }
+
+/* Fiche figure : un enjeu, ses positions dans le temps */
+.fig-enjeu { border-top: 1px solid var(--rule); padding: var(--s3) 0; }
+.fig-enjeu > summary { cursor: pointer; display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s3); list-style: none; }
+.fig-enjeu > summary::-webkit-details-marker { display: none; }
+.fig-enjeu > summary::before { content: "+"; width: 1ch; color: var(--muted); }
+.fig-enjeu[open] > summary::before { content: "2"; }
+.fig-enjeu__titre { font-weight: 600; color: var(--ink); }
+.fig-enjeu > .sujet__meta { margin: var(--s2) 0 0; }
+.fig-enjeu .position:last-child { border-bottom: 0; }
+
+/* Texte courant d'une page de lecture (Méthode) : la prose, sans les retours à la ligne du source */
+.texte { max-width: var(--measure-read); }
+.texte p { font-family: var(--font-serif); font-size: var(--t-read); line-height: var(--lh-read); color: var(--ink); margin: 0 0 var(--s4); }
+.texte + .band, .table-scroll + .texte { margin-top: var(--s5); }

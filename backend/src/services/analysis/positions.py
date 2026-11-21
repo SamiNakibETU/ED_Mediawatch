@@ -133,6 +133,92 @@ async def sommaire(db) -> list[dict]:
     ]
 
 
+async def par_figure(db, figure_id: int) -> dict | None:
+    """Les positions d'une figure, enjeu par enjeu, dans l'ordre du temps.
+
+    Les enjeux où elle a occupé plusieurs crans viennent d'abord : c'est là qu'il y a quelque
+    chose à lire. Les déclarations douteuses restent dehors, comme sur la fiche d'un enjeu.
+    """
+    pers = await db.get(Personality, figure_id)
+    if pers is None:
+        return None
+    rows = (await db.execute(
+        select(Declaration, Post)
+        .join(Post, Post.id == Declaration.post_id)
+        .where(Declaration.personality_id == figure_id, Declaration.position.isnot(None),
+               or_(Declaration.douteuse.is_(None), Declaration.douteuse.is_(False)))
+        .order_by(Declaration.published_at.asc())
+    )).all()
+    par_enjeu: dict[str, list[dict]] = {}
+    for d, post in rows:
+        enjeu = PAR_SLUG.get(d.enjeu)
+        cran = enjeu.cran(d.position) if enjeu else None
+        if cran is None:
+            continue
+        par_enjeu.setdefault(d.enjeu, []).append({
+            "post_id": post.id, "decl_id": d.id,
+            "date": d.published_at.isoformat() if d.published_at else None,
+            "position": d.position, "label": cran.label, "rang": cran.rang,
+            "modalite": d.modalite, "valeur": d.valeur, "unite": d.unite,
+            "verbatim": d.verbatim, "source": _source(post, pers.handle),
+        })
+    enjeux = []
+    for slug, positions in par_enjeu.items():
+        e = PAR_SLUG[slug]
+        enjeux.append({
+            "slug": slug, "titre": e.titre, "question": e.question,
+            "theme_label": THEMES.get(e.theme, e.theme),
+            "echelle": [{"code": c.code, "label": c.label, "rang": c.rang} for c in e.echelle],
+            "crans": len({p["position"] for p in positions}),
+            "positions": positions,
+        })
+    enjeux.sort(key=lambda x: (x["crans"] > 1, len(x["positions"])), reverse=True)
+    return {"figure_id": pers.id, "nom": pers.full_name,
+            "declarations": sum(len(x["positions"]) for x in enjeux), "enjeux": enjeux}
+
+
+async def recentes(db, *, limit: int = 10) -> list[dict]:
+    """Les dernières déclarations entrées au registre, pour l'accueil."""
+    rows = (await db.execute(
+        select(Declaration, Post, Personality)
+        .join(Post, Post.id == Declaration.post_id)
+        .join(Personality, Personality.id == Declaration.personality_id)
+        .where(Declaration.position.isnot(None), Declaration.enjeu.in_(list(PAR_SLUG)),
+               or_(Declaration.douteuse.is_(None), Declaration.douteuse.is_(False)))
+        .order_by(Declaration.published_at.desc().nullslast()).limit(limit * 3)
+    )).all()
+    out, vus = [], set()
+    for d, post, pers in rows:
+        enjeu = PAR_SLUG[d.enjeu]
+        cran = enjeu.cran(d.position)
+        # Un tweet qui porte deux déclarations n'occupe qu'une ligne de l'accueil.
+        if cran is None or post.id in vus:
+            continue
+        vus.add(post.id)
+        out.append({
+            "date": d.published_at.isoformat() if d.published_at else None,
+            "figure": pers.full_name, "figure_id": pers.id, "handle": pers.handle, "parti": pers.group_code,
+            "enjeu": d.enjeu, "titre": enjeu.titre, "label": cran.label, "verbatim": d.verbatim,
+            "source": _source(post, pers.handle),
+        })
+        if len(out) >= limit:
+            break
+    return out
+
+
+async def etat(db) -> dict:
+    """Ce que le registre contient, en une ligne : de quoi écrire la phrase d'ouverture."""
+    valides = (Declaration.position.isnot(None),
+               or_(Declaration.douteuse.is_(None), Declaration.douteuse.is_(False)))
+    n, figures, debut, fin = (await db.execute(
+        select(func.count(), func.count(func.distinct(Declaration.personality_id)),
+               func.min(Declaration.published_at), func.max(Declaration.published_at)).where(*valides))).one()
+    tweets, dernier, suivies = (await db.execute(
+        select(func.count(), func.max(Post.published_at), func.count(func.distinct(Post.personality_id))))).one()
+    return {"declarations": n, "figures": figures, "debut": debut, "fin": fin,
+            "tweets": tweets, "dernier_tweet": dernier, "figures_suivies": suivies, "enjeux": len(ENJEUX)}
+
+
 async def hors_liste(db, *, limit: int = 60) -> list[dict]:
     """Les objets les plus fréquents parmi les déclarations hors liste.
 

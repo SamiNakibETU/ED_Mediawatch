@@ -137,7 +137,7 @@ function render(d) {
       <p class="dek">${fmtNum(total)} prises de position consignées, ${periode(s.first_seen, s.last_seen)}.
         ${portee(s)}</p>
       ${s.named ? "" : `<p class="stamp mt-4">Libellé provisoire, tiré des
-        mots du corpus — le nommage n’est pas encore passé sur ce sujet.</p>`}
+        mots du corpus, le nommage n’est pas encore passé sur ce sujet.</p>`}
     </header>
 
     <div class="band"><h2>Qui a dit quoi, quand</h2>
@@ -216,7 +216,7 @@ async function load() {
   }
   try {
     state.data = await fetchJSON(`/subjects/${state.id}`);
-    document.title = `${state.data.subject.label} — ED Mediawatch`;
+    document.title = `${state.data.subject.label}, ED Mediawatch`;
     $("#stats").textContent = `${state.data.subject.n_speakers} locuteurs`;
     render(state.data);
   } catch (e) {

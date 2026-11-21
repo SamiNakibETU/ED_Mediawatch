@@ -208,17 +208,17 @@ function nomSujet(s) {
 // Neuf rubriques de même rang disaient au lecteur qu'il y avait neuf façons
 // d'entrer, donc aucune.
 const PAGES = [
-  ["index.html", "accueil", "Aujourd’hui", "observatoire"],
-  ["revue.html", "revue", "Revue", "temps"],
-  ["themes.html", "themes", "Thèmes", "chiffres"],
-  ["enjeux.html", "enjeux", "Enjeux", "sujets"],
+  ["index.html", "accueil", "Accueil", "observatoire"],
   ["ecarts.html", "ecarts", "Écarts", "validation"],
-  ["sujets.html", "sujets", "Sujets", "sujets"],
-  ["figure.html", "figures", "Locuteurs", "locuteurs"],
+  ["enjeux.html", "enjeux", "Enjeux", "sujets"],
+  ["figure.html", "figures", "Figures", "locuteurs"],
+  ["themes.html", "themes", "Thèmes", "chiffres"],
+  ["revue.html", "revue", "Revue", "temps"],
+  ["methode.html", "methode", "Méthode", "atelier"],
   ["atelier.html", "atelier", "Coulisses", "atelier"],
 ];
 // Les pages de coulisses gardent un onglet actif : « Coulisses ».
-const COULISSES = new Set(["archive", "validation", "compteur", "engagements"]);
+const COULISSES = new Set(["archive", "validation", "compteur", "engagements", "sujets", "sujet", "codage"]);
 
 
 // Voyant de collecte : un observatoire doit dire s'il regarde encore. Un site
@@ -410,3 +410,79 @@ async function themeTree(container, { source, onSelect }) {
 }
 
 mountMasthead();
+
+
+// ── La carte d'un écart ─────────────────────────────────────────────────────
+//
+// Les deux textes en entier, côte à côte, avant l'avis des juges : c'est au lecteur de voir
+// l'écart, pas de le croire. Partagée par la page Écarts, la fiche d'un enjeu, la fiche d'une
+// figure et l'accueil.
+
+const ECART_JUGE = {
+  revirement: "Revirement", glissement: "Glissement", report_condition: "Report ou condition ajoutée",
+  imprecision_chiffree: "Imprécision chiffrée", divergence: "Divergence", ecart_au_programme: "Écart au programme",
+  nuance: "Nuance", contexte_different: "Contexte différent", erreur_de_lecture: "Erreur de lecture",
+};
+const ECART_FORCE = ["aucun écart réel", "écart faible", "écart net", "contradiction nette"];
+const jourLong = (iso) =>
+  (iso ? asDate(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }) : "date inconnue");
+
+function ecartCote(c) {
+  if (!c) return "";
+  return `<div class="ecart__cote">
+    <p class="entry__head"><a class="speaker" href="figure.html?id=${c.figure_id}">${escapeHtml(c.figure || "")}</a>
+      ${c.parti ? `<span class="tag">${escapeHtml(c.parti)}</span>` : ""}
+      <span class="spacer"></span><span class="sujet__meta">${jourLong(c.date)}</span></p>
+    <p class="ecart__position">${escapeHtml(c.valeur || c.label || "")}</p>
+    ${c.douteuse ? `<p class="sujet__meta">Déclaration douteuse : ${escapeHtml(c.doute_motif || "")}</p>` : ""}
+    <p class="position__q">${escapeHtml(c.verbatim)}</p>
+    ${sourceCard(c.source)}
+  </div>`;
+}
+
+function ecartCoteProgramme(p) {
+  if (!p) return "";
+  return `<div class="ecart__cote">
+    <p class="entry__head"><span class="speaker">Programme ${escapeHtml(p.parti)} ${p.annee}</span>
+      <span class="spacer"></span>
+      <span class="sujet__meta">livret « ${escapeHtml(p.livret.replace(/^projet-/, "").replace(/-/g, " "))} », p. ${p.page ?? "?"}</span></p>
+    <p class="ecart__position">${escapeHtml(p.label)}</p>
+    <p class="position__q">${escapeHtml(p.verbatim)}</p>
+  </div>`;
+}
+
+function ecartJuges(e) {
+  if (!e.juge) return `<p class="sujet__meta">Pas encore relu par les juges.</p>`;
+  const un = (j, nom) => `<p><span class="decl-ligne__k">${nom} : ${escapeHtml(ECART_JUGE[j.type] || j.type)}</span>
+      <span class="sujet__meta">${ECART_FORCE[j.force] ?? ""}${j.justification === "oui" ? ", changement expliqué publiquement" : ""}</span></p>
+    ${j.explication ? `<p class="prose" style="margin:0">${escapeHtml(j.explication)}</p>` : ""}`;
+  return `<div class="ecart__juge">
+    <p class="sujet__meta">${escapeHtml(e.auto_label || "")}, sans relecture humaine</p>
+    ${un(e.juge, "Premier juge")}
+    ${e.juge2 ? un(e.juge2, "Second juge") : ""}
+  </div>`;
+}
+
+// Un fait, plusieurs paires : dans un parti, on nomme les voix de chaque camp ; ailleurs, on dit
+// combien d'autres paires de déclarations portent le même mouvement.
+function ecartVoix(e) {
+  if (e.voix) {
+    return `<div class="ecart__voix">${e.voix.map((v) => `<p><span class="decl-ligne__k">${escapeHtml(v.label)}</span>
+      ${v.figures.map((f) => `<a href="figure.html?id=${f.id}">${escapeHtml(f.nom)}</a>`).join(", ")}</p>`).join("")}
+      <p class="sujet__meta">${fmtNum(e.paires)} paires de déclarations portent cette divergence. La carte montre la plus nette.</p></div>`;
+  }
+  return e.paires > 1
+    ? `<p class="sujet__meta">${fmtNum(e.paires)} paires de déclarations portent ce même mouvement. La carte montre la plus nette.</p>`
+    : "";
+}
+
+function ecartCarte(e, pied = "") {
+  return `<article class="ecart" id="ecart${e.id}">
+    <p class="ecart__titre"><a href="enjeux.html?e=${encodeURIComponent(e.enjeu || "")}">${escapeHtml(e.titre)}</a><span class="sujet__meta"> ${escapeHtml(e.type_label.toLowerCase())}</span></p>
+    <p class="sujet__meta">${escapeHtml(e.question)}</p>
+    <div class="ecart__cotes">${ecartCote(e.a)}${e.b ? ecartCote(e.b) : ecartCoteProgramme(e.programme)}</div>
+    ${ecartVoix(e)}
+    ${ecartJuges(e)}
+    ${pied}
+  </article>`;
+}

@@ -71,31 +71,117 @@ async def list_ecarts(
     rows = (await db.execute(
         stmt.order_by(Ecart.juge_force.desc().nullslast(), Ecart.ampleur.desc(), Ecart.date_b.desc().nullslast())
         .limit(limit).offset(offset))).scalars().all()
-    items = []
-    for e in rows:
-        enj = PAR_SLUG.get(e.enjeu)
-        a = await _cote(db, e.decl_a_id, e.figure_a_id, e.parti_a, e.position_a, enj)
-        b = await _cote(db, e.decl_b_id, e.figure_b_id, e.parti_b, e.position_b, enj)
-        prog = None
-        if e.engagement_id:
-            g = await db.get(EngagementProgramme, e.engagement_id)
-            if g:
-                prog = {"parti": g.parti, "annee": g.annee, "livret": g.livret, "page": g.page,
-                        "label": enj.cran(g.position).label if enj and enj.cran(g.position) else g.position,
-                        "verbatim": g.verbatim}
-        items.append({
-            "id": e.id, "type": e.type, "type_label": TYPES.get(e.type, e.type), "enjeu": e.enjeu,
-            "titre": enj.titre if enj else ((a or {}).get("objet") or "Même mesure, deux chiffres"),
-            "question": enj.question if enj else "Même mesure annoncée avec des chiffres différents",
-            "ampleur": e.ampleur, "statut": e.statut, "auto": e.auto, "auto_label": AUTO.get(e.auto),
-            "a": a, "b": b, "programme": prog,
-            "juge": {"type": e.juge_type, "force": e.juge_force, "justification": e.juge_justification,
-                     "explication": e.juge_explication} if e.juge_type else None,
-            "juge2": {"type": e.juge2_type, "force": e.juge2_force,
-                      "explication": e.juge2_explication} if e.juge2_type else None,
-            "decision_note": e.decision_note,
-        })
+    items = [await _item(db, e) for e in rows]
     return {"total": total, "items": items}
+
+
+async def _item(db, e: Ecart) -> dict:
+    enj = PAR_SLUG.get(e.enjeu)
+    a = await _cote(db, e.decl_a_id, e.figure_a_id, e.parti_a, e.position_a, enj)
+    b = await _cote(db, e.decl_b_id, e.figure_b_id, e.parti_b, e.position_b, enj)
+    prog = None
+    if e.engagement_id:
+        g = await db.get(EngagementProgramme, e.engagement_id)
+        if g:
+            prog = {"parti": g.parti, "annee": g.annee, "livret": g.livret, "page": g.page,
+                    "label": enj.cran(g.position).label if enj and enj.cran(g.position) else g.position,
+                    "verbatim": g.verbatim}
+    return {
+        "id": e.id, "type": e.type, "type_label": TYPES.get(e.type, e.type), "enjeu": e.enjeu,
+        "titre": enj.titre if enj else ((a or {}).get("objet") or "Même mesure, deux chiffres"),
+        "question": enj.question if enj else "Même mesure annoncée avec des chiffres différents",
+        "ampleur": e.ampleur, "statut": e.statut, "auto": e.auto, "auto_label": AUTO.get(e.auto),
+        "a": a, "b": b, "programme": prog,
+        "juge": {"type": e.juge_type, "force": e.juge_force, "justification": e.juge_justification,
+                 "explication": e.juge_explication} if e.juge_type else None,
+        "juge2": {"type": e.juge2_type, "force": e.juge2_force,
+                  "explication": e.juge2_explication} if e.juge2_type else None,
+        "decision_note": e.decision_note,
+    }
+
+
+def cle_fait(e: Ecart) -> tuple:
+    """Le fait derrière une paire. Un même vote ou un même revirement produit beaucoup de paires
+    de déclarations : dans un parti, toutes les voix d'un camp contre toutes celles de l'autre ;
+    chez une figure, chaque propos d'avant contre chaque propos d'après."""
+    if e.type == "parti":
+        return (e.type, e.enjeu, e.parti_a, frozenset((e.position_a, e.position_b)))
+    if e.type in ("temps", "programme"):
+        return (e.type, e.enjeu, e.figure_a_id)
+    return (e.type, e.id)
+
+
+def _rang(e: Ecart) -> tuple:
+    return (e.juge_force or 0, e.ampleur or 0, str(e.date_b or e.date_a or ""))
+
+
+def _filtre(type: str | None, enjeu: str | None, juge: str, figure: int | None = None):
+    stmt = select(Ecart).where(Ecart.statut != "ecarte")
+    if type:
+        stmt = stmt.where(Ecart.type == type)
+    if enjeu:
+        stmt = stmt.where(Ecart.enjeu == enjeu)
+    if figure:
+        stmt = stmt.where((Ecart.figure_a_id == figure) | (Ecart.figure_b_id == figure))
+    if juge in AUTO:
+        stmt = stmt.where(Ecart.auto == juge)
+    elif juge == "attente":
+        stmt = stmt.where(Ecart.auto.is_(None))
+    return stmt
+
+
+async def faits_de(db, *, type: str | None = None, enjeu: str | None = None, juge: str = "retenu",
+                   figure: int | None = None, limit: int = 20, offset: int = 0) -> dict:
+    rows = (await db.execute(_filtre(type, enjeu, juge, figure))).scalars().all()
+    if juge in ("retenu", "faible"):
+        # Une déclaration que d'autres juges ont tenue pour mal lue ne porte plus d'écart : la paire
+        # a pu être jugée avant que le doute ne tombe.
+        douteuses = set((await db.execute(select(Declaration.id).where(Declaration.douteuse.is_(True)))).scalars())
+        rows = [e for e in rows if e.decl_a_id not in douteuses and e.decl_b_id not in douteuses]
+    groupes: dict[tuple, list[Ecart]] = {}
+    for e in rows:
+        groupes.setdefault(cle_fait(e), []).append(e)
+    ordre = sorted(groupes.values(), key=lambda g: (max(_rang(e) for e in g), len(g)), reverse=True)
+    noms: dict[int, str] = {}
+    items = []
+    for g in ordre[offset:offset + limit]:
+        tete = max(g, key=_rang)
+        it = await _item(db, tete)
+        it["paires"] = len(g)
+        it["periode"] = [min(str(x) for e in g for x in (e.date_a, e.date_b) if x),
+                         max(str(x) for e in g for x in (e.date_a, e.date_b) if x)] if any(
+                             e.date_a or e.date_b for e in g) else None
+        voix = None
+        if tete.type == "parti" and len(g) > 1:
+            enj = PAR_SLUG.get(tete.enjeu)
+            camps: dict[str, dict[int, str]] = {}
+            for e in g:
+                for fid, pos, d in ((e.figure_a_id, e.position_a, e.date_a), (e.figure_b_id, e.position_b, e.date_b)):
+                    if fid and pos:
+                        vu = camps.setdefault(pos, {})
+                        vu[fid] = max(vu.get(fid, ""), str(d or ""))
+            voix = []
+            for pos, vu in camps.items():
+                for fid in vu:
+                    if fid not in noms:
+                        pers = await db.get(Personality, fid)
+                        noms[fid] = pers.full_name if pers else "?"
+                cran = enj.cran(pos) if enj else None
+                voix.append({"position": pos, "label": cran.label if cran else pos,
+                             "figures": [{"id": fid, "nom": noms[fid], "date": d or None}
+                                         for fid, d in sorted(vu.items(), key=lambda kv: kv[1], reverse=True)]})
+        it["voix"] = voix
+        items.append(it)
+    return {"total": len(ordre), "paires": len(rows), "items": items}
+
+
+@router.get("/faits")
+async def list_faits(
+    type: str | None = None, enjeu: str | None = None, juge: str = Query("retenu"), figure: int | None = None,
+    limit: int = Query(20, le=100), offset: int = 0, db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Les écarts regroupés par fait : une carte par mouvement, pas une par paire de déclarations."""
+    return await faits_de(db, type=type, enjeu=enjeu, juge=juge, figure=figure, limit=limit, offset=offset)
 
 
 @router.get("/compte")

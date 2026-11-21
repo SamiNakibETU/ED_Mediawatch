@@ -107,7 +107,7 @@ function renderAmplifies(rows) {
   if (!host) return;
   if (!rows?.length) {
     host.innerHTML = `<p class="state">Aucun relais consigné. La collecte ne
-      retrouve pas toujours le compte relayé — compte fermé, publication
+      retrouve pas toujours le compte relayé, compte fermé, publication
       supprimée.</p>`;
     return;
   }
@@ -133,7 +133,7 @@ function renderAmplifies(rows) {
 function claimRow(c) {
   const date = c.published_at
     ? asDate(c.published_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })
-    : "—";
+    : "n. d.";
   const value = c.qty_value != null ? `${c.qty_value}${c.qty_unit ? " " + c.qty_unit : ""}` : "";
   return `<article class="entry" style="grid-template-columns:4.5rem 1fr;padding:var(--s4) 0">
     <p class="stamp" style="padding-top:2px">${date}</p>
@@ -173,7 +173,7 @@ function renderTimeline() {
   if (!d.timeline.length) {
     host.innerHTML = `<p class="state"><span class="state__title">Aucun propos consigné</span>
       <span class="state__hint">Rien n’a encore été extrait pour cette figure. La collecte a
-      peut-être échoué (compte renommé, homonyme) — voir
+      peut-être échoué (compte renommé, homonyme) : voir
       <a class="source-link" href="atelier.html">l’atelier</a>.</span></p>`;
     return;
   }
@@ -219,7 +219,7 @@ const ECHECS_AVANT_ALERTE = 2;
 
 function collecteMuette(f) {
   if (!f.handle || (f.collecte_echecs || 0) < ECHECS_AVANT_ALERTE) return "";
-  const depuis = f.collecte_le ? ` — dernière collecte réussie ${relTime(f.collecte_le)}` : "";
+  const depuis = f.collecte_le ? `, dernière collecte réussie ${relTime(f.collecte_le)}` : "";
   return `<p class="caveat">
     <span class="caveat__mention">Collecte interrompue</span>
     La collecte de <span class="nowrap">@${escapeHtml(f.handle)}</span> échoue depuis
@@ -286,7 +286,10 @@ function render(d) {
 
     ${months < 24 && s.first_seen ? `<p class="caveat">
       Un changement de position se lit sur plusieurs années. En deçà, l’absence de revirement
-      ne prouve rien — c’est une limite du corpus, pas un résultat.</p>` : ""}
+      ne prouve rien, c’est une limite du corpus, pas un résultat.</p>` : ""}
+
+    <div class="band"><h2>Ses positions sur les enjeux</h2><span class="spacer"></span><p id="posMeta"></p></div>
+    <div id="positions"><p class="state state--inline">Chargement…</p></div>
 
     <div class="band"><h2>Quand ${escapeHtml(f.full_name)} parle</h2>
       <span class="spacer"></span>
@@ -295,7 +298,7 @@ function render(d) {
 
     ${d.dossier?.summary ? `
       <div class="band"><h2>Synthèse</h2><span class="spacer"></span>
-        <p>Produite par ${escapeHtml(d.dossier.model || "—")}, à relire.</p></div>
+        <p>Produite par ${escapeHtml(d.dossier.model || "n. d.")}, à relire.</p></div>
       <p class="prose">${escapeHtml(d.dossier.summary)}</p>` : ""}
 
     <div class="band"><h2>Ce dont parle ${escapeHtml(f.full_name)}</h2>
@@ -328,6 +331,58 @@ function render(d) {
   renderAmplifies(d.amplifies);
   renderTimeline();
   renderSerie(f.id);
+  renderPositions(f.id);
+}
+
+// Le registre vu depuis la figure : ce qu'elle a dit sur chaque enjeu, dans l'ordre du temps.
+// Les enjeux où elle a occupé plusieurs positions viennent d'abord et s'ouvrent seuls.
+function positionLigne(p, avant) {
+  const change = avant && avant.position !== p.position;
+  return `<article class="position">
+    <div class="position__head">
+      <span class="stamp">${jourLong(p.date)}</span>
+      <span class="tag${change ? " tag--theme" : ""}">${escapeHtml(p.label)}</span>
+      ${p.valeur != null ? `<span class="tag">${p.valeur}${p.unite ? " " + escapeHtml(p.unite) : ""}</span>` : ""}
+      <span class="spacer"></span>
+      ${p.source?.url ? `<a class="source-link" href="${escapeHtml(p.source.url)}" target="_blank" rel="noopener">ouvrir sur X ↗</a>` : ""}
+    </div>
+    <p class="position__q">${escapeHtml(p.verbatim)}</p>
+  </article>`;
+}
+
+function enjeuBloc(e) {
+  const n = e.positions.length;
+  const an = (p) => (p.date ? p.date.slice(0, 4) : "");
+  const bornes = an(e.positions[0]) === an(e.positions[n - 1]) ? an(e.positions[0]) : `${an(e.positions[0])} à ${an(e.positions[n - 1])}`;
+  const dernier = e.positions[n - 1];
+  return `<details class="fig-enjeu"${e.crans > 1 ? " open" : ""}>
+    <summary><span class="fig-enjeu__titre">${escapeHtml(e.titre)}</span>
+      <span class="tag">${escapeHtml(dernier.label)}</span>
+      <span class="sujet__meta">${n} déclaration${n > 1 ? "s" : ""}, ${bornes}${
+        e.crans > 1 ? `, ${e.crans} positions différentes` : ""}</span></summary>
+    <p class="sujet__meta">${escapeHtml(e.question)} <a href="enjeux.html?e=${encodeURIComponent(e.slug)}">Voir toutes les figures</a></p>
+    ${e.positions.map((p, i) => positionLigne(p, e.positions[i - 1])).join("")}
+  </details>`;
+}
+
+async function renderPositions(id) {
+  const host = $("#positions");
+  try {
+    const d = await fetchJSON(`/figures/${id}/positions`);
+    if (state.id !== id || !$("#positions")) return;
+    if (!d.enjeux.length) {
+      host.innerHTML = '<p class="state state--inline">Aucune position lue dans ses tweets sur les enjeux du référentiel.</p>';
+      return;
+    }
+    $("#posMeta").textContent = `${fmtNum(d.declarations)} déclarations sur ${d.enjeux.length} enjeux, lues dans ses tweets.`;
+    const ec = d.ecarts.items;
+    host.innerHTML = `${ec.length ? `<p class="section-label">Écarts retenus par les juges</p>${ec.map((e) => ecartCarte(e)).join("")}` : ""}
+      ${d.mouvements_faibles ? `<p class="sujet__meta">${fmtNum(d.mouvements_faibles)} mouvement${d.mouvements_faibles > 1 ? "s" : ""} faible${d.mouvements_faibles > 1 ? "s" : ""} relevé${d.mouvements_faibles > 1 ? "s" : ""} par ailleurs, à voir sur <a href="ecarts.html">la page des écarts</a>.</p>` : ""}
+      <p class="section-label">Enjeu par enjeu</p>
+      ${d.enjeux.map(enjeuBloc).join("")}`;
+  } catch (err) {
+    host.innerHTML = `<p class="state state--error">Les positions ne se sont pas chargées (${escapeHtml(err.message)}).</p>`;
+  }
 }
 
 async function load(id) {

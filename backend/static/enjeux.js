@@ -126,10 +126,8 @@ function render() {
     <div class="band"><h2>Ce que dit le programme</h2></div>
     ${programmeHtml(f)}
 
-    ${ecartsProgrammeHtml(f)}
-
-    <div class="band"><h2>Les écarts</h2><span class="spacer"></span><p>${f.ecarts.length}</p></div>
-    ${ecartsHtml(f)}
+    <div class="band"><h2>Les écarts</h2><span class="spacer"></span><p id="faitsMeta"></p></div>
+    <div id="faits"><p class="state state--inline">Chargement…</p></div>
 
     <div class="band"><h2>Les trajectoires</h2></div>
     ${nPos ? `<div class="card">${trajectoires(f)}</div>`
@@ -146,6 +144,23 @@ function render() {
       peek.innerHTML = `<p class="kicker">${escapeHtml(g.nom)}</p>${citation(p)}`;
     };
   });
+}
+
+// Les écarts de la fiche sont ceux que les deux juges ont retenus, regroupés par fait. Les
+// changements de cran bruts se lisent plus bas, sur les trajectoires.
+async function faits(slug) {
+  try {
+    const p = `enjeu=${encodeURIComponent(slug)}&limit=50&offset=0`;
+    const [r, f] = await Promise.all([fetchJSON(`/ecarts/faits?juge=retenu&${p}`), fetchJSON(`/ecarts/faits?juge=faible&${p}`)]);
+    if (state.slug !== slug || !$("#faits")) return;
+    $("#faitsMeta").textContent = `${r.total} retenu${r.total > 1 ? "s" : ""} par les juges, ${f.total} mouvement${f.total > 1 ? "s" : ""} faible${f.total > 1 ? "s" : ""}`;
+    $("#faits").innerHTML = (r.items.map((e) => ecartCarte(e)).join("")
+      || '<p class="state state--inline">Aucun écart retenu par les juges sur cet enjeu.</p>')
+      + (f.total ? `<details class="fig-enjeu"><summary><span class="fig-enjeu__titre">Mouvements faibles</span>
+          <span class="sujet__meta">${f.total}, jugés réels mais ténus</span></summary>${f.items.map((e) => ecartCarte(e)).join("")}</details>` : "");
+  } catch (err) {
+    $("#faits").innerHTML = `<p class="state state--error">Les écarts ne se sont pas chargés (${escapeHtml(err.message)}).</p>`;
+  }
 }
 
 async function load() {
@@ -182,6 +197,7 @@ async function fiche() {
   try {
     state.fiche = await fetchJSON(`/enjeux/${state.slug}`);
     render();
+    faits(state.slug);
   } catch (err) {
     $("#fiche").innerHTML = `<p class="state state--error">La fiche ne s’est pas chargée (${escapeHtml(err.message)}).</p>`;
   }

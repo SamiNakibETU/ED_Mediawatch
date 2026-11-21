@@ -236,3 +236,17 @@ async def figure_detail(
             "model": dossier.model,
         } if dossier else None,
     }
+
+
+@router.get("/{figure_id}/positions")
+async def figure_positions(figure_id: int, db: AsyncSession = Depends(get_db)) -> dict:
+    """Le registre vu depuis une figure : ses positions par enjeu, et les écarts qui la concernent."""
+    from src.routers.ecarts import faits_de
+    from src.services.analysis.positions import par_figure
+
+    out = await par_figure(db, figure_id)
+    if out is None:
+        raise HTTPException(404, "figure inconnue")
+    out["ecarts"] = await faits_de(db, figure=figure_id, juge="retenu", limit=30)
+    out["mouvements_faibles"] = (await faits_de(db, figure=figure_id, juge="faible", limit=1))["total"]
+    return out

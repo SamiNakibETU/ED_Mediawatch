@@ -4,7 +4,7 @@
 const REFRESH_MS = 30000;
 
 const dur = (s) => {
-  if (s == null) return "—";
+  if (s == null) return "n. d.";
   if (s < 60) return `${s.toFixed(1)} s`;
   const m = Math.floor(s / 60);
   return m < 60 ? `${m} min ${Math.round(s % 60)} s` : `${Math.floor(m / 60)} h ${m % 60} min`;
@@ -82,7 +82,7 @@ function renderPouls(run, costs, fresh) {
       <span class="statbar__n">${usd(costs?.month_usd)}</span>
       ce mois <span class="statbar__of">/ ${usd(costs?.monthly_budget_usd)}</span></span>
     <span class="statbar__item">
-      <span class="statbar__n">${age == null ? "—" : age < 48 ? `${Math.round(age)} h` : `${Math.round(age / 24)} j`}</span>
+      <span class="statbar__n">${age == null ? "n. d." : age < 48 ? `${Math.round(age)} h` : `${Math.round(age / 24)} j`}</span>
       depuis la dernière collecte</span>
   </div>`;
 }
@@ -110,7 +110,7 @@ function renderLastRun(run) {
   const [tone, word] = STATUS_WORD[run.status] || ["pending", run.status];
   const steps = (run.steps || []).map((s) =>
     `<span class="step-chip step-chip--${s.status}" title="${escapeHtml(
-      `${s.status}${s.detail ? " — " + s.detail : ""} · ${dur(s.duration_s)}`)}">${escapeHtml(s.stage)}</span>`
+      `${s.status}${s.detail ? ", " + s.detail : ""} · ${dur(s.duration_s)}`)}">${escapeHtml(s.stage)}</span>`
   ).join("");
 
   // Ce que la passe a réellement produit : les chiffres rendus par chaque
@@ -168,7 +168,7 @@ function renderSpend(c) {
   const rows = (c.by_model_month || [])
     .sort((a, b) => b.cost_usd - a.cost_usd).slice(0, 5)
     .map((m) => `<div class="kv__row">
-      <span class="kv__k">${escapeHtml(m.task || "—")}</span>
+      <span class="kv__k">${escapeHtml(m.task || "n. d.")}</span>
       <span class="kv__v">${usd(m.cost_usd)}</span>
       <span class="kv__note">${escapeHtml(m.model)} · ${fmtNum(m.calls)} appels ·
         ${fmtNum(m.input_tokens)} jetons entrants · ${fmtNum(m.output_tokens)} sortants</span>
@@ -273,7 +273,7 @@ function renderApprentissage(d) {
   const host = $("#apprentissage");
   if (!host) return;
   if (!d) { host.innerHTML = '<p class="state">Indisponible.</p>'; return; }
-  const pct = (v) => (v == null ? "—" : `${Math.round(v * 100)} %`);
+  const pct = (v) => (v == null ? "n. d." : `${Math.round(v * 100)} %`);
   const amorce = d.enough_to_learn;
   host.innerHTML = `
     <p class="lede mb-4">${amorce
@@ -415,7 +415,7 @@ function renderThemes(d) {
          <strong>Mesure indicative.</strong> Accord codeur humain / modèle :
          α = ${String(f.alpha).replace(".", ",")} sur ${f.n_units} déclarations
          (${f.n_coders} annotateur). Le seuil de fiabilité de l'analyse de contenu
-         est 0,67 — cette répartition oriente, elle ne se publie pas comme une mesure.
+         est 0,67, cette répartition oriente, elle ne se publie pas comme une mesure.
          <a class="source-link" href="codage.html">coder des unités à la main</a></p>`
     : "";
 

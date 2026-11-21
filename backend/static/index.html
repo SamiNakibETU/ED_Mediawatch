@@ -3,36 +3,41 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Aujourd’hui — ED Mediawatch</title>
+  <title>ED Mediawatch</title>
   <link rel="stylesheet" href="design.css" />
   <script>
     try { const t = localStorage.getItem("theme"); if (t) document.documentElement.dataset.theme = t; } catch {}
   </script>
 </head>
-<body data-page="accueil" data-tagline="Ce qui compte, et pourquoi">
+<body data-page="accueil">
   <header id="masthead"></header>
   <div class="wrap page">
-    <!-- Un seul chemin : ce qui compte cette semaine, puis le sujet, puis la
-         source. La une ne montre ni « le plus récent » ni « le plus aimé » :
-         elle montre l'inhabituel, le repris, le contredit, l'engageant — et
-         dit lequel, à côté de chaque ligne. -->
-    <div class="band band--flush"><h2>Ce qui compte cette semaine</h2>
-      <span class="spacer"></span>
-      <p id="pourquoi-note">Classé par ce qui est inhabituel, repris, contredit ou engageant.</p></div>
-    <!-- Deux colonnes : la parole à gauche, à la mesure de lecture ; ce qu'on
-         en a écrit à droite. Le corps de texte gardait sa juste largeur mais
-         laissait la moitié droite de l'écran vide, et la revue de la semaine —
-         le seul travail éditorial du produit — était reléguée sous la ligne de
-         flottaison. -->
+    <h1 class="hero-title lede-first">Les déclarations du RN, de l’UDR et de Reconquête sur X</h1>
+    <p class="dek" id="etat">Chargement…</p>
+
+    <section aria-labelledby="titreEcarts">
+      <div class="band"><h2 id="titreEcarts">Écarts retenus par les juges</h2><span class="spacer"></span>
+        <p id="ecartsMeta"></p></div>
+      <div id="ecarts"><p class="state state--inline">Chargement…</p></div>
+      <p class="mt-4"><a class="btn btn--sm" href="ecarts.html">Tous les écarts</a></p>
+    </section>
+
     <div class="une">
-      <main id="aujourdhui"><p class="state">Chargement…</p></main>
-      <aside id="revue" class="une__cote" hidden></aside>
+      <section aria-labelledby="titreRecentes">
+        <div class="band"><h2 id="titreRecentes">Dernières déclarations</h2><span class="spacer"></span>
+          <p>Lues dans les tweets, rangées sur un enjeu.</p></div>
+        <div id="recentes"><p class="state state--inline">Chargement…</p></div>
+      </section>
+      <aside class="une__cote" aria-labelledby="titreEnjeux">
+        <p class="section-label" id="titreEnjeux">Les enjeux les plus documentés</p>
+        <div class="register" id="enjeux"></div>
+        <p class="mt-4"><a class="btn btn--sm" href="enjeux.html">Tous les enjeux</a></p>
+      </aside>
     </div>
 
-    <div class="band"><h2>Les sujets qui bougent</h2>
-      <span class="spacer"></span>
-      <p>Où plusieurs voix se répondent, le plus fort d’abord.</p></div>
-    <div class="tiles" id="grid"></div>
+    <p class="dek mt-6">Tout ce qui s’affiche ici est lu par des modèles et n’a pas encore été relu par
+      une personne. Chaque déclaration renvoie à son tweet. Les sources, les taux d’erreur mesurés et
+      ce que l’observatoire ne couvre pas sont décrits sur la page <a href="methode.html">Méthode et limites</a>.</p>
   </div>
 
   <script src="common.js"></script>

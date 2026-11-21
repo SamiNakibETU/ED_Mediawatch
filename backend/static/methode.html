@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Méthode et limites, ED Mediawatch</title>
+  <link rel="stylesheet" href="design.css" />
+  <script>
+    try { const t = localStorage.getItem("theme"); if (t) document.documentElement.dataset.theme = t; } catch {}
+  </script>
+</head>
+<body data-page="methode">
+  <header id="masthead"></header>
+  <div class="wrap page">
+    <h1 class="hero-title lede-first">Méthode et limites</h1>
+    <p class="dek">ED Mediawatch lit les tweets d’un panel de figures du RN, de l’UDR et de Reconquête,
+      en tire des déclarations rangées sur une liste fermée d’enjeux, puis cherche ce qui ne coïncide
+      pas : dans le temps, avec le programme, entre membres d’un même parti. <span id="etat"></span></p>
+
+    <div class="band"><h2>D’où viennent les tweets</h2></div>
+    <div class="texte">
+      <p>Les déclarations viennent des tweets seulement. La presse, la télévision et la radio ne sont
+        pas lues : une position prise sur un plateau et jamais reprise sur X n’apparaît pas ici.</p>
+      <p>Trois collectes se complètent. La première a relevé, mois par mois, l’historique de 2022 à
+        mai 2026 par la recherche datée d’une instance Nitter ; elle a été interrompue fin octobre 2026
+        après 26 comptes, quand cette recherche s’est fermée aux robots. La deuxième lit les pages de
+        profil, qui ne remontent qu’à quelques mois ou un an selon le compte. La troisième, en cours,
+        passe par des comptes de recherche et couvre tout le panel depuis juin 2026.</p>
+      <p>Conséquence : les têtes d’affiche sont couvertes de 2022 à aujourd’hui, les députés de second
+        rang surtout depuis juin 2026. Un écart « dans le temps » ne peut être trouvé que chez une
+        figure dont l’historique est en base. Les retweets simples ne comptent pas comme des
+        déclarations. Les réponses à d’autres comptes sont peu couvertes par la recherche. Un tweet
+        supprimé avant la collecte est absent.</p>
+    </div>
+
+    <div class="band"><h2>Comment un tweet devient une déclaration</h2></div>
+    <div class="texte">
+      <p>Un prétri en code écarte les tweets qui ne touchent aucun enjeu. Un premier modèle
+        (DeepSeek V4 Flash) filtre ceux qui prennent position. Un second (GPT-5.6 Luna) extrait la
+        déclaration : l’enjeu, la position sur une échelle fermée, et le passage du tweet qui la porte.
+        Le modèle ne voit pas le nom de l’auteur. Le passage cité est vérifié dans le texte du tweet :
+        une déclaration dont les mots ne s’y trouvent pas est rejetée.</p>
+      <p>Le référentiel compte 44 enjeux, chacun avec sa question et son échelle. C’est un premier
+        jet : il n’a pas encore été validé en atelier par Terra Nova.</p>
+    </div>
+
+    <div class="band"><h2>Comment un écart est retenu</h2></div>
+    <div class="texte">
+      <p>Les écarts sont cherchés par requête sur le registre : une même figure à deux crans
+        différents à plus de trente jours d’intervalle, une déclaration qui s’éloigne du programme de
+        son parti, deux membres d’un même parti sur des positions opposées. Le programme de référence
+        est celui du RN en 2022, lu dans ses livrets : 605 engagements, chacun avec son livret et sa
+        page.</p>
+      <p>Chaque déclaration prise dans un écart reçoit un second avis, qui relit le tweet. Puis deux
+        juges de familles différentes (GPT-5.6 Luna et Gemini 3.7 Flash) relisent les deux textes côte
+        à côte. Un écart n’est retenu que si les deux le tiennent pour réel. Les paires de
+        déclarations qui portent un même fait sont regroupées : un vote qui divise un groupe
+        s’affiche une fois, avec les noms de chaque camp.</p>
+      <p>Les écarts concentrent les erreurs de lecture : une position mal lue crée mécaniquement un
+        faux écart. C’est pour cela que près de neuf écarts détectés sur dix sont écartés par les juges.</p>
+    </div>
+
+    <div class="band"><h2>Ce qui a été mesuré</h2></div>
+    <div class="table-scroll"><table class="tableau">
+      <thead><tr><th scope="col">Contrôle</th><th scope="col">Résultat</th><th scope="col">Date</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">Filtre, sur 100 tweets annotés à la main</th><td>32 déclarations sur 34 passent</td><td>octobre 2026</td></tr>
+        <tr><th scope="row">Rangement sur l’enjeu attendu, mêmes tweets</th><td>9 sur 11</td><td>octobre 2026</td></tr>
+        <tr><th scope="row">Déclarations relues par une personne</th><td>47 justes sur 50</td><td>octobre 2026</td></tr>
+        <tr><th scope="row">Thème du tweet, relu par une personne</th><td>28 justes sur 30</td><td>octobre 2026</td></tr>
+        <tr><th scope="row">Écarts relus par une personne</th><td>aucun à ce jour</td><td></td></tr>
+      </tbody>
+    </table></div>
+    <div class="texte">
+      <p>Un jeu d’or sert d’épreuve : 22 mouvements connus, relevés à la main entre 2022 et 2026
+        (reports, revirements, désaccords publics). Quatre portent sur des sujets que le référentiel
+        ne couvre pas. Sur les 18 autres, la mesure du 21 novembre 2026 en retrouve 11 : 6 par un
+        écart retenu, 5 par un mouvement faible. Trois ont été détectés puis écartés par les juges,
+        quatre manqués faute de déclaration lue ou d’écart détecté. La mesure est large : elle
+        vérifie qu’un écart existe pour la figure et l’enjeu du cas, pas qu’il s’agit exactement du
+        mouvement attendu.</p>
+    </div>
+
+    <div class="band"><h2>Ce que l’observatoire ne dit pas</h2></div>
+    <div class="texte">
+      <p>Aucun écart n’a encore été vérifié par une personne. Tout ce qui s’affiche est une lecture
+        automatique, à vérifier sur le tweet avant d’être cité. Le lien vers X figure sous chaque
+        déclaration.</p>
+      <p>Un écart n’est pas forcément une contradiction : ce peut être un glissement, une condition
+        ajoutée, un contexte différent. L’absence d’écart ne prouve pas la constance : elle peut
+        tenir à un historique incomplet ou à une position jamais exprimée sur X.</p>
+      <p>Un élu qui relaie une promesse de Marine Le Pen ou de Jordan Bardella sans la reprendre à son
+        compte n’est pas compté comme prenant position. Ce choix reste à trancher avec Terra Nova.</p>
+      <p>Les écarts de chiffre (une même mesure annoncée avec deux montants) sont laissés de côté :
+        leur détection donnait trop de faux écarts.</p>
+      <p>La collecte passe par des voies non officielles, sans l’accord de X. Elle peut s’interrompre.</p>
+    </div>
+  </div>
+
+  <script src="common.js"></script>
+  <script>
+    fetchJSON("/enjeux/etat").then((e) => {
+      $("#etat").textContent = `Au ${jourLong(e.dernier_tweet)} : ${fmtNum(e.tweets)} tweets de ${fmtNum(e.figures_suivies)} figures, ${
+        fmtNum(e.declarations)} déclarations, ${fmtNum(e.faits_retenu)} écarts retenus.`;
+    }).catch(() => {});
+  </script>
+</body>
+</html>

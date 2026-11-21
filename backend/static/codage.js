@@ -41,7 +41,7 @@ function renderUnite(d) {
   if (!state.coder) {
     $("#unite").innerHTML = `<p class="state">
       <span class="state__title">Donne-toi un identifiant de codeur</span>
-      <span class="state__hint">Il sépare tes décisions de celles d’un second codeur —
+      <span class="state__hint">Il sépare tes décisions de celles d’un second codeur -
       c’est cette séparation qui rend l’alpha calculable.</span></p>`;
     return;
   }
@@ -78,7 +78,7 @@ function ligne(m) {
     m.alpha >= 0.8 ? "status--ok" : m.alpha >= 0.67 ? "status--pending" : "status--alert";
   return `<div class="kv__row">
     <span class="kv__k">${escapeHtml(m.a)} × ${escapeHtml(m.b)}</span>
-    <span class="kv__v">${m.alpha === null ? "—" : m.alpha.toFixed(3)}</span>
+    <span class="kv__v">${m.alpha === null ? "n. d." : m.alpha.toFixed(3)}</span>
     <span class="kv__note">
       <span class="status ${seuil}">${escapeHtml(m.verdict)}</span> ·
       ${fmtNum(m.n)} unités communes</span>
@@ -93,7 +93,7 @@ async function renderFiabilite() {
          <p class="stamp mt-4">Seuils : α ≥ 0,80 fiable · 0,67–0,79 provisoire ·
            en dessous, non publiable.</p>`
       : `<p class="state">Aucune annotation humaine pour l’instant. La mesure de
-         référence reste celle du jeu annoté&nbsp;: α = ${d.reference?.alpha ?? "—"},
+         référence reste celle du jeu annoté&nbsp;: α = ${d.reference?.alpha ?? "n. d."},
          ${escapeHtml(d.reference?.verdict || "")}.</p>`;
   } catch (e) {
     $("#fiabilite").innerHTML =

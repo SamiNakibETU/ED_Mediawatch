@@ -689,7 +689,7 @@ class ClaimLLM:
         await budget.record(provider=prov, model=model, task=task,
                             input_tokens=tin, output_tokens=tout)
         content = resp.choices[0].message.content or ""
-        return schema.model_validate_json(content[content.find("{"): content.rfind("}") + 1])
+        return _valider(schema, content)
 
     async def _ask_codex(self, *, system: str, prompt: str, schema, task: str, model: str | None = None):
         """`ask_json` par Codex CLI (abonnement ChatGPT) : voir `codex_client`."""
@@ -707,7 +707,7 @@ class ClaimLLM:
         await budget.record(provider="codex", model=f"codex/{model}", task=task,
                             input_tokens=r.tokens, output_tokens=0)
         content = r.texte
-        return schema.model_validate_json(content[content.find("{"): content.rfind("}") + 1])
+        return _valider(schema, content)
 
     async def read_position(self, *, prompt: str, system: str, schema):
         """Range une prise de parole sur l'échelle d'un enjeu (registre des positions).
@@ -822,3 +822,34 @@ def get_claim_llm() -> ClaimLLM:
     if _client is None:
         _client = ClaimLLM()
     return _client
+
+
+def _valider(schema, content: str):
+    """Valide la réponse contre `schema`, en tolérant une liste rendue sans son enveloppe.
+
+    Demandé `{"tweets": [...]}`, le modèle du premier étage rend une fois sur six les objets à la
+    suite (`{...}{...}` ou un par ligne), ou un tableau nu. Quand le schéma n'a qu'un champ et que
+    c'est une liste, on remet l'enveloppe au lieu de jeter le lot.
+    """
+    import json
+
+    from pydantic import ValidationError
+
+    try:
+        return schema.model_validate_json(content[content.find("{"): content.rfind("}") + 1])
+    except ValidationError:
+        champs = list(schema.model_fields)
+        if len(champs) != 1:
+            raise
+        texte, objets, i, dec = content.strip(), [], 0, json.JSONDecoder()
+        if texte.startswith("["):
+            return schema.model_validate({champs[0]: json.loads(texte[: texte.rfind("]") + 1])})
+        while (i := texte.find("{", i)) != -1:
+            try:
+                obj, i = dec.raw_decode(texte, i)
+            except json.JSONDecodeError:
+                break
+            objets.append(obj)
+        if len(objets) < 2:
+            raise
+        return schema.model_validate({champs[0]: objets})

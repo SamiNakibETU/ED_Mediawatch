@@ -73,7 +73,7 @@ async function renderBar() {
       <span class="statbar__item"><span class="statbar__n">${fmtNum(c.total)}</span> confirmés</span>
       <span class="statbar__item"><span class="statbar__n">${fmtNum(r.total)}</span> écartés</span>
       <span class="statbar__item">${prec == null
-        ? "précision inconnue — trop peu de décisions"
+        ? "précision inconnue, trop peu de décisions"
         : `<span class="statbar__n">${prec}\u202f%</span> de propositions retenues`}</span>
     </div>`;
   } catch {
@@ -102,7 +102,7 @@ async function load() {
     $("#empty").hidden = false;
     $("#empty").className = "state";
     $("#empty").innerHTML = `<span class="state__title">File vide</span>
-      <span class="state__hint">Aucun rapprochement n’attend de relecture. Le juge sémantique n’a rien proposé sur ce filtre — c’est le comportement voulu tant qu’il n’a pas de matière.</span>`;
+      <span class="state__hint">Aucun rapprochement n’attend de relecture. Le juge sémantique n’a rien proposé sur ce filtre, c’est le comportement voulu tant qu’il n’a pas de matière.</span>`;
     return;
   }
   $("#empty").hidden = true;
@@ -150,7 +150,7 @@ async function validate(id, decision, el, btn) {
     btn.textContent = decision === "confirm" ? "Confirmer" : "Écarter";
     const err = document.createElement("p");
     err.className = "rationale state--error";
-    err.textContent = `Décision non enregistrée (${e.message}). Réessaie — rien n’a été modifié.`;
+    err.textContent = `Décision non enregistrée (${e.message}). Réessaie, rien n’a été modifié.`;
     el.append(err);
   }
 }
