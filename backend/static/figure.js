@@ -1,32 +1,10 @@
-// Fiche d'un locuteur : CE QU'IL DÉFEND, sujet par sujet.
+// Fiche d'une figure : ses positions enjeu par enjeu, ses écarts, et ce que la collecte a ramené de
+// ses tweets. Tout vient du registre des déclarations, lues dans les tweets.
 //
-// La page listait ses propos par ordre chronologique. Personne n'arrive avec la
-// question « qu'a-t-elle dit le 12 mars » ; on arrive avec « que dit-elle des
-// retraites, et depuis quand » — et, si d'autres en parlent, « qui dit le
-// contraire ». La chronologie reste, en second : c'est une pièce du dossier,
-// pas la porte d'entrée.
-//
-// Helpers (common.js) : $, fetchJSON, escapeHtml, fmtNum, asDate, exactDate,
-// themeLabel, themeVar, kicker, duree, periode, ico, mandat.
+// Helpers (common.js, chart.js) : $, fetchJSON, escapeHtml, fmtNum, jourLong, ecartCarte, portrait,
+// mandat, ico, relTime, moisLisible, barresMensuelles.
 
-const TYPE_LABEL = {
-  normatif: "position", factuel_quantitatif: "chiffre", factuel_qualitatif: "fait",
-  predictif: "prédiction", attributif: "imputation",
-};
-const MONTHS = ["janv.", "févr.", "mars", "avril", "mai", "juin",
-                "juil.", "août", "sept.", "oct.", "nov.", "déc."];
-
-// Une fiche peut porter 1 400 propos : on en charge une tranche et on annonce
-// combien il en reste.
-const PAGE = 60;
-
-const state = { id: null, figures: [], data: null, loading: false, onlyConf: true };
-
-const monthLabel = (key) => {
-  if (key === "date-inconnue") return "Date inconnue";
-  const [y, m] = key.split("-");
-  return `${MONTHS[+m - 1]} ${y}`;
-};
+const state = { id: null, figures: [] };
 
 // ── Répertoire ──────────────────────────────────────────────────────────────
 
@@ -50,161 +28,6 @@ function renderList() {
     (b.onclick = () => load(+b.dataset.id)));
 }
 
-// ── Ce qu'il défend ─────────────────────────────────────────────────────────
-//
-// Les sujets CONFRONTABLES d'abord : ce sont les seuls où la position de cette
-// figure peut être mise en regard d'une autre. Un sujet où elle parle seule
-// documente ce qu'elle dit, il ne prouve rien sur le débat.
-
-function subjectRow(x) {
-  return `<a class="ranked__item" href="sujet.html?id=${x.id}" style="--th:${themeVar(x.theme)}">
-    <span class="ranked__n">${x.n}</span>
-    <span>
-      <span class="ranked__t">${nomSujet(x)}</span>
-      <span class="ranked__m">${escapeHtml(themeLabel(x.theme) || "sans thème")}
-        · ${duree(x.span_days)} · ${x.confrontable
-          ? `${x.n_speakers} voix`
-          : "une seule voix"}</span>
-    </span>
-  </a>`;
-}
-
-function renderSubjects() {
-  const all = state.data?.by_subject || [];
-  const conf = all.filter((x) => x.confrontable);
-  const shown = (state.onlyConf ? conf : all).slice(0, 40);
-
-  $("#subjects").innerHTML = `
-    <div class="filters filters--head">
-      <button class="filter" data-conf="1" aria-pressed="${state.onlyConf}">
-        À plusieurs voix<span class="count">${conf.length}</span></button>
-      <button class="filter" data-conf="0" aria-pressed="${!state.onlyConf}">
-        Tous les sujets<span class="count">${all.length}</span></button>
-    </div>
-    ${shown.length
-      ? `<div class="ranked card">${shown.map(subjectRow).join("")}</div>`
-      : `<p class="state"><span class="state__title">Aucun sujet confrontable</span>
-         <span class="state__hint">Cette figure ne partage encore aucun objet de débat avec une
-         autre voix du corpus. Affiche tous les sujets pour voir ce qu’elle porte seule.</span></p>`}`;
-
-  $("#subjects").querySelectorAll("[data-conf]").forEach((b) =>
-    (b.onclick = () => { state.onlyConf = b.dataset.conf === "1"; renderSubjects(); }));
-}
-
-// ── Qui elle relaie ─────────────────────────────────────────────────────────
-//
-// Trois actes de parole, trois sens. Un retweet nu vaut adhésion — la
-// méta-analyse des travaux sur Twitter est nette là-dessus, et c'est sur cette
-// base qu'on détecte des communautés politiquement homogènes. Un relais
-// commenté sert des signaux VARIÉS : il peut approuver comme dénoncer, et le
-// sens se lit dans le commentaire, qui existe par ailleurs comme déclaration.
-//
-// D'où l'affichage séparé : « 15 relayés » et « 15 commentés » ne disent pas la
-// même chose, et les additionner effacerait le signal.
-
-function renderAmplifies(rows) {
-  const host = $("#amplifies");
-  if (!host) return;
-  if (!rows?.length) {
-    host.innerHTML = `<p class="state">Aucun relais consigné. La collecte ne
-      retrouve pas toujours le compte relayé, compte fermé, publication
-      supprimée.</p>`;
-    return;
-  }
-  host.innerHTML = `<div class="ranked card">${rows.map((r) => `
-    <a class="ranked__item" href="https://x.com/${encodeURIComponent(r.handle)}"
-       target="_blank" rel="noopener">
-      <span class="ranked__n">${r.n}</span>
-      <span>
-        <span class="ranked__t">@${escapeHtml(r.handle)}</span>
-        <span class="ranked__m">${
-          r.n_retweets ? `${r.n_retweets} relayé${r.n_retweets > 1 ? "s" : ""}` : ""}${
-          r.n_retweets && r.n_quotes ? " · " : ""}${
-          r.n_quotes ? `${r.n_quotes} commenté${r.n_quotes > 1 ? "s" : ""}` : ""}
-          · ${escapeHtml(periode(r.first_seen, r.last_seen))}</span>
-      </span>
-    </a>`).join("")}</div>
-    <p class="stamp mt-3">Relayer sans commentaire vaut
-      adhésion ; commenter peut aussi bien approuver que dénoncer.</p>`;
-}
-
-// ── Chronologie (second plan) ───────────────────────────────────────────────
-
-function claimRow(c) {
-  const date = c.published_at
-    ? asDate(c.published_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })
-    : "n. d.";
-  const value = c.qty_value != null ? `${c.qty_value}${c.qty_unit ? " " + c.qty_unit : ""}` : "";
-  return `<article class="entry" style="grid-template-columns:4.5rem 1fr;padding:var(--s4) 0">
-    <p class="stamp" style="padding-top:2px">${date}</p>
-    <div>
-      ${value ? `<p class="claim__value">${escapeHtml(value)}</p>` : ""}
-      <p class="prose" style="margin-top:0">${escapeHtml(c.canonical || c.verbatim)}</p>
-      ${sourceCard(c.source)}
-      <div class="entry__foot">
-        <span class="tag">${TYPE_LABEL[c.claim_type] || escapeHtml(c.claim_type)}</span>
-        ${c.theme ? `<span class="tag tag--theme">${escapeHtml(themeLabel(c.theme))}</span>` : ""}
-        <span class="tag">${c.platform === "x" ? "X" : "presse"}</span>
-        <span class="spacer"></span>
-        ${c.source_url ? `<a class="source-link" href="${c.source_url}" target="_blank" rel="noopener">source ↗</a>`
-          : '<span class="stamp">source non résolue</span>'}
-      </div>
-    </div>
-  </article>`;
-}
-
-// Une page peut commencer au milieu d'un mois : sans fusion, deux blocs
-// « août 2026 » se suivraient et donneraient l'impression d'un trou.
-function mergeTimeline(into, incoming) {
-  const byMonth = new Map(into.map((m) => [m.month, m]));
-  for (const m of incoming) {
-    const cur = byMonth.get(m.month);
-    if (cur) cur.claims.push(...m.claims);
-    else { byMonth.set(m.month, m); into.push(m); }
-  }
-  into.sort((a, b) => (a.month < b.month ? 1 : -1));
-  return into;
-}
-
-function renderTimeline() {
-  const host = $("#timeline");
-  const d = state.data;
-  if (!host || !d) return;
-  if (!d.timeline.length) {
-    host.innerHTML = `<p class="state"><span class="state__title">Aucun propos consigné</span>
-      <span class="state__hint">Rien n’a encore été extrait pour cette figure. La collecte a
-      peut-être échoué (compte renommé, homonyme) : voir
-      <a class="source-link" href="atelier.html">l’atelier</a>.</span></p>`;
-    return;
-  }
-  const shown = d.timeline.reduce((n, m) => n + m.claims.length, 0);
-  const left = Math.max(0, (d.timeline_total || shown) - shown);
-  host.innerHTML = d.timeline.map((m) => `
-      <h3 style="font-size:var(--t-title);margin:var(--s6) 0 var(--s2)">${monthLabel(m.month)}</h3>
-      <div class="register">${m.claims.map(claimRow).join("")}</div>`).join("")
-    + (left ? `<button class="more" id="more">Afficher les <b>${fmtNum(left)}</b> propos plus anciens</button>` : "");
-  const more = $("#more");
-  if (more) more.onclick = loadMore;
-}
-
-async function loadMore() {
-  if (state.loading || !state.data) return;
-  state.loading = true;
-  const btn = $("#more");
-  const shown = state.data.timeline.reduce((n, m) => n + m.claims.length, 0);
-  if (btn) btn.textContent = "Chargement…";
-  try {
-    const next = await fetchJSON(`/figures/${state.id}?limit=${PAGE}&offset=${shown}`);
-    mergeTimeline(state.data.timeline, next.timeline);
-    state.data.timeline_total = next.timeline_total;
-    renderTimeline();
-    $("#more")?.scrollIntoView({ block: "center" });
-  } catch (e) {
-    if (btn) btn.textContent = `Chargement impossible (${e.message})`;
-  } finally {
-    state.loading = false;
-  }
-}
 
 // ── Quand la collecte est muette ────────────────────────────────────────
 // Le pire malentendu que cette page puisse produire : un compteur à 158 propos
@@ -228,32 +51,11 @@ function collecteMuette(f) {
     ${f.collecte_erreur ? `<span class="caveat__cause">${escapeHtml(f.collecte_erreur)}</span>` : ""}</p>`;
 }
 
-// ── La série mensuelle ──────────────────────────────────────────────────────
-// Le graphique dit ce que la chronologie ne montre pas : le RYTHME. Un
-// locuteur peut avoir cinquante déclarations réparties sur quatre ans ou
-// toutes tenues en trois semaines de campagne, et la liste datée se lit
-// pareil dans les deux cas.
-
-async function renderSerie(id) {
-  const host = $("#serie");
-  if (!host) return;
-  try {
-    const d = await fetchJSON(`/series/figure/${id}`);
-    host.innerHTML = lireSerie(d) + barresMensuelles(d.points || []);
-  } catch (e) {
-    // Un graphique manquant ne doit pas passer pour un locuteur silencieux.
-    host.innerHTML = `<p class="state state--error">La série n’a pas pu être chargée (${escapeHtml(e.message)}).</p>`;
-  }
-}
 
 // ── Rendu ───────────────────────────────────────────────────────────────────
 
 function render(d) {
   const f = d.figure, s = d.stats;
-  const months = s.first_seen && s.last_seen
-    ? Math.max(1, Math.round((asDate(s.last_seen) - asDate(s.first_seen)) / (1000 * 60 * 60 * 24 * 30)))
-    : 0;
-  const conf = (d.by_subject || []).filter((x) => x.confrontable).length;
 
   // Le portrait, en tête. Une fiche de personne sans visage est le seul écran
   // du produit qui pouvait en porter un et n'en portait pas.
@@ -286,56 +88,14 @@ function render(d) {
     <div class="band"><h2>Ses positions sur les enjeux</h2><span class="spacer"></span><p id="posMeta"></p></div>
     <div id="positions"><p class="state state--inline">Chargement…</p></div>
 
-    <div class="band"><h2>Relevé de l’été 2026</h2></div>
-    <p class="dek">Ce qui suit vient de la première chaîne de lecture, arrêtée en septembre 2026 : propos
-      extraits des tweets et de la presse, sujets, chronologie. Gardé pour mémoire ; les positions
-      ci-dessus font foi.</p>
+    <div class="band"><h2>Ses tweets en base, mois par mois</h2><span class="spacer"></span>
+      <p>Ce que la collecte a ramené, pas ce que la figure a publié.</p></div>
+    <div id="couverture"><p class="state state--inline">Chargement…</p></div>`;
 
-    <div class="band"><h2>Quand ${escapeHtml(f.full_name)} parle</h2>
-      <span class="spacer"></span>
-      <p>Déclarations attribuées, mois par mois.</p></div>
-    <div id="serie"><p class="state state--inline">Chargement…</p></div>
-
-    ${d.dossier?.summary ? `
-      <div class="band"><h2>Synthèse</h2><span class="spacer"></span>
-        <p>Produite par ${escapeHtml(d.dossier.model || "n. d.")}, à relire.</p></div>
-      <p class="prose">${escapeHtml(d.dossier.summary)}</p>` : ""}
-
-    <div class="band"><h2>Ce dont parle ${escapeHtml(f.full_name)}</h2>
-      <span class="spacer"></span>
-      <p>Du plus investi au moins. Clique pour voir qui a dit quoi.</p></div>
-    <div id="subjects"></div>
-
-    ${d.contradictions?.length ? `
-      <div class="band"><h2>Rapprochements la concernant</h2></div>
-      <div class="kv">${d.contradictions.map((e) => `
-        <div class="kv__row">
-          <span class="kv__k" style="color:var(--ink)">${escapeHtml(e.type_label)}</span>
-          <span class="kv__v">score ${e.score}</span>
-          <span class="status status--${e.status === "confirmed" ? "ok" : e.status === "rejected" ? "alert" : "pending"}"
-                style="margin-left:var(--s3)">${
-            e.status === "confirmed" ? "confirmé" : e.status === "rejected" ? "écarté" : "à relire"}</span>
-          ${e.rationale ? `<span class="kv__note">${escapeHtml(e.rationale)}</span>` : ""}
-        </div>`).join("")}</div>` : ""}
-
-    <div class="band"><h2>Qui ${escapeHtml(f.full_name)} relaie</h2>
-      <span class="spacer"></span>
-      <p>Retweets et citations, comptés séparément.</p></div>
-    <div id="amplifies"></div>
-
-    <div class="band"><h2>Chronologie</h2><span class="spacer"></span>
-      <p>Le relevé brut, daté et sourcé.</p></div>
-    <div id="timeline"></div>`;
-
-  renderSubjects();
-  renderAmplifies(d.amplifies);
-  renderTimeline();
-  renderSerie(f.id);
   renderPositions(f.id);
+  renderCouverture(f.id);
 }
 
-// Le registre vu depuis la figure : ce qu'elle a dit sur chaque enjeu, dans l'ordre du temps.
-// Les enjeux où elle a occupé plusieurs positions viennent d'abord et s'ouvrent seuls.
 function positionLigne(p, avant) {
   const change = avant && avant.position !== p.position;
   return `<article class="position">
@@ -389,18 +149,37 @@ async function renderPositions(id) {
   }
 }
 
+
+// La couverture : sans elle, l'absence d'écart chez une figure se lit comme de la constance,
+// alors qu'elle tient souvent à un historique que la collecte n'a pas pu ramener.
+async function renderCouverture(id) {
+  const host = $("#couverture");
+  try {
+    const d = await fetchJSON(`/figures/${id}/couverture`);
+    if (state.id !== id || !$("#couverture")) return;
+    if (!d.points.length) {
+      host.innerHTML = '<p class="state state--inline">Aucun tweet en base pour cette figure.</p>';
+      return;
+    }
+    const vides = d.points.filter((p) => !p.n).length;
+    host.innerHTML = `<p class="chart__lecture">${fmtNum(d.tweets)} tweets de ${moisLisible(d.points[0].mois)} à ${
+      moisLisible(d.points[d.points.length - 1].mois)}${vides ? `, dont ${vides} mois sans aucun tweet en base` : ""}. ${
+      fmtNum(d.declarations)} y portent une position.</p>${barresMensuelles(d.points, { unite: "tweets" })}`;
+  } catch (err) {
+    host.innerHTML = `<p class="state state--error">La couverture ne s’est pas chargée (${escapeHtml(err.message)}).</p>`;
+  }
+}
+
 async function load(id) {
   state.id = id;
   // L'adresse suit le locuteur affiché. Sans ça, aucune fiche n'était
   // citable : la page ouvrait toujours sur le premier nom de la liste, et un
   // observatoire dont on ne peut pas lier une fiche ne se cite pas.
   history.replaceState(null, "", `figure.html?id=${id}`);
-  state.onlyConf = true;
   renderList();
   $("#detail").innerHTML = '<p class="state">Chargement…</p>';
   try {
-    state.data = await fetchJSON(`/figures/${id}?limit=${PAGE}&offset=0`);
-    render(state.data);
+    render(await fetchJSON(`/figures/${id}?limit=1&offset=0`));
   } catch (e) {
     $("#detail").innerHTML = `<p class="state state--error">Fiche indisponible (${e.message}).</p>`;
   }
@@ -415,7 +194,7 @@ async function init() {
     // Le locuteur demandé dans l'adresse ; à défaut, le premier qui a parlé.
     const voulu = +new URLSearchParams(location.search).get("id") || null;
     const cible = state.figures.find((f) => f.id === voulu)
-      || state.figures.find((f) => f.n_claims > 0);
+      || state.figures.find((f) => f.n_declarations > 0);
     if (cible) load(cible.id);
   } catch (e) {
     $("#figList").innerHTML = `<p class="state state--error">Répertoire indisponible (${e.message}).</p>`;

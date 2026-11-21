@@ -38,14 +38,8 @@ SORTIE = BACKEND.parent / "site"
 
 FIXES = [
     "/enjeux", "/enjeux/etat", "/enjeux/recentes?limit=10", "/ecarts/faits?juge=retenu&limit=3&offset=0",
-    "/figures", "/ecarts/compte", "/ecarts/divergences?jours=365",
-    "/declarations?jours=7&limit=10", "/subjects?limit=9&confrontable=true", "/reviews?limit=3",
-    "/revue", "/themes/tree", "/themes/sujets", "/series/corpus", "/compteurs",
-    "/pipeline/themes", "/pipeline/stages", "/pipeline/runs?limit=8", "/pipeline/funnel",
-    "/llm/costs", "/learning/stats", "/health/freshness", "/health/collectors",
-    "/health/collection-report", "/codage/grille", "/codage/fiabilite",
-    "/contradictions?status=rejected&limit=1", "/contradictions?status=pending&limit=1",
-    "/contradictions?status=confirmed&limit=1",
+    "/figures", "/ecarts/compte", "/ecarts/divergences?jours=365", "/revue", "/themes/tree", "/themes/sujets",
+    "/etat",
 ]
 STATUTS = ["retenu", "faible", "ecarte", "attente"]                 # ecarts.js
 TYPES = ["", "temps", "programme", "parti", "chiffre"]
@@ -97,14 +91,9 @@ async def exporter(sortie: Path) -> dict:
                 await ex.get(f"/ecarts/faits?juge={juge}&enjeu={quote(e['slug'], safe='')}&limit=50&offset=0")
 
         for f in (res["/figures"] or {}).get("items", []):
-            offset = 0
-            while True:
-                d = await ex.get(f"/figures/{f['id']}?limit={PAGE_FIGURE}&offset={offset}")
-                offset += PAGE_FIGURE
-                if not d or offset >= (d.get("timeline_total") or 0):
-                    break
-            await ex.get(f"/series/figure/{f['id']}")
+            await ex.get(f"/figures/{f['id']}?limit=1&offset=0")
             await ex.get(f"/figures/{f['id']}/positions")
+            await ex.get(f"/figures/{f['id']}/couverture")
 
         for juge in STATUTS:
             for t in TYPES:
@@ -135,17 +124,6 @@ async def exporter(sortie: Path) -> dict:
                     sujets_vus.add(sj.get("id"))
                     await ex.get(f"/themes/sujets/{sj['id']}")
 
-        sujets = await ex.get("/subjects?limit=120&confrontable=true")
-        await ex.get("/subjects?limit=120")
-        for th in (sujets or {}).get("themes", {}):
-            await ex.get(f"/subjects?limit=120&confrontable=true&theme={quote_plus(str(th))}")
-            await ex.get(f"/subjects?limit=120&theme={quote_plus(str(th))}")
-        for s in (sujets or {}).get("items", []):
-            await ex.get(f"/subjects/{s['id']}")
-
-        for c in (res["/compteurs"] or {}).get("compteurs", []):
-            if c.get("key"):
-                await ex.get(f"/compteur?key={quote(str(c['key']), safe='')}")
 
     # Les pages, marquées statiques
     for f in STATIC.iterdir():

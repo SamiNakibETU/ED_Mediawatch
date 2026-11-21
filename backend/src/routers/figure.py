@@ -15,7 +15,7 @@ from __future__ import annotations
 from collections import defaultdict
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import func, or_, select
+from sqlalchemy import String, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database import get_db
@@ -251,3 +251,32 @@ async def figure_positions(figure_id: int, db: AsyncSession = Depends(get_db)) -
     out["ecarts"] = await faits_de(db, figure=figure_id, juge="retenu", limit=30)
     out["mouvements_faibles"] = (await faits_de(db, figure=figure_id, juge="faible", limit=1))["total"]
     return out
+
+
+@router.get("/{figure_id}/couverture")
+async def figure_couverture(figure_id: int, db: AsyncSession = Depends(get_db)) -> dict:
+    """Les tweets en base mois par mois, et ceux qui portent une position : ce que la collecte a ramené."""
+    from src.models.declaration import Declaration
+
+    if await db.get(Personality, figure_id) is None:
+        raise HTTPException(404, "figure inconnue")
+    mois = func.substr(func.cast(Post.published_at, String), 1, 7)
+    tweets = dict((await db.execute(
+        select(mois, func.count()).where(Post.personality_id == figure_id, Post.published_at.isnot(None))
+        .group_by(mois))).all())
+    dmois = func.substr(func.cast(Declaration.published_at, String), 1, 7)
+    decl = dict((await db.execute(
+        select(dmois, func.count(func.distinct(Declaration.post_id)))
+        .where(Declaration.personality_id == figure_id, Declaration.position.isnot(None),
+               or_(Declaration.douteuse.is_(None), Declaration.douteuse.is_(False)))
+        .group_by(dmois))).all())
+    cles = sorted(k for k in tweets if k and k >= "2021-01")
+    points = []
+    if cles:
+        an, m = int(cles[0][:4]), int(cles[0][5:7])
+        while f"{an:04d}-{m:02d}" <= cles[-1]:
+            k = f"{an:04d}-{m:02d}"
+            points.append({"mois": k, "n": tweets.get(k, 0), "declarations": decl.get(k, 0)})
+            an, m = (an + 1, 1) if m == 12 else (an, m + 1)
+    return {"figure_id": figure_id, "tweets": sum(p["n"] for p in points),
+            "declarations": sum(p["declarations"] for p in points), "points": points}

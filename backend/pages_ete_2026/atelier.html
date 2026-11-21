@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Atelier, ED Mediawatch</title>
+  <link rel="stylesheet" href="design.css" />
+  <script>
+    try { const t = localStorage.getItem("theme"); if (t) document.documentElement.dataset.theme = t; } catch {}
+  </script>
+</head>
+<body data-page="atelier" data-tagline="Ce que la machine fait, et où elle en est">
+  <header id="masthead"></header>
+
+  <div class="layout layout--norail">
+    <main>
+      <p class="lede lede-first">Ce qui sert à fabriquer l’observatoire&nbsp;: le fonds, les
+        relectures, les réglages. Rien ici n’est destiné à la lecture, tout y est destiné à
+        rendre la lecture fiable.</p>
+
+      <nav class="filters mb-7" aria-label="Coulisses">
+        <a class="filter" href="archive.html">Archive</a>
+        <a class="filter" href="contradictions.html">Validation</a>
+        <a class="filter" href="revue.html">Revues</a>
+        <a class="filter" href="engagements.html">Engagements</a>
+        <a class="filter" href="compteur.html">Chiffres</a>
+        <a class="filter" href="codage.html">Codage à la main</a>
+      </nav>
+
+      <div id="pouls" class="mb-7"></div>
+
+      <!-- L'entonnoir : la réponse à « pourquoi il n'y a rien à l'écran ». -->
+      <div class="controls flush">
+        <p class="section-label mb-0">Où en est la chaîne</p>
+        <div class="spacer"></div>
+        <p class="live" id="live" hidden><span class="live__dot"></span><span id="liveText"></span></p>
+      </div>
+      <p class="chain-verdict" id="verdict"></p>
+      <div id="funnel" class="card"><p class="state">Chargement…</p></div>
+
+      <!-- Depuis quand on regarde. Le produit ne l'avait jamais dit, et sans
+           cette date aucun de ses graphiques ne veut dire quoi que ce soit. -->
+      <section class="mt-8">
+        <div class="band band--flush"><h2>Depuis quand on regarde</h2>
+          <span class="spacer"></span>
+          <p>Ce qui a été consigné, mois par mois.</p></div>
+        <div id="veille" class="card"><p class="state">Chargement…</p></div>
+      </section>
+
+      <section class="mt-8">
+        <div class="band band--flush"><h2>Sur quoi ils parlent</h2>
+          <span class="spacer"></span>
+          <p>Grille CAP, comparable au gouvernement, au Parlement, à la presse.</p></div>
+        <div id="themes" class="card"></div>
+      </section>
+
+      <section class="mt-8">
+        <p class="section-label">La dernière passe</p>
+        <div id="lastRun" class="card"></div>
+      </section>
+
+      <div class="cols mt-8">
+        <section>
+          <p class="section-label">Dépense</p>
+          <div id="spend" class="card"></div>
+        </section>
+        <section>
+          <p class="section-label">Ce qu’on couvre, et depuis quand</p>
+          <div id="fresh" class="card"></div>
+        </section>
+      </div>
+
+      <section class="mt-8">
+        <p class="section-label">Ce que le juge apprend de vous</p>
+        <div id="apprentissage" class="card"><p class="state">Chargement…</p></div>
+      </section>
+
+      <section class="mt-8">
+        <p class="section-label">Ce qui ne rentre plus</p>
+        <div id="muets" class="card"><p class="state">Chargement…</p></div>
+      </section>
+
+      <section class="mt-8">
+        <p class="section-label">Les passes précédentes</p>
+        <div id="runs" class="card"></div>
+      </section>
+
+      <section class="mt-8">
+        <p class="section-label">Les étapes, et ce dont chacune dépend</p>
+        <p class="lede mb-4">L’ordre n’est pas dans la tête de quelqu’un&nbsp;:
+          chaque étape déclare ce dont elle dépend, et le graphe décide. Une étape qui échoue
+          n’arrête que ce qui en dépend.</p>
+        <div id="graph" class="card"></div>
+      </section>
+    </main>
+  </div>
+
+  <script src="common.js"></script>
+  <script src="chart.js"></script>
+  <script src="atelier.js"></script>
+</body>
+</html>

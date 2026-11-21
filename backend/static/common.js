@@ -218,7 +218,7 @@ const PAGES = [
   ["atelier.html", "atelier", "Coulisses", "atelier"],
 ];
 // Les pages de coulisses gardent un onglet actif : « Coulisses ».
-const COULISSES = new Set(["archive", "validation", "compteur", "engagements", "sujets", "sujet", "codage"]);
+const COULISSES = new Set([]);
 
 
 // Voyant de collecte : un observatoire doit dire s'il regarde encore. Un site
