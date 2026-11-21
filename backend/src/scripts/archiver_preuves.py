@@ -66,6 +66,24 @@ async def file_d_attente(db, limit: int) -> list[tuple[int, str]]:
     return [(i, u) for i, u in rows]
 
 
+async def enregistrer(factory, Post, pid: int, adresse: str) -> None:
+    """Écrit l'adresse de la capture. Une autre passe peut tenir la base (21/11/2026 : l'import des scrutins,
+    « database is locked ») : on réessaie quelques fois au lieu de perdre la capture et de s'arrêter."""
+    from sqlalchemy.exc import OperationalError
+
+    for essai in range(6):
+        try:
+            async with factory() as db:
+                post = await db.get(Post, pid)
+                post.snapshot_url, post.archived_at = adresse, datetime.now(timezone.utc)
+                await db.commit()
+            return
+        except OperationalError as exc:
+            if "locked" not in str(exc) or essai == 5:
+                raise
+            await asyncio.sleep(30 * (essai + 1))
+
+
 async def main_async(limit: int, essai: bool) -> int:
     import aiohttp
 
@@ -110,10 +128,7 @@ async def main_async(limit: int, essai: bool) -> int:
                     await asyncio.sleep(PAUSE_CAPTURE * (2 if code in (429, 0) else 1))
                 await asyncio.sleep(PAUSE_CAPTURE)
             if adresse:
-                async with factory() as db:
-                    post = await db.get(Post, pid)
-                    post.snapshot_url, post.archived_at = adresse, datetime.now(timezone.utc)
-                    await db.commit()
+                await enregistrer(factory, Post, pid, adresse)
             if n % 25 == 0:
                 print(f"{n}/{len(file)} : {stats} en {int((time.monotonic() - t0) / 60)} min", flush=True)
     print(f"Terminé : {stats} en {int((time.monotonic() - t0) / 60)} min.", flush=True)
