@@ -20,6 +20,7 @@ function partiHtml(code, p) {
       <span class="statbar__item">Alignement ${mesure(p.alignement)}</span>
       <span class="statbar__item">Constance ${mesure(p.constance)}</span>
       <span class="statbar__item">Programme ${mesure(p.programme)}</span>
+      <span class="statbar__item">Votes ${mesure(p.votes)}</span>
     </div>`;
 }
 
@@ -27,10 +28,10 @@ function enjeuxHtml(lignes) {
   const mesurees = lignes.filter((x) => x.indice != null);
   if (!mesurees.length) return "<caption>Aucun enjeu mesuré.</caption>";
   return `<thead><tr><th scope="col">Enjeu</th><th scope="col">Indice</th><th scope="col">Alignement</th>
-      <th scope="col">Constance</th><th scope="col">Programme</th><th scope="col">Position majoritaire</th></tr></thead>
+      <th scope="col">Constance</th><th scope="col">Programme</th><th scope="col">Votes</th><th scope="col">Position majoritaire</th></tr></thead>
     <tbody>${mesurees.map((x) => `<tr${x.indice < SEUIL_FAIBLE ? ' class="tableau__marque"' : ""}>
       <th scope="row"><a href="enjeux.html?e=${encodeURIComponent(x.enjeu)}">${escapeHtml(x.titre)}</a></th>
-      <td>${x.indice}</td><td>${mesure(x.alignement)}</td><td>${mesure(x.constance)}</td><td>${mesure(x.programme)}</td>
+      <td>${x.indice}</td><td>${mesure(x.alignement)}</td><td>${mesure(x.constance)}</td><td>${mesure(x.programme)}</td><td>${mesure(x.votes)}</td>
       <td>${escapeHtml(x.position_majoritaire_label || "")}</td></tr>`).join("")}</tbody>`;
 }
 

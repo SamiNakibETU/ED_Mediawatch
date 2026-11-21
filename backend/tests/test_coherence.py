@@ -69,3 +69,19 @@ def test_indice_de_parti_demande_cinq_enjeux():
 def test_un_parti_sans_donnees_est_present_et_vide():
     res = mesurer([], set(), {}, MAINTENANT)
     assert res["UDR"]["indice"] is None and res["UDR"]["enjeux"] == []
+
+
+def test_votes_quatrieme_mesure_et_seuil():
+    decls = [d(i, "contre", 10, "fin_de_vie") for i in range(3)]          # alignement 3/3, rien d'autre
+    seul = ligne(mesurer(decls, set(), {}, MAINTENANT), "fin_de_vie")
+    assert seul["indice"] is None                                          # une seule mesure
+    avec = ligne(mesurer(decls, set(), {}, MAINTENANT, {("RN", "fin_de_vie"): (80, 100)}), "fin_de_vie")
+    assert avec["votes"] == {"n": 80, "sur": 100, "part": 80} and avec["indice"] == 90
+    peu = ligne(mesurer(decls, set(), {}, MAINTENANT, {("RN", "fin_de_vie"): (5, 9)}), "fin_de_vie")
+    assert peu["votes"] is None                                            # moins de dix votes
+
+
+def test_un_enjeu_vote_sans_declaration_apparait():
+    res = mesurer([], set(), {}, MAINTENANT, {("UDR", "retraites"): (11, 11)})
+    x = ligne(res, "retraites", "UDR")
+    assert x["figures"] == 0 and x["votes"]["part"] == 100 and x["indice"] is None

@@ -115,6 +115,34 @@ function ecartsProgrammeHtml(f) {
     </div>`).join("")}`;
 }
 
+// La carte des positions : chaque figure à sa dernière position, rangée par parti. Les figures dont la
+// dernière déclaration date de plus d'un an sont comptées à part : leur position a pu changer depuis.
+function cartePositions(f) {
+  const unAn = Date.now() - 365 * 864e5;
+  const PARTIS = ["RN", "UDR", "FIGURE"];
+  const nomParti = { RN: "RN", UDR: "UDR", FIGURE: "Autres figures" };
+  const derniere = f.figures.map((g) => {
+    const datees = g.positions.filter((p) => p.date);
+    const p = datees[datees.length - 1];
+    return p ? { g, p, recente: asDate(p.date).getTime() >= unAn } : null;
+  }).filter(Boolean);
+  if (derniere.length < 3) return "";
+  const cellule = (cran, parti) => {
+    const xs = derniere.filter((x) => x.p.position === cran && (x.g.groupe || "FIGURE") === parti);
+    if (!xs.length) return '<td class="sujet__meta">0</td>';
+    const recentes = xs.filter((x) => x.recente);
+    return `<td><strong>${xs.length}</strong>${recentes.length < xs.length ? `<span class="sujet__meta"> dont ${xs.length - recentes.length} avant ${new Date(unAn).getFullYear()}</span>` : ""}
+      <details><summary class="sujet__meta">qui</summary><span class="sujet__meta">${xs.map((x) =>
+        `<a href="figure.html?id=${x.g.id}">${escapeHtml(x.g.nom)}</a>`).join(", ")}</span></details></td>`;
+  };
+  const presents = PARTIS.filter((pa) => derniere.some((x) => (x.g.groupe || "FIGURE") === pa));
+  return `<div class="band"><h2>Où se placent les figures</h2><span class="spacer"></span><p>Dernière position de chaque figure</p></div>
+    <div class="table-scroll"><table class="tableau">
+      <thead><tr><th scope="col">Position</th>${presents.map((pa) => `<th scope="col">${nomParti[pa]}</th>`).join("")}</tr></thead>
+      <tbody>${f.echelle.map((c) => `<tr><th scope="row">${escapeHtml(c.label)}</th>${presents.map((pa) => cellule(c.code, pa)).join("")}</tr>`).join("")}</tbody>
+    </table></div>`;
+}
+
 function render() {
   const f = state.fiche;
   const nPos = f.figures.reduce((a, g) => a + g.positions.length, 0);
@@ -131,6 +159,8 @@ function render() {
 
     <div class="band"><h2>À l’Assemblée</h2><span class="spacer"></span><p>Scrutins dont le titre touche cet enjeu</p></div>
     <div id="assemblee"><p class="state state--inline">Chargement…</p></div>
+
+    ${cartePositions(f)}
 
     <div class="band"><h2>Les trajectoires</h2></div>
     ${nPos ? `<div class="card">${trajectoires(f)}</div>`
@@ -155,7 +185,7 @@ function coherenceLigne(c, slug) {
   if (!x || x.indice == null) return "";
   const m = (k, l) => (x[k] ? `${l} ${x[k].part} (${x[k].n} sur ${x[k].sur})` : null);
   return `<p class="sujet__meta">Indice de cohérence du RN sur cet enjeu : ${x.indice} sur 100. ${
-    [m("alignement", "Alignement"), m("constance", "constance"), m("programme", "programme")].filter(Boolean).join(", ")}.
+    [m("alignement", "Alignement"), m("constance", "constance"), m("programme", "programme"), m("votes", "votes")].filter(Boolean).join(", ")}.
     <a href="coherence.html">Définition</a></p>`;
 }
 

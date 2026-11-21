@@ -10,6 +10,10 @@ Pour un parti et un enjeu :
   programme en vigueur à leur date (le plus récent qui traite l'enjeu). Au moins cinq déclarations. Programmes
   lus : RN 2022 (projet présidentiel et livrets thématiques), RN 2024 (législatives, européennes).
 
+- **Votes** : part des votes exprimés par les députés suivis, sur les votes d'ensemble, solennels et motions
+  rattachés à l'enjeu, qui suivent la position la plus fréquente de leur groupe. Au moins dix votes. Ne dépend
+  d'aucune lecture automatique.
+
 L'indice vaut la moyenne des mesures disponibles, sur 100, et n'est donné que si deux mesures au moins le
 sont. L'indice d'un parti demande au moins cinq enjeux mesurés. Au niveau d'un parti, chaque mesure additionne numérateurs et dénominateurs de tous les enjeux : un
 enjeu dont parlent beaucoup de figures pèse plus qu'un enjeu marginal.
@@ -29,6 +33,7 @@ PARTIS = ("RN", "UDR", "Reconquete")
 FENETRE_JOURS = 365
 MIN_ALIGNEMENT, MIN_CONSTANCE, MIN_PROGRAMME = 3, 2, 5
 MIN_ENJEUX = 5   # enjeux mesurés au moins, pour donner l'indice d'un parti
+MIN_VOTES = 10   # votes exprimés au moins, sur les votes d'ensemble rattachés à l'enjeu
 ECART_MIN_JOURS = 30
 
 
@@ -46,15 +51,21 @@ def _part(n: int, d: int) -> dict:
 
 
 def mesurer(decls: list[Decl], revirements: set[tuple[int, str]],
-            programme: dict[tuple[str, str], dict[int, set[str]]], maintenant: datetime) -> dict:
-    """Les trois mesures et l'indice, par parti et par enjeu, puis par parti."""
+            programme: dict[tuple[str, str], dict[int, set[str]]], maintenant: datetime,
+            votes: dict[tuple[str, str], tuple[int, int]] | None = None) -> dict:
+    """Les quatre mesures et l'indice, par parti et par enjeu, puis par parti.
+
+    `votes` : pour un parti et un enjeu, (votes alignés sur la majorité du groupe, votes exprimés).
+    """
+    votes = votes or {}
     depuis = maintenant - timedelta(days=FENETRE_JOURS)
     groupes: dict[tuple[str, str], dict[int, list[Decl]]] = defaultdict(lambda: defaultdict(list))
     for d in decls:
         groupes[(d.parti, d.enjeu)][d.figure].append(d)
 
     par_parti: dict[str, list[dict]] = defaultdict(list)
-    for (parti, enjeu), figures in groupes.items():
+    for parti, enjeu in set(groupes) | set(votes):
+        figures = groupes.get((parti, enjeu), {})
         recentes = {f: [x for x in ds if x.date >= depuis] for f, ds in figures.items()}
         derniere = {f: max(xs, key=lambda x: x.date).position for f, xs in recentes.items() if xs}
         alignement = majoritaire = None
@@ -79,11 +90,15 @@ def mesurer(decls: list[Decl], revirements: set[tuple[int, str]],
             if len(ds) >= MIN_PROGRAMME:
                 conformite = _part(sum(1 for x, c in ds if x.position in c), len(ds))
 
-        mesures = [m["part"] for m in (alignement, constance, conformite) if m]
+        alignes, exprimes = votes.get((parti, enjeu), (0, 0))
+        au_vote = _part(alignes, exprimes) if exprimes >= MIN_VOTES else None
+
+        mesures = [m["part"] for m in (alignement, constance, conformite, au_vote) if m]
         par_parti[parti].append({
             "enjeu": enjeu, "figures": len(figures), "declarations": sum(len(v) for v in figures.values()),
             "alignement": alignement, "position_majoritaire": majoritaire, "constance": constance,
-            "programme": conformite, "indice": round(sum(mesures) / len(mesures)) if len(mesures) >= 2 else None,
+            "programme": conformite, "votes": au_vote,
+            "indice": round(sum(mesures) / len(mesures)) if len(mesures) >= 2 else None,
         })
 
     out = {}
@@ -91,7 +106,7 @@ def mesurer(decls: list[Decl], revirements: set[tuple[int, str]],
         lignes = sorted(par_parti.get(parti, []),
                         key=lambda x: (x["indice"] is None, x["indice"] if x["indice"] is not None else 0))
         total = {}
-        for cle in ("alignement", "constance", "programme"):
+        for cle in ("alignement", "constance", "programme", "votes"):
             n = sum(x[cle]["n"] for x in lignes if x[cle])
             d = sum(x[cle]["sur"] for x in lignes if x[cle])
             total[cle] = _part(n, d) if d else None
@@ -105,6 +120,30 @@ def mesurer(decls: list[Decl], revirements: set[tuple[int, str]],
             "enjeux": lignes,
         }
     return out
+
+
+async def votes_par_enjeu(db) -> dict[tuple[str, str], tuple[int, int]]:
+    """Votes alignés et votes exprimés des députés suivis, par parti et par enjeu, sur les votes d'ensemble,
+    solennels et motions rattachés à un enjeu."""
+    from sqlalchemy import func, or_, select
+
+    from src.models.vote import Scrutin, Vote
+    from src.services.analysis.votes import EXPRIMES, noms_des_groupes
+
+    noms = await noms_des_groupes(db)
+    rows = (await db.execute(
+        select(Vote.groupe, Scrutin.enjeu, Vote.vote == Vote.majorite_groupe, func.count())
+        .join(Scrutin, Scrutin.uid == Vote.scrutin_uid)
+        .where(Scrutin.enjeu.isnot(None), Vote.vote.in_(EXPRIMES), Vote.majorite_groupe.isnot(None),
+               or_(Scrutin.type.in_(("SPS", "MOC")), Scrutin.titre.like("l'ensemble%"), Scrutin.titre.like("l’ensemble%")))
+        .group_by(Vote.groupe, Scrutin.enjeu, Vote.vote == Vote.majorite_groupe))).all()
+    out: dict[tuple[str, str], list[int]] = defaultdict(lambda: [0, 0])
+    for groupe, enjeu, aligne, n in rows:
+        cle = (noms.get(groupe, "?"), enjeu)
+        out[cle][1] += n
+        if aligne:
+            out[cle][0] += n
+    return {k: (a, t) for k, (a, t) in out.items()}
 
 
 async def indice(db, *, maintenant: datetime | None = None) -> dict:
@@ -136,7 +175,7 @@ async def indice(db, *, maintenant: datetime | None = None) -> dict:
     for g in (await db.execute(select(EngagementProgramme).where(EngagementProgramme.position.isnot(None)))).scalars():
         programme[(g.parti, g.enjeu)][g.annee].add(g.position)
 
-    resultat = mesurer(decls, revirements, programme, maintenant)
+    resultat = mesurer(decls, revirements, programme, maintenant, await votes_par_enjeu(db))
     for parti in resultat.values():
         for x in parti["enjeux"]:
             e = PAR_SLUG[x["enjeu"]]
@@ -144,5 +183,5 @@ async def indice(db, *, maintenant: datetime | None = None) -> dict:
             x["position_majoritaire_label"] = e.cran(x["position_majoritaire"]).label if x["position_majoritaire"] else None
     return {"calcule_le": maintenant.isoformat(), "fenetre_jours": FENETRE_JOURS,
             "seuils": {"alignement": MIN_ALIGNEMENT, "constance": MIN_CONSTANCE, "programme": MIN_PROGRAMME,
-                       "enjeux": MIN_ENJEUX},
+                       "votes": MIN_VOTES, "enjeux": MIN_ENJEUX},
             "partis": resultat}
