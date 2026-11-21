@@ -39,7 +39,7 @@ SORTIE = BACKEND.parent / "site"
 FIXES = [
     "/enjeux", "/enjeux/etat", "/enjeux/recentes?limit=10", "/ecarts/faits?juge=retenu&limit=3&offset=0",
     "/figures", "/ecarts/compte", "/ecarts/divergences?jours=365", "/revue", "/themes/tree", "/themes/sujets",
-    "/etat", "/coherence", "/votes/dissidences?limit=12",
+    "/etat", "/coherence", "/votes/dissidences?limit=12", "/enjeux/recherche",
 ]
 STATUTS = ["retenu", "faible", "ecarte", "attente"]                 # ecarts.js
 TYPES = ["", "temps", "programme", "parti", "chiffre"]

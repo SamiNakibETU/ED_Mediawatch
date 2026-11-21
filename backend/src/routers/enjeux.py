@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database import get_db
-from src.services.analysis.positions import etat, fiche, hors_liste, recentes, sommaire
+from src.services.analysis.positions import etat, fiche, hors_liste, index_recherche, recentes, sommaire
 
 router = APIRouter(prefix="/enjeux", tags=["enjeux"])
 
@@ -36,6 +36,12 @@ async def get_etat(db: AsyncSession = Depends(get_db)) -> dict:
         f = await faits_de(db, juge=juge, limit=1)
         out[f"faits_{juge}"], out[f"paires_{juge}"] = f["total"], f["paires"]
     return out
+
+
+@router.get("/recherche")
+async def get_recherche(db: AsyncSession = Depends(get_db)) -> dict:
+    """L'index compact des déclarations, pour la page Recherche."""
+    return await index_recherche(db)
 
 
 @router.get("/{slug}")

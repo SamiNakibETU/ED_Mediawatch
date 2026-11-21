@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Recherche, ED Mediawatch</title>
+  <link rel="stylesheet" href="design.css" />
+  <script>
+    try { const t = localStorage.getItem("theme"); if (t) document.documentElement.dataset.theme = t; } catch {}
+  </script>
+</head>
+<body data-page="recherche">
+  <header id="masthead"></header>
+  <div class="wrap page">
+    <h1 class="hero-title lede-first">Chercher dans le registre</h1>
+    <p class="dek">Toutes les déclarations lues dans les tweets et rangées sur un enjeu. La recherche porte sur le passage
+      cité, le nom de la figure et l’enjeu ; elle ignore les accents et les majuscules.</p>
+
+    <form class="controls mt-6" id="filtres" role="search" onsubmit="return false">
+      <label class="sr-only" for="q">Mots à chercher</label>
+      <input id="q" class="field" type="search" placeholder="Mots, figure ou enjeu" autocomplete="off" />
+      <label class="sr-only" for="figure">Figure</label>
+      <select id="figure" class="field field--inline"><option value="">Toutes les figures</option></select>
+      <label class="sr-only" for="enjeu">Enjeu</label>
+      <select id="enjeu" class="field field--inline"><option value="">Tous les enjeux</option></select>
+      <label class="sr-only" for="annee">Année</label>
+      <select id="annee" class="field field--inline"><option value="">Toutes les années</option></select>
+    </form>
+
+    <div class="band"><h2>Résultats</h2><span class="spacer"></span><p id="compte" aria-live="polite"></p></div>
+    <div id="resultats"><p class="state">Chargement…</p></div>
+  </div>
+
+  <script src="common.js"></script>
+  <script src="recherche.js"></script>
+</body>
+</html>

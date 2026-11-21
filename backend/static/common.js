@@ -213,6 +213,7 @@ const PAGES = [
   ["coherence.html", "coherence", "Cohérence", "chiffres"],
   ["enjeux.html", "enjeux", "Enjeux", "sujets"],
   ["figure.html", "figures", "Figures", "locuteurs"],
+  ["recherche.html", "recherche", "Recherche", "sujets"],
   ["themes.html", "themes", "Thèmes", "chiffres"],
   ["revue.html", "revue", "Revue", "temps"],
   ["methode.html", "methode", "Méthode", "atelier"],

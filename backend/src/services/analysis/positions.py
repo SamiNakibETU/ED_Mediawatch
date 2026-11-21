@@ -234,3 +234,24 @@ async def hors_liste(db, *, limit: int = 60) -> list[dict]:
         .limit(limit)
     )).all()
     return [{"objet": o, "declarations": n, "figures": f} for o, n, f in rows]
+
+
+async def index_recherche(db) -> dict:
+    """Toutes les déclarations à position, en forme compacte, pour la recherche dans le navigateur.
+
+    Une ligne par déclaration : [id, date, id de la figure, enjeu, position, passage cité, lien du tweet].
+    Les noms des figures et les libellés des enjeux sont donnés une seule fois, à part.
+    """
+    rows = (await db.execute(
+        select(Declaration.id, Declaration.published_at, Declaration.personality_id, Declaration.enjeu,
+               Declaration.position, Declaration.verbatim, Post.url)
+        .join(Post, Post.id == Declaration.post_id)
+        .where(Declaration.position.isnot(None), Declaration.enjeu.in_(list(PAR_SLUG)),
+               or_(Declaration.douteuse.is_(None), Declaration.douteuse.is_(False)))
+        .order_by(Declaration.published_at.desc()))).all()
+    ids = {r[2] for r in rows}
+    figures = {i: [nom, parti] for i, nom, parti in (await db.execute(
+        select(Personality.id, Personality.full_name, Personality.group_code).where(Personality.id.in_(ids)))).all()}
+    enjeux = {e.slug: {"titre": e.titre, "crans": {c.code: c.label for c in e.echelle}} for e in ENJEUX}
+    return {"figures": figures, "enjeux": enjeux,
+            "declarations": [[i, d.date().isoformat() if d else None, f, e, p, v, u] for i, d, f, e, p, v, u in rows]}
